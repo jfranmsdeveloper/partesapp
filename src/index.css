@@ -1,152 +1,152 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
 @layer base {
   html {
-    font-family: system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Animations */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
 /* Custom Quill Styling for Modern/Premium Look */
 .quill-modern .ql-toolbar.ql-snow {
   border: none;
-  border-bottom: 1px solid #e2e8f0;
-  border-radius: 12px 12px 0 0;
-  background-color: #f8fafc;
-  padding: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px 16px 0 0;
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  padding: 16px;
 }
 
 .quill-modern .ql-container.ql-snow {
   border: none;
-  border-radius: 0 0 12px 12px;
-  background-color: white;
+  border-radius: 0 0 16px 16px;
+  background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
   font-family: inherit;
 }
 
 .quill-modern .ql-editor {
-  min-height: 120px;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: #334155;
-  padding: 16px;
+  min-height: 150px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #1e293b;
+  padding: 20px;
 }
 
 .quill-modern .ql-editor.ql-blank::before {
-  font-style: normal;
+  font-style: italic;
   color: #94a3b8;
-  opacity: 0.8;
-}
-
-/* Toolbar Buttons */
-.quill-modern .ql-snow .ql-picker {
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
-}
-
-.quill-modern .ql-snow .ql-stroke {
-  stroke: #64748b;
-  stroke-width: 1.5;
-}
-
-.quill-modern .ql-snow .ql-fill {
-  fill: #64748b;
-}
-
-/* Hover/Active States */
-.quill-modern .ql-snow.ql-toolbar button:hover .ql-stroke,
-.quill-modern .ql-snow.ql-toolbar button.ql-active .ql-stroke {
-  stroke: #3b82f6;
-}
-
-.quill-modern .ql-snow.ql-toolbar button:hover .ql-fill,
-.quill-modern .ql-snow.ql-toolbar button.ql-active .ql-fill {
-  fill: #3b82f6;
-}
-
-.quill-modern .ql-snow.ql-toolbar button:hover,
-.quill-modern .ql-snow.ql-toolbar button.ql-active {
-  background-color: #eff6ff;
-  border-radius: 6px;
+  opacity: 0.6;
 }
 
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Outfit', sans-serif;
 
-  /* Premium Palette - Corporate Orange */
-  --color-primary-50: #fff7ed;
-  --color-primary-100: #ffedd5;
-  --color-primary-200: #fed7aa;
-  --color-primary-300: #fdba74;
-  --color-primary-400: #fb923c;
-  --color-primary-500: #f97316;
-  --color-primary-600: #ea580c;
-  --color-primary-700: #c2410c;
-  --color-primary-800: #9a3412;
-  --color-primary-900: #7c2d12;
-
-  /* Semantic Aliases */
-  --color-brand: var(--color-primary-600);
-  --color-brand-foreground: #ffffff;
-
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
-
-  --color-background: #fffbf7;
-  /* Warm White */
-  --color-surface: #ffffff;
-  --color-border: #fed7aa;
-  /* Soft Orange Border */
-
-  --shadow-soft: 0 4px 6px -1px rgb(249 115 22 / 0.05), 0 2px 4px -2px rgb(249 115 22 / 0.05);
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-elevated: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
-}
-
-:root {
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: var(--color-background);
-  color: #0f172a;
-  /* Slate 900 */
+  /* Premium iOS 26 Palette */
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
 }
 
 @layer utilities {
   .glass {
-    @apply backdrop-blur-xl bg-white/30 dark:bg-slate-900/40 border border-white/40 shadow-xl;
+    @apply backdrop-blur-xl bg-white/40 dark:bg-slate-900/40 border border-white/40 dark:border-white/5 shadow-xl;
   }
 
   .glass-card {
-    @apply backdrop-blur-md bg-white/50 dark:bg-slate-900/50 border border-white/40 dark:border-white/5 shadow-lg;
+    @apply backdrop-blur-2xl bg-white/60 dark:bg-slate-800/60 border border-white/50 dark:border-white/5;
+    box-shadow: 0 8px 30px rgb(0, 0, 0, 0.04);
   }
 
-  .glass-liquid {
-    background: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 8px 32px 0 rgba(76, 29, 0, 0.15);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+  .glass-panel {
+    @apply backdrop-blur-3xl bg-white/40 dark:bg-slate-800/40 border border-white/60 dark:border-white/5;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+  }
+
+  .bg-brand-gradient {
+    @apply bg-gradient-to-br from-orange-300 to-orange-400;
+  }
+
+  .hover-brand-gradient:hover {
+    @apply bg-gradient-to-br from-orange-400 to-orange-500;
+  }
+
+  .text-brand-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-orange-400 to-orange-500;
+  }
+
+  .mask-grad-x {
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   }
 
   .text-glow {
-    text-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
-  }
-
-  .card-hover-glow:hover {
-    box-shadow: 0 0 30px -5px rgba(249, 115, 22, 0.3),
-      0 10px 20px -5px rgba(0, 0, 0, 0.1);
-    border-color: rgba(253, 186, 116, 0.6);
-    background-image: linear-gradient(120deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
-    backdrop-filter: blur(16px);
+    text-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    /* Violet glow */
   }
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -156,22 +156,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  @apply font-sans antialiased text-slate-700 dark:text-slate-200;
-  /* Premium Warm Mesh Gradient */
-  background-color: #fff7ed;
-  background-image:
-    radial-gradient(at 0% 0%, rgba(251, 146, 60, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(249, 115, 22, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(253, 186, 116, 0.15) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(255, 237, 213, 0.5) 0px, transparent 50%);
-}
-
-.dark body {
-  background-color: #0f0501;
-  /* Dark Orange/Brown base */
-  background:
-    radial-gradient(circle at 15% 50%, rgba(194, 65, 12, 0.1), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(234, 88, 12, 0.1), transparent 25%);
+  @apply font-sans antialiased text-slate-800 dark:text-slate-100 bg-[#f2f4f8] dark:bg-[#0c0c0e];
+  /* Base texture or gradient handled in Layout/Pages directly for better layering */
 }
 
 h1,
@@ -181,10 +167,8 @@ h4,
 h5,
 h6 {
   font-family: 'Outfit', sans-serif;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
 }
-
-
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
@@ -198,7 +182,7 @@ h6 {
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 3px;
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

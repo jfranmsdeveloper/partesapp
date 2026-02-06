@@ -1,7 +1,7 @@
-
-// Adapts the Supabase client interface to our local Express API
-
-const API_URL = '/api';
+// Adapts the Supabase client interface to our local Express API or PHP API
+// For local PHP development, run: php -S localhost:8000 -t php-backend
+// const API_URL = '/api'; // Old Node Url
+const API_URL = 'http://localhost:8000'; // New PHP URL
 
 // Helper for fetch wrapper
 async function request(endpoint: string, method: string = 'GET', body?: any) {

@@ -337,7 +337,14 @@ export const ParteEditor = () => {
                         <div className="relative">
                             <select
                                 value={currentParte.status}
-                                onChange={(e) => updateParteStatus(currentParte.id, e.target.value as any)}
+                                onChange={(e) => {
+                                    const newStatus = e.target.value as any;
+                                    if (newStatus === 'CERRADO' && currentParte.actuaciones.length === 0) {
+                                        alert('⚠️ No se puede cerrar un parte sin actuaciones. Añade al menos una actuación.');
+                                        return;
+                                    }
+                                    updateParteStatus(currentParte.id, newStatus);
+                                }}
                                 className={clsx(
                                     "appearance-none cursor-pointer pl-3 pr-8 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border-0 focus:ring-2 focus:ring-offset-1 transition-all",
                                     currentParte.status === 'ABIERTO' ? 'bg-green-100 text-green-700 ring-green-500' :

@@ -13,20 +13,32 @@ interface ParteCardProps {
 export const ParteCard = ({ parte }: ParteCardProps) => {
     const navigate = useNavigate();
     const { users } = useAppStore();
-    const user = users.find(u => u.id === parte.userId || u.email === parte.userId); // userId might be email in legacy data? Types say string. Schema says userId is owner email or id. Let's match both. Actually store uses ID for new users but maybe email for old? 
-    // In server.js registration: id is 'user-' + timestamp. 
-    // In types: userId: string; // Owner email. Wait. 
-    // server.js /partes: user_id: 'user-...'
-    // So it links by ID.
-    // Let's safe match.
 
+    // Logic to determine which user to display (Issuer vs Owner)
+    // 1. "Emitido por" (parte.createdBy) takes precedence as requested.
+    const issuerName = parte.createdBy;
+
+    // 2. Try to find the user profile matching the issuer name (to get avatar)
+    const issuerUser = users.find(u => (u.user_metadata?.full_name || u.name || u.email) === issuerName);
+
+    // 3. Fallback: The owner of the record (userId)
+    const ownerUser = users.find(u => u.id === parte.userId || u.email === parte.userId);
+
+    // Final Display Values
+    const displayName = issuerName || ownerUser?.user_metadata?.full_name || ownerUser?.name || 'Desconocido';
+
+    // Use issuer's avatar if found, otherwise owner's avatar (only if no specific issuer name was manually set distinct from owner)
+    // Actually, if issuerName is set, we want to show THAT person (or their initial). 
+    // If issuerUser is found, use their avatar. If not, use undefined (will show Initial).
+    // If issuerName is NOT set, use owner's avatar.
+    const avatarUrl = issuerName ? issuerUser?.avatar_url : ownerUser?.avatar_url;
 
     return (
         <div
             onClick={() => navigate(`/parte/${parte.id}`)}
             className="glass-card card-hover-glow p-4 rounded-xl transition-all cursor-pointer group hover:-translate-y-1 relative overflow-hidden"
         >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
             <div className="flex justify-between items-start mb-2 relative z-10">
                 <span className="text-xs font-mono text-slate-400 dark:text-slate-500">#{parte.id}</span>
@@ -46,19 +58,19 @@ export const ParteCard = ({ parte }: ParteCardProps) => {
 
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-4">
                 <div className="flex items-center gap-2">
-                    {user?.avatar_url ? (
+                    {avatarUrl ? (
                         <img
-                            src={user.avatar_url}
+                            src={avatarUrl}
                             alt="Avatar"
                             className="w-6 h-6 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
                         />
                     ) : (
                         <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                            {(user?.name || parte.createdBy || '?').charAt(0).toUpperCase()}
+                            {displayName.charAt(0).toUpperCase()}
                         </div>
                     )}
-                    <span className="truncate max-w-[80px]">
-                        {user?.user_metadata?.full_name || user?.name || parte.createdBy}
+                    <span className="truncate max-w-[150px]">
+                        {displayName}
                     </span>
                 </div>
                 <span className="flex items-center gap-1">

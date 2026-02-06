@@ -1,29 +1,61 @@
 services:
+  # Frontend (Vite/React)
   app:
     build: .
-    container_name: partes-app
+    container_name: partes-frontend
     ports:
       - "5173:5173"
-      - "3001:3001"
     volumes:
       - .:/app
       - /app/node_modules
-      # Persist backend data
-      - ./server/db:/app/server/db
-      - ./server/uploads:/app/server/uploads
     environment:
-      - VITE_API_URL=http://localhost:3001
-    command: npm run dev:docker
+      - VITE_API_URL=http://localhost:8000
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - api
 
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: partes-tunnel
-    links:
-      - app
-    environment:
-      - NGROK_AUTHTOKEN=38WKQb2orgRQemA8TqxTYDrJkr5_5X79tPEDWBFHSSrLeuz4z
-    command: http app:5173 --domain=jeremy-unacademical-positivistically.ngrok-free.dev
-
+  # Backend (PHP/Apache)
+  api:
+    build: ./php-backend
+    container_name: partes-backend
     ports:
-      - "4040:4040"
-    restart: unless-stopped
+      - "8000:80"
+    volumes:
+      - ./php-backend:/var/www/html
+    environment:
+      - DB_HOST=db
+      - DB_NAME=partes_app_db
+      - DB_USER=root
+      - DB_PASS=root
+    depends_on:
+      - db
+
+  # Database (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: partes-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: partes_app_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      # Auto-init database with schema
+      - ./php-backend/database.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # Database Viewer (Optional)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: partes-pma
+    links:
+      - db:db
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: root
+
+volumes:
+  db_data:
