@@ -13,16 +13,18 @@ import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
 
+import { toLocalISOString } from '../../utils/dateUtils';
+
 export const ParteEditor = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const isNew = !id;
 
-    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, addClient, currentUser } = useUserStore();
+    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, addClient, currentUser, users } = useUserStore();
 
     const [title, setTitle] = useState('');
     const [customId, setCustomId] = useState('');
-    const [customDate, setCustomDate] = useState(new Date().toISOString().slice(0, 16)); // Default to now
+    const [customDate, setCustomDate] = useState(toLocalISOString(new Date())); // Default to now (Local)
     const [createdBy, setCreatedBy] = useState('Usuario Actual');
     const [uploadedPdf, setUploadedPdf] = useState<string | undefined>(undefined);
     const [showAddActuacion, setShowAddActuacion] = useState(false);
@@ -37,6 +39,7 @@ export const ParteEditor = () => {
             setTitle(currentParte.title);
             setCreatedBy(currentParte.createdBy);
             setCustomId(currentParte.id.toString());
+            setCustomDate(toLocalISOString(new Date(currentParte.createdAt)));
             // Note: We don't load the full PDF into state to save memory unless needed, 
             // but for "viewing" we rely on currentParte.pdfFile
         }
@@ -48,6 +51,15 @@ export const ParteEditor = () => {
     const handleCreateParte = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title) return;
+
+        if (!isNew && currentParte) {
+            await updateParte(currentParte.id, {
+                title,
+                createdAt: new Date(customDate).toISOString()
+            });
+            alert('✅ Parte actualizado correctamente');
+            return;
+        }
 
         // Auto-save client
         await addClient({
@@ -108,7 +120,7 @@ export const ParteEditor = () => {
         }
     };
 
-    const handleAddOrUpdateActuacion = (actuacion: { type: ActuacionType; duration: number; notes: string; user: string }) => {
+    const handleAddOrUpdateActuacion = (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => {
         if (!currentParte) return;
 
         if (editingActuacion) {
@@ -117,7 +129,7 @@ export const ParteEditor = () => {
         } else {
             addActuacion(currentParte.id, {
                 ...actuacion,
-                timestamp: new Date().toISOString()
+                timestamp: actuacion.timestamp || new Date().toISOString()
             });
         }
         setShowAddActuacion(false);
@@ -492,7 +504,6 @@ export const ParteEditor = () => {
                                                     const time = customDate.split('T')[1] || '09:00';
                                                     setCustomDate(`${date}T${time}`);
                                                 }}
-                                                disabled={!isNew}
                                             />
                                         </div>
                                         <div className="w-24">
@@ -504,21 +515,43 @@ export const ParteEditor = () => {
                                                     const date = customDate.split('T')[0];
                                                     setCustomDate(`${date}T${e.target.value}`);
                                                 }}
-                                                disabled={!isNew}
                                             />
                                         </div>
                                     </div>
                                 </div>
 
-                                <Input
-                                    label="Emitido por"
-                                    value={createdBy}
-                                    onChange={(e) => setCreatedBy(e.target.value)}
-                                    required
-                                    disabled={!isNew}
-                                    className={isNew ? "" : "w-full"}
-                                    title={createdBy}
-                                />
+                                <div className="w-full">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Emitido por</label>
+                                    {!isNew ? (
+                                        <Input
+                                            value={createdBy}
+                                            onChange={(e) => setCreatedBy(e.target.value)}
+                                            readOnly
+                                            disabled
+                                        />
+                                    ) : (
+                                        <div className="relative">
+                                            <select
+                                                value={createdBy}
+                                                onChange={(e) => setCreatedBy(e.target.value)}
+                                                required
+                                                disabled={!isNew}
+                                                className="block w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400"
+                                            >
+                                                <option value="" disabled>Selecciona un usuario</option>
+                                                {users.map((u) => {
+                                                    const name = u.user_metadata?.full_name || u.name || u.email;
+                                                    return <option key={u.id} value={name}>{name}</option>
+                                                })}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                                                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <Input
@@ -527,22 +560,21 @@ export const ParteEditor = () => {
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder="Ej. Incidencia WiFi cliente X"
                                 required
-                                disabled={!isNew}
                                 className="w-full text-lg"
                                 title={title}
                             />
 
-                            {isNew && (
-                                <div className="pt-2 flex flex-col items-center">
-                                    <Button type="submit" className="w-full md:w-auto md:px-12 md:py-3 text-lg">
-                                        <Save className="w-5 h-5 mr-2" />
-                                        Crear Parte
-                                    </Button>
+                            <div className="pt-2 flex flex-col items-center">
+                                <Button type="submit" className="w-full md:w-auto md:px-12 md:py-3 text-lg">
+                                    <Save className="w-5 h-5 mr-2" />
+                                    {isNew ? 'Crear Parte' : 'Guardar Cambios'}
+                                </Button>
+                                {isNew && (
                                     <p className="text-sm text-slate-500 mt-3 text-center">
                                         Podrás añadir actuaciones una vez creado el parte.
                                     </p>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </form>
                     </Card>
 
@@ -598,6 +630,12 @@ export const ParteEditor = () => {
                                         onAdd={handleAddOrUpdateActuacion}
                                         onCancel={handleCancelForm}
                                         initialData={editingActuacion?.data}
+                                        defaultTimestamp={(() => {
+                                            if (currentParte.actuaciones.length === 0) return currentParte.createdAt;
+                                            const lastAct = currentParte.actuaciones[currentParte.actuaciones.length - 1];
+                                            const endDate = new Date(new Date(lastAct.timestamp).getTime() + lastAct.duration * 60000);
+                                            return endDate.toISOString();
+                                        })()}
                                         key={editingActuacion?.id || 'new'} // Force re-render on switch
                                     />
                                 </div>
@@ -610,7 +648,7 @@ export const ParteEditor = () => {
                             />
                         </Card>
 
-                        <div className="flex justify-between items-center pt-6 border-t border-slate-100">
+                        <div className="flex flex-col sm:flex-row justify-between items-center pt-6 pb-20 border-t border-slate-100 gap-4">
                             <Button
                                 variant="ghost"
                                 className="text-red-500 hover:text-red-600 hover:bg-red-50"
@@ -620,21 +658,47 @@ export const ParteEditor = () => {
                                 Eliminar Parte
                             </Button>
 
-                            <div className="flex gap-3">
-                                {currentParte.status !== 'CERRADO' && (
-                                    <Button
-                                        variant="danger"
-                                        onClick={() => updateParteStatus(currentParte.id, 'CERRADO')}
-                                        disabled={currentParte.actuaciones.length === 0}
-                                    >
-                                        Cerrar Parte
-                                    </Button>
-                                )}
-                                {currentParte.status === 'CERRADO' && (
-                                    <Button variant="outline" onClick={() => updateParteStatus(currentParte.id, 'EN TRÁMITE')}>
-                                        Reabrir Parte
-                                    </Button>
-                                )}
+                            <div className="flex items-center gap-6">
+                                {/* Avatares de participantes */}
+                                <div className="flex -space-x-3">
+                                    {Array.from(new Set(currentParte.actuaciones.map(a => a.user))).map((userName) => {
+                                        const userObj = users.find(u => (u.user_metadata?.full_name || u.name) === userName || u.email === userName);
+                                        const hasAvatar = userObj?.avatar_url;
+
+                                        return (
+                                            <div key={userName} className="relative z-10 transition-transform hover:scale-110 hover:z-20 group" title={userName}>
+                                                {hasAvatar ? (
+                                                    <img
+                                                        src={userObj.avatar_url}
+                                                        alt={userName}
+                                                        className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow-md"
+                                                    />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-xs text-orange-700 dark:text-orange-200 font-bold uppercase ring-2 ring-white dark:ring-slate-900 shadow-md">
+                                                        {userName.charAt(0)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="flex gap-3">
+                                    {currentParte.status !== 'CERRADO' && (
+                                        <Button
+                                            variant="danger"
+                                            onClick={() => updateParteStatus(currentParte.id, 'CERRADO')}
+                                            disabled={currentParte.actuaciones.length === 0}
+                                        >
+                                            Cerrar Parte
+                                        </Button>
+                                    )}
+                                    {currentParte.status === 'CERRADO' && (
+                                        <Button variant="outline" onClick={() => updateParteStatus(currentParte.id, 'EN TRÁMITE')}>
+                                            Reabrir Parte
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

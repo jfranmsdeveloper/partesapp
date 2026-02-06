@@ -1,6 +1,7 @@
 import type { Actuacion } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
-import { Trash2, Clock, User, Edit2 } from 'lucide-react';
+import { Trash2, Clock, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -12,6 +13,8 @@ interface ActuacionesListProps {
 }
 
 export const ActuacionesList = ({ actuaciones, onDelete, onEdit, readOnly = false }: ActuacionesListProps) => {
+    const { users } = useAppStore();
+
     if (actuaciones.length === 0) {
         return (
             <div className="text-center py-8 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-dashed border-slate-200 dark:border-slate-700">
@@ -32,7 +35,7 @@ export const ActuacionesList = ({ actuaciones, onDelete, onEdit, readOnly = fals
                             <Icon className="w-5 h-5" />
                         </div>
 
-                        <div className="flex-1 min-w-0" title={`Nota completa: ${actuacion.notes || 'Sin notas'} \nRealizado por: ${actuacion.user}`}>
+                        <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start">
                                 <h4 className="font-medium text-slate-900 dark:text-slate-100">{actuacion.type}</h4>
                                 <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -41,17 +44,39 @@ export const ActuacionesList = ({ actuaciones, onDelete, onEdit, readOnly = fals
                             </div>
 
                             {actuacion.notes && (
-                                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{actuacion.notes}</p>
+                                <div
+                                    className="text-sm text-slate-600 dark:text-slate-300 mt-1 prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden"
+                                    dangerouslySetInnerHTML={{ __html: actuacion.notes }}
+                                />
                             )}
 
-                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
+                            <div className="flex items-center gap-4 mt-3 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-50 dark:border-white/5 pt-2">
+                                <div className="flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5" />
                                     <span>{actuacion.duration} min</span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    <span>{actuacion.user}</span>
+                                <div className="flex items-center gap-2">
+                                    {(() => {
+                                        const userObj = users.find(u => (u.user_metadata?.full_name || u.name) === actuacion.user || u.email === actuacion.user);
+                                        const hasAvatar = userObj?.avatar_url;
+
+                                        return (
+                                            <>
+                                                {hasAvatar ? (
+                                                    <img
+                                                        src={userObj.avatar_url}
+                                                        alt={actuacion.user}
+                                                        className="w-5 h-5 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                                                    />
+                                                ) : (
+                                                    <div className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-[10px] text-orange-700 dark:text-orange-400 font-bold uppercase ring-1 ring-orange-200 dark:ring-orange-800">
+                                                        {actuacion.user.charAt(0)}
+                                                    </div>
+                                                )}
+                                                <span className="font-medium">{actuacion.user}</span>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>

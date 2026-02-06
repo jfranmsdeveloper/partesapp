@@ -24,21 +24,23 @@ export const ParteCard = ({ parte }: ParteCardProps) => {
     return (
         <div
             onClick={() => navigate(`/parte/${parte.id}`)}
-            className="glass-card p-4 rounded-xl transition-all cursor-pointer group hover:-translate-y-1"
+            className="glass-card card-hover-glow p-4 rounded-xl transition-all cursor-pointer group hover:-translate-y-1 relative overflow-hidden"
         >
-            <div className="flex justify-between items-start mb-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+            <div className="flex justify-between items-start mb-2 relative z-10">
                 <span className="text-xs font-mono text-slate-400 dark:text-slate-500">#{parte.id}</span>
                 <Badge
                     variant={
                         parte.status === 'ABIERTO' ? 'success' :
-                            parte.status === 'EN TRÁMITE' ? 'info' : 'danger'
+                            parte.status === 'EN TRÁMITE' ? 'warning' : 'danger'
                     }
                 >
                     {parte.status}
                 </Badge>
             </div>
 
-            <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100 mb-3 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors line-clamp-2 relative z-10">
                 {parte.title}
             </h3>
 

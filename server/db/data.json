@@ -6,58 +6,67 @@
       "password": "KzN.1285",
       "role": "admin",
       "user_metadata": {
-        "full_name": "Fran MolSan",
+        "full_name": "José Francisco Molina Sánchez",
         "avatar_url": "/uploads/avatar_user-1768914513438_1768916415563.bin"
       },
       "created_at": "2026-01-20T13:08:33.438Z",
       "avatar_url": "/uploads/avatar_user-1768914513438_1768916415563.bin"
     },
     {
-      "id": "user-1768991557350",
-      "email": "rlopez02.ext@melilla.es",
-      "password": "01.2026",
+      "id": "user-1768996541051",
+      "email": "mferna04.ext@melilla.es",
+      "password": "Marta.1234",
       "role": "user",
       "user_metadata": {
-        "full_name": "Ricardo Lopez Fernandez",
+        "full_name": "Marta Fernández Lence",
         "role": "user"
       },
-      "created_at": "2026-01-21T10:32:37.350Z"
+      "created_at": "2026-01-21T11:55:41.051Z"
+    },
+    {
+      "id": "user-1768997644235",
+      "email": "mflore01.ext@melilla.es",
+      "password": "mflore.2026",
+      "role": "user",
+      "user_metadata": {
+        "full_name": "Maria José Flores Torres",
+        "role": "user"
+      },
+      "created_at": "2026-01-21T12:14:04.235Z"
+    },
+    {
+      "id": "user-1768997708640",
+      "email": "mcobo01.ext@melilla.es",
+      "password": "mcobo.2026",
+      "role": "user",
+      "user_metadata": {
+        "full_name": "Maria de los Angeles Cobo Rodriguez",
+        "role": "user"
+      },
+      "created_at": "2026-01-21T12:15:08.640Z"
+    },
+    {
+      "id": "user-1768997776752",
+      "email": "rlopez02.ext@melilla.es",
+      "password": "rlopez.2026",
+      "role": "user",
+      "user_metadata": {
+        "full_name": "Ricardo Lopez Fernández",
+        "role": "user"
+      },
+      "created_at": "2026-01-21T12:16:16.752Z"
     }
   ],
   "partes": [
     {
       "type": "INCIDENCIA",
-      "description": "Estimados compañeros:\nMEMBRETE DE ASAMBLEA DE MELILLA: Secretaría General (SOLO PONE ESO, NO EXCELENTISIMA\nASAMBLEA)\nPrimero desearos una feliz navidad a todas y agradeceros el tremendo trabajo realizado durante este",
-      "status": "CERRADO",
-      "start_date": "2025-12-26T11:10:00.000Z",
-      "user_id": "user-1768990736239",
-      "created_by": "GINER GUTIERREZ, DIEGO",
-      "pdf_file": "/uploads/parte_518095_1768990824527.pdf",
-      "id": 518095,
-      "created_at": "2026-01-21T10:20:24.527Z",
-      "closed_at": "2026-01-21T10:34:31.541Z"
-    },
-    {
-      "type": "INCIDENCIA",
-      "description": "Estimados compañeros:\nMEMBRETE DE ASAMBLEA DE MELILLA: Secretaría General (SOLO PONE ESO, NO EXCELENTISIMA\nASAMBLEA)\nPrimero desearos una feliz navidad a todas y agradeceros el tremendo trabajo realizado durante este",
+      "description": "EL USUARIO NO PUEDE ACCEDER A EUROCOPE. FALTA EL QR",
       "status": "ABIERTO",
-      "start_date": "2025-12-26T11:10:00.000Z",
+      "start_date": "2026-01-02T11:02:00.000Z",
       "user_id": "user-1768914513438",
-      "created_by": "GINER GUTIERREZ, DIEGO",
-      "pdf_file": "/uploads/parte_518095_1768991269996.pdf",
-      "id": 518095,
-      "created_at": "2026-01-21T10:27:49.995Z"
-    },
-    {
-      "type": "INCIDENCIA",
-      "description": "Incidencia de Prueba",
-      "status": "CERRADO",
-      "start_date": "2026-01-21T09:33:00.000Z",
-      "user_id": "user-1768991557350",
       "created_by": "Usuario Actual",
-      "id": 123456,
-      "created_at": "2026-01-21T10:33:29.831Z",
-      "closed_at": "2026-01-21T10:34:37.540Z"
+      "id": 518278,
+      "created_at": "2026-01-26T12:25:09.583Z"
     }
   ],
   "actuaciones": [
@@ -92,16 +101,152 @@
       "created_at": "2026-01-16T23:05:12.937Z"
     },
     {
-      "parte_id": 518095,
+      "parte_id": 222333,
+      "type": "Traslado",
+      "description": "<p></p><p>Hola&nbsp;esto&nbsp;es&nbsp;un&nbsp;parte&nbsp;y&nbsp;se&nbsp;está&nbsp;haciendo&nbsp;una&nbsp;prueba</p>",
+      "date": "2026-01-21T13:05:18.479Z",
+      "duration": 10,
+      "user": "José Francisco Molina Sánchez",
+      "id": 1769000718488,
+      "created_at": "2026-01-21T13:05:18.488Z"
+    },
+    {
+      "parte_id": 222333,
+      "type": "Correo Enviado",
+      "description": "<p>Se&nbsp;envia&nbsp;correo&nbsp;</p>",
+      "date": "2026-01-21T13:05:46.429Z",
+      "duration": 1,
+      "user": "Maria de los Angeles Cobo Rodriguez",
+      "id": 1769000746437,
+      "created_at": "2026-01-21T13:05:46.437Z"
+    },
+    {
+      "parte_id": 518096,
+      "type": "Modificaciones",
+      "description": "<p>Prueba&nbsp;1&nbsp;</p>",
+      "date": "2026-01-21T13:23:39.013Z",
+      "duration": 1,
+      "user": "Maria José Flores Torres",
+      "id": 1769001819026,
+      "created_at": "2026-01-21T13:23:39.026Z"
+    },
+    {
+      "parte_id": 518096,
+      "type": "Correo Recibido",
+      "description": "<p>Correo&nbsp;de&nbsp;Prueba&nbsp;</p>",
+      "date": "2026-01-21T13:23:55.691Z",
+      "duration": 1,
+      "user": "Ricardo Lopez Fernández",
+      "id": 1769001835699,
+      "created_at": "2026-01-21T13:23:55.699Z"
+    },
+    {
+      "parte_id": 111222,
       "type": "Llamada Realizada",
-      "description": "<p></p><p>Para&nbsp;abajo&nbsp;que&nbsp;me&nbsp;he&nbsp;tirado&nbsp;toda&nbsp;la&nbsp;mañana&nbsp;llamando&nbsp;y&nbsp;la&nbsp;colega&nbsp;no&nbsp;me&nbsp;lo&nbsp;coge</p>",
-      "date": "2026-01-21T10:29:35.210Z",
+      "description": "<p>ACTUACIÓN&nbsp;DE&nbsp;PRUEBA&nbsp;1&nbsp;</p>",
+      "date": "2026-01-26T10:00:00.000Z",
+      "duration": 10,
+      "user": "José Francisco Molina Sánchez",
+      "id": 1769429011612,
+      "created_at": "2026-01-26T12:03:31.612Z"
+    },
+    {
+      "parte_id": 111222,
+      "type": "Correo Recibido",
+      "description": "<p>ACTUACIÓN&nbsp;DE&nbsp;PRUEBA&nbsp;2</p>",
+      "date": "2026-01-26T10:01:00.000Z",
       "duration": 1,
       "user": "José Francisco Molina Sánchez",
-      "id": 1768991375219,
-      "created_at": "2026-01-21T10:29:35.219Z"
+      "id": 1769429040324,
+      "created_at": "2026-01-26T12:04:00.324Z"
+    },
+    {
+      "parte_id": 518278,
+      "type": "Llamada Realizada",
+      "description": "<p>LLAMO&nbsp;AL&nbsp;USUARIO,&nbsp;ME&nbsp;INFORMA&nbsp;QUE&nbsp;NO&nbsp;PUEDE&nbsp;ENTRAR&nbsp;A&nbsp;EUROCOPE&nbsp;CON&nbsp;SU&nbsp;CONTRASEÑA.&nbsp;LE&nbsp;PIDO&nbsp;SU&nbsp;DNI&nbsp;Y&nbsp;QUEDO&nbsp;EN&nbsp;LLAMARLE&nbsp;CUANDO&nbsp;LA&nbsp;RESTAURE&nbsp;LA&nbsp;CONTRASEÑA.&nbsp;</p>",
+      "date": "2026-01-02T11:10:00.000Z",
+      "duration": 2,
+      "user": "José Francisco Molina Sánchez",
+      "id": 1769430405460,
+      "created_at": "2026-01-26T12:26:45.460Z"
+    },
+    {
+      "parte_id": 518278,
+      "type": "Investigación",
+      "description": "<ul><li>ENTRO&nbsp;A&nbsp;EUROCOPE&nbsp;CON&nbsp;USUARIO&nbsp;ADMIN&nbsp;</li><li>BUSCO&nbsp;AL&nbsp;USARIO&nbsp;POR&nbsp;SU&nbsp;NOMBRE&nbsp;Y&nbsp;APELLIDOS&nbsp;</li><li>LE&nbsp;RESTAURO&nbsp;LA&nbsp;CONTRASEÑA,&nbsp;LA&nbsp;CUAL&nbsp;SERÁ&nbsp;AHORA&nbsp;EL&nbsp;DNI&nbsp;SIN&nbsp;LA&nbsp;LETRA&nbsp;</li><li>LE&nbsp;LIMPIO&nbsp;LOS&nbsp;DATOS&nbsp;DE&nbsp;AUTENTICACIÓN&nbsp;DOBLE&nbsp;FACTOR&nbsp;</li></ul>",
+      "date": "2026-01-02T11:22:00.000Z",
+      "duration": 10,
+      "user": "José Francisco Molina Sánchez",
+      "id": 1769430547849,
+      "created_at": "2026-01-26T12:29:07.849Z"
     }
   ],
-  "clients": [],
+  "clients": [
+    {
+      "full_name": "PARTE DE PRUEBA",
+      "id": "1768996403412",
+      "created_at": "2026-01-21T11:53:23.412Z"
+    },
+    {
+      "full_name": "Parte de Prueba",
+      "id": "1769000648484",
+      "created_at": "2026-01-21T13:04:08.484Z"
+    },
+    {
+      "full_name": "Indicencia de Prueba",
+      "id": "1769000680114",
+      "created_at": "2026-01-21T13:04:40.114Z"
+    },
+    {
+      "full_name": "MARIA TERESA CUEVAS MONTESINOS",
+      "id": "1769000981410",
+      "created_at": "2026-01-21T13:09:41.410Z"
+    },
+    {
+      "full_name": "Nuevo Parte de prueba",
+      "id": "1769001762564",
+      "created_at": "2026-01-21T13:22:42.564Z"
+    },
+    {
+      "full_name": "EL USUARIO NO PUEDE ACCEDER AL EUROCOP, NECESTA QR 6440",
+      "id": "1769419732675",
+      "created_at": "2026-01-26T09:28:52.675Z"
+    },
+    {
+      "full_name": "PARTE DE PRUEBA ",
+      "id": "1769428378865",
+      "created_at": "2026-01-26T11:52:58.865Z"
+    },
+    {
+      "full_name": "ESTO ES UN PARTE DE PRUEBA",
+      "id": "1769428657300",
+      "created_at": "2026-01-26T11:57:37.300Z"
+    },
+    {
+      "full_name": "EL USUARIO NO PUEDE ACCEDER AL EUROCOP, NECESITA QR. EXT 6440",
+      "id": "1769429579020",
+      "created_at": "2026-01-26T12:12:59.020Z"
+    },
+    {
+      "full_name": "EL USUARIO NO PUEDE ACCEDER AL EUROCOP, NECESITA QR",
+      "id": "1769429658104",
+      "created_at": "2026-01-26T12:14:18.104Z"
+    },
+    {
+      "full_name": "EL USUARIO NO PUEDE ACCEDER AL EUROCOP. NECESITA QR ",
+      "id": "1769429717735",
+      "created_at": "2026-01-26T12:15:17.735Z"
+    },
+    {
+      "full_name": "EL USUARIO NO PUEDE ACCEDER A EUROCOPE",
+      "id": "1769430009715",
+      "created_at": "2026-01-26T12:20:09.715Z"
+    },
+    {
+      "full_name": "EL USUARIO NO PUEDE ACCEDER A EUROCOPE. FALTA EL QR",
+      "id": "1769430309549",
+      "created_at": "2026-01-26T12:25:09.549Z"
+    }
+  ],
   "verifications": []
 }

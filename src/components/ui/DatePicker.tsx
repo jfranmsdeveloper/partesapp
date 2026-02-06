@@ -19,11 +19,13 @@ interface DatePickerProps {
 
 export const DatePicker = ({ value, onChange, label, className, required, min, max, disabled }: DatePickerProps) => {
     const [isOpen, setIsOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const calendarRef = useRef<HTMLElement>(null);
 
+    // Handle click outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (ref.current && !ref.current.contains(event.target as Node)) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         }
@@ -35,13 +37,26 @@ export const DatePicker = ({ value, onChange, label, className, required, min, m
         };
     }, [isOpen]);
 
-    const handleDateChange = (e: any) => {
-        onChange(e.target.value);
-        setIsOpen(false);
-    };
+    // Handle custom element event listener
+    useEffect(() => {
+        const calendarElement = calendarRef.current;
+        if (!calendarElement || !isOpen) return;
+
+        const handleChange = (e: any) => {
+            // Stop propagation to prevent bubbling issues if any
+            e.stopPropagation();
+            onChange(e.target.value);
+            setIsOpen(false);
+        };
+
+        calendarElement.addEventListener('change', handleChange);
+        return () => {
+            calendarElement.removeEventListener('change', handleChange);
+        };
+    }, [isOpen, onChange]);
 
     return (
-        <div className={clsx("relative", className, disabled && "opacity-60 pointer-events-none")} ref={ref}>
+        <div className={clsx("relative", className, disabled && "opacity-60 pointer-events-none")} ref={containerRef}>
             {label && (
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">
                     {label} {required && <span className="text-red-500">*</span>}
@@ -70,19 +85,19 @@ export const DatePicker = ({ value, onChange, label, className, required, min, m
                     <div className="p-4 rounded-xl glass-card border border-white/20 shadow-xl bg-white dark:bg-slate-900 ring-1 ring-black/5">
                         {/* @ts-ignore */}
                         <calendar-date
+                            ref={calendarRef}
                             value={value}
                             min={min}
                             max={max}
-                            onChange={handleDateChange}
                             locale="es-ES"
                             className="text-slate-700 dark:text-slate-200"
                         >
                             <div className="flex justify-between items-center mb-4">
-                                <button slot="previous" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                                <button slot="previous" type="button" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
                                 </button>
                                 <span slot="month" className="font-display font-semibold text-lg capitalize"></span>
-                                <button slot="next" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                                <button slot="next" type="button" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                                 </button>
                             </div>

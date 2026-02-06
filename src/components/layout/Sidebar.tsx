@@ -66,7 +66,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                 clsx(
                                     'flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group relative',
                                     {
-                                        'bg-blue-600/10 text-blue-700 dark:text-blue-300': isActive,
+                                        'bg-orange-600/10 text-orange-700 dark:text-orange-300': isActive,
                                         'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200': !isActive,
                                     }
                                 )
@@ -74,9 +74,9 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         >
                             {({ isActive }) => (
                                 <>
-                                    <item.icon className={clsx("h-5 w-5 transition-transform duration-200", { "text-blue-600 dark:text-blue-400": isActive, "group-hover:scale-110": !isActive })} />
+                                    <item.icon className={clsx("h-5 w-5 transition-transform duration-200", { "text-orange-600 dark:text-orange-400": isActive, "group-hover:scale-110": !isActive })} />
                                     <span>{item.label}</span>
-                                    {isActive && <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                    {isActive && <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-orange-500" />}
                                 </>
                             )}
                         </NavLink>

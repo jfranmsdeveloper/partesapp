@@ -70,7 +70,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                         email: session.user.email!,
                         name: session.user.user_metadata.full_name || '',
                         password: '', // Not needed/available
-                        role: 'user'
+                        role: session.user.user_metadata?.role || 'user'
                     }
                 });
                 // Load data when session exists
@@ -146,7 +146,23 @@ export const useAppStore = create<AppState>((set, get) => ({
         // Loading local state should be handled by components if needed.
 
         try {
-            // 1. Fetch Partes
+            // 1. Fetch Clients (Pre-fetch to map accordingly)
+            const { data: clientsData, error: clientsError } = await supabase
+                .from('clients')
+                .select('*')
+                .order('full_name', { ascending: true });
+
+            if (clientsError && clientsError.code !== 'PGRST116') console.error('Error fetching clients:', clientsError);
+
+            const mappedClients: Client[] = (clientsData || []).map((c: any) => ({
+                id: c.id,
+                name: c.full_name,
+                userId: '' // Not strictly used yet
+            }));
+
+            set({ clients: mappedClients });
+
+            // 2. Fetch Partes
             const { data: partesData, error: partesError } = await supabase
                 .from('partes')
                 .select('*')
@@ -154,19 +170,19 @@ export const useAppStore = create<AppState>((set, get) => ({
 
             if (partesError) throw partesError;
 
-            // 2. Fetch Actuaciones
+            // 3. Fetch Actuaciones
             const { data: actData, error: actError } = await supabase
                 .from('actuaciones')
                 .select('*');
 
             if (actError) console.error('Error fetching actuaciones:', actError);
 
-            // 3. Fetch Users (for avatars)
+            // 4. Fetch Users (for avatars and roles)
             const { data: usersData } = await supabase.from('users').select('*');
             if (usersData) {
                 set({ users: usersData });
 
-                // Sync currentUser with latest data from DB (to fix stale avatar in session)
+                // Sync currentUser with latest data from DB
                 const { currentUser } = get();
                 if (currentUser) {
                     const freshUser = usersData.find((u: any) => u.id === currentUser.id);
@@ -175,8 +191,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                             currentUser: state.currentUser ? {
                                 ...state.currentUser,
                                 avatar_url: freshUser.avatar_url,
-                                // Update other fields if needed, e.g. name from metadata
-                                name: freshUser.user_metadata?.full_name || state.currentUser.name
+                                name: freshUser.user_metadata?.full_name || state.currentUser.name,
+                                role: freshUser.role || state.currentUser.role // Sync role
                             } : null
                         }));
                     }
@@ -186,6 +202,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             // Map to internal types
             const mappedPartes: Parte[] = (partesData || []).map((p: any) => {
                 const pActs = (actData || []).filter((a: any) => a.parte_id === p.id);
+                const client = mappedClients.find(c => c.id === p.client_id);
+
                 return {
                     id: p.id,
                     title: p.description || 'Sin título',
@@ -194,6 +212,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                     createdAt: p.start_date || p.created_at,
                     createdBy: p.created_by || 'Sistema',
                     userId: p.user_id || '',
+                    clientId: p.client_id,
+                    clientName: client?.name,
                     pdfFile: p.pdf_file,
                     pdfFileSigned: p.pdf_file_signed,
                     actuaciones: pActs.map((a: any) => ({
@@ -229,7 +249,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             start_date: parteData.createdAt,
             user_id: (await supabase.auth.getUser()).data.user?.id,
             created_by: parteData.createdBy, // Save the manual name
-            pdf_file: parteData.pdfFile
+            pdf_file: parteData.pdfFile,
+            client_id: parteData.clientId
         };
 
         // Respect custom ID if provided
@@ -262,6 +283,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const updatePayload: any = {};
         if (data.title) updatePayload.description = data.title;
         if (data.status) updatePayload.status = data.status;
+        if (data.createdAt) updatePayload.start_date = data.createdAt;
         if (data.pdfFile) updatePayload.pdf_file = data.pdfFile; // Assuming col exists or need to create
 
         if (Object.keys(updatePayload).length > 0) {
@@ -271,6 +293,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
 
     deleteParte: async (id) => {
+        // Delete related actuaciones first to ensure definitive deletion
+        await supabase.from('actuaciones').delete().eq('parte_id', id);
+        // Then delete the parte
         await supabase.from('partes').delete().eq('id', id);
         await get().fetchData();
     },
@@ -295,6 +320,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (data.notes) payload.description = data.notes;
         if (data.duration) payload.duration = data.duration;
         if (data.type) payload.type = data.type;
+        if (data.timestamp) payload.date = data.timestamp;
+        if (data.user) payload.user = data.user;
 
         await supabase.from('actuaciones').update(payload).eq('id', actuacionId);
         await get().fetchData();
@@ -305,7 +332,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().fetchData();
     },
 
-    addClient: async () => { console.warn('Add Client placeholder'); },
+    addClient: async (client) => {
+        const { error } = await supabase
+            .from('clients')
+            .insert({
+                full_name: client.name
+            });
+
+        if (error) {
+            console.error('Error adding client:', error);
+        } else {
+            await get().fetchData();
+        }
+    },
     updateClient: async () => { console.warn('Update Client placeholder'); },
 
     getParte: (id: number) => get().partes.find(p => p.id === id),

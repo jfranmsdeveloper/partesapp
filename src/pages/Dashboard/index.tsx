@@ -57,7 +57,7 @@ export default function Dashboard() {
                 </div>
                 <Button
                     onClick={() => setIsReportModalOpen(true)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 border-0"
+                    className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/30 border-0"
                 >
                     <FileDown className="w-4 h-4" />
                     Generar Informe
@@ -70,7 +70,7 @@ export default function Dashboard() {
                     title="Total Partes"
                     value={metrics.totalPartes}
                     icon={FileText}
-                    color="blue"
+                    color="orange"
                     trend={{ value: 12, isPositive: true }}
                 />
                 <KPICard
@@ -89,7 +89,7 @@ export default function Dashboard() {
                     title="Tiempo Promedio"
                     value={`${metrics.avgTime} min`}
                     icon={Activity}
-                    color="orange"
+                    color="blue"
                 />
             </div>
 

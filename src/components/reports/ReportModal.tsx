@@ -1,14 +1,16 @@
 import { useState, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { generatePdfReport } from '../../utils/pdfGenerator';
+import { generateWordReport } from '../../utils/wordGenerator';
+import { generateExcelReport } from '../../utils/excelGenerator';
 import { StatusDistributionChart } from '../dashboard/StatusDistributionChart';
 import { ActivityTypeChart } from '../dashboard/ActivityTypeChart';
 import { TrendChart } from '../dashboard/TrendChart';
 import { Button } from '../ui/Button';
-import { X, Calendar as CalendarIcon, Download, Loader2 } from 'lucide-react';
+import { Input } from '../ui/Input';
+import { X, Calendar as CalendarIcon, Download, Loader2, FileSpreadsheet as ExcelIcon, FileText as WordIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import html2canvas from 'html2canvas';
 
 // Custom Web Component wrapper for Calendar
 // @ts-nocheck
@@ -21,10 +23,14 @@ interface ReportModalProps {
 }
 
 export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
-    const { partes, currentUser } = useAppStore();
+    const { partes, currentUser, users } = useAppStore();
     const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
     const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
     const [isGenerating, setIsGenerating] = useState(false);
+
+    // Bolsa de Horas State
+    const [bolsaNominas, setBolsaNominas] = useState('');
+    const [bolsaCovid, setBolsaCovid] = useState('');
 
     // Admin Scope State
     // @ts-ignore
@@ -55,7 +61,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
         avgTime: filteredPartes.length > 0 ? Math.round(filteredPartes.reduce((acc, p) => acc + p.totalTime, 0) / filteredPartes.length) : 0
     };
 
-    // Chart Data Preparation (Based on filtered data)
+    // Chart Data Preparation (Based on filtered data) - PREVIEW ONLY
     const statusData = [
         { name: 'ABIERTO', value: filteredPartes.filter(p => p.status === 'ABIERTO').length, color: '#f59e0b' },
         { name: 'EN TRÁMITE', value: filteredPartes.filter(p => p.status === 'EN TRÁMITE').length, color: '#3b82f6' },
@@ -82,47 +88,34 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
-    const handleGenerate = async () => {
+    const handleGenerate = async (format: 'pdf' | 'word' | 'excel') => {
         setIsGenerating(true);
         try {
-            // 1. Capture Charts
-            let chartImages = undefined;
-            if (chartsRef.current) {
-                // Wait for render/animations
-                await new Promise(resolve => setTimeout(resolve, 800));
+            // Visualize loader
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-                const statusEl = chartsRef.current.querySelector('#chart-status') as HTMLElement;
-                const activityEl = chartsRef.current.querySelector('#chart-activity') as HTMLElement;
-                const trendEl = chartsRef.current.querySelector('#chart-trend') as HTMLElement;
-
-                if (statusEl && activityEl && trendEl) {
-                    try {
-                        const statusCanvas = await html2canvas(statusEl, { scale: 2 });
-                        const activityCanvas = await html2canvas(activityEl, { scale: 2 });
-                        const trendCanvas = await html2canvas(trendEl, { scale: 2 });
-
-                        chartImages = {
-                            status: statusCanvas.toDataURL('image/png'),
-                            activity: activityCanvas.toDataURL('image/png'),
-                            trend: trendCanvas.toDataURL('image/png')
-                        };
-                    } catch (err) {
-                        console.warn('Error capturing charts:', err);
-                    }
-                }
-            }
-
-            // 2. Prepare Data
+            // Prepare Data
             const reportData = {
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
-                metrics: metrics,
+                // metrics: metrics, // Removed from interface
                 partes: filteredPartes,
-                chartImages
+                users: users || [], // Pass users from store
+                bolsaHoras: {
+                    nominas: bolsaNominas,
+                    covid: bolsaCovid
+                }
             };
 
-            // 3. Generate
-            await generatePdfReport(reportData);
+            // Generate
+            if (format === 'word') {
+                await generateWordReport(reportData);
+            } else if (format === 'excel') {
+                await generateExcelReport(reportData);
+            } else {
+                await generatePdfReport(reportData);
+            }
+
             onClose();
         } catch (error) {
             console.error('Generación fallida:', error);
@@ -142,12 +135,12 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
                 {/* Header - Minimal & Clean */}
                 <div className="flex justify-between items-center px-8 py-5 border-b border-neutral-200/60 dark:border-neutral-700/60 bg-white/50 dark:bg-black/20">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-600 rounded-md text-white shadow-sm">
+                        <div className="p-2 bg-orange-600 rounded-md text-white shadow-sm">
                             <Download className="w-5 h-5" />
                         </div>
                         <div>
                             <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 mt-[-2px]">Generar Informe</h2>
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Exportar datos a PDF</p>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Exportar datos a PDF, Word o Excel</p>
                         </div>
                     </div>
                     <button
@@ -166,24 +159,57 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
 
                         {/* Admin Scope Selector - InfoBar Style */}
                         {isAdmin && (
-                            <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-md border-l-4 border-blue-600 flex items-center gap-4">
-                                <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 uppercase tracking-wide text-[11px]">Alcance</span>
-                                <div className="flex gap-6">
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                        <div className={`w-4 h-4 rounded-full border border-neutral-400 flex items-center justify-center bg-white ${reportScope === 'me' ? 'border-blue-600' : ''}`}>
-                                            {reportScope === 'me' && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
+                            <div className="bg-orange-50 dark:bg-orange-900/20 px-4 py-3 rounded-md border-l-4 border-orange-600 flex flex-col gap-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 uppercase tracking-wide text-[11px]">Alcance</span>
+                                        <div className="flex gap-6">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <div className={`w-4 h-4 rounded-full border border-neutral-400 flex items-center justify-center bg-white ${reportScope === 'me' ? 'border-orange-600' : ''}`}>
+                                                    {reportScope === 'me' && <div className="w-2.5 h-2.5 rounded-full bg-orange-600" />}
+                                                </div>
+                                                <input type="radio" name="scope" checked={reportScope === 'me'} onChange={() => setReportScope('me')} className="hidden" />
+                                                <span className={`text-sm ${reportScope === 'me' ? 'text-neutral-900 font-medium' : 'text-neutral-600'} transition-colors`}>Solo Mis Partes</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <div className={`w-4 h-4 rounded-full border border-neutral-400 flex items-center justify-center bg-white ${reportScope === 'all' ? 'border-orange-600' : ''}`}>
+                                                    {reportScope === 'all' && <div className="w-2.5 h-2.5 rounded-full bg-orange-600" />}
+                                                </div>
+                                                <input type="radio" name="scope" checked={reportScope === 'all'} onChange={() => setReportScope('all')} className="hidden" />
+                                                <span className={`text-sm ${reportScope === 'all' ? 'text-neutral-900 font-medium' : 'text-neutral-600'} transition-colors`}>Global (Todos)</span>
+                                            </label>
                                         </div>
-                                        <input type="radio" name="scope" checked={reportScope === 'me'} onChange={() => setReportScope('me')} className="hidden" />
-                                        <span className={`text-sm ${reportScope === 'me' ? 'text-neutral-900 font-medium' : 'text-neutral-600'} transition-colors`}>Solo Mis Partes</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer group">
-                                        <div className={`w-4 h-4 rounded-full border border-neutral-400 flex items-center justify-center bg-white ${reportScope === 'all' ? 'border-blue-600' : ''}`}>
-                                            {reportScope === 'all' && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
-                                        </div>
-                                        <input type="radio" name="scope" checked={reportScope === 'all'} onChange={() => setReportScope('all')} className="hidden" />
-                                        <span className={`text-sm ${reportScope === 'all' ? 'text-neutral-900 font-medium' : 'text-neutral-600'} transition-colors`}>Global (Todos)</span>
-                                    </label>
+                                    </div>
                                 </div>
+
+                                {/* Bolsa de Horas Inputs (Only for Admin & Global) */}
+                                {reportScope === 'all' && (
+                                    <div className="pt-2 border-t border-orange-200 dark:border-orange-800/30">
+                                        <h4 className="text-xs font-semibold text-orange-800 dark:text-orange-200 uppercase tracking-wide mb-3">
+                                            Bolsa de Horas (Opcional - Matriz Global)
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs text-neutral-500 mb-1">Actualización Nóminas</label>
+                                                <Input
+                                                    value={bolsaNominas}
+                                                    onChange={(e) => setBolsaNominas(e.target.value)}
+                                                    placeholder="Ej: 10 hrs"
+                                                    className="bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-neutral-500 mb-1">COVID</label>
+                                                <Input
+                                                    value={bolsaCovid}
+                                                    onChange={(e) => setBolsaCovid(e.target.value)}
+                                                    placeholder="Ej: 5 hrs"
+                                                    className="bg-white"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -208,7 +234,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
                                     <button
                                         key={idx}
                                         onClick={btn.action}
-                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-700 hover:shadow-sm transition-all focus:bg-white focus:text-blue-600"
+                                        className="px-3 py-1.5 rounded-md text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-700 hover:shadow-sm transition-all focus:bg-white focus:text-orange-600"
                                     >
                                         {btn.label}
                                     </button>
@@ -257,8 +283,8 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
 
                     {/* Preview Section */}
                     <div>
-                        <h3 className="text-lg font-semibold mb-6 text-neutral-800 dark:text-white border-l-4 border-blue-600 pl-3">
-                            Vista Previa
+                        <h3 className="text-lg font-semibold mb-6 text-neutral-800 dark:text-white border-l-4 border-orange-600 pl-3">
+                            Vista Previa de Datos
                         </h3>
                         <div
                             ref={chartsRef}
@@ -295,19 +321,33 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
                     <Button variant="outline" onClick={onClose} disabled={isGenerating} className="border-slate-200 dark:border-slate-700 dark:text-slate-300">
                         Cancelar
                     </Button>
-                    <Button onClick={handleGenerate} disabled={isGenerating} className="min-w-[180px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border-0 shadow-lg shadow-blue-500/30">
-                        {isGenerating ? (
-                            <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Generando...
-                            </>
-                        ) : (
-                            <>
-                                <Download className="w-4 h-4 mr-2" />
-                                Descargar PDF
-                            </>
-                        )}
-                    </Button>
+
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={() => handleGenerate('pdf')}
+                            disabled={isGenerating}
+                            className="min-w-[100px] bg-red-600 hover:bg-red-700 text-white border-0 shadow-lg shadow-red-500/20"
+                        >
+                            {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                            PDF
+                        </Button>
+                        <Button
+                            onClick={() => handleGenerate('word')}
+                            disabled={isGenerating}
+                            className="min-w-[100px] bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20"
+                        >
+                            {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <WordIcon className="w-4 h-4 mr-2" />}
+                            Word
+                        </Button>
+                        <Button
+                            onClick={() => handleGenerate('excel')}
+                            disabled={isGenerating}
+                            className="min-w-[100px] bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-500/20"
+                        >
+                            {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ExcelIcon className="w-4 h-4 mr-2" />}
+                            Excel
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -315,8 +355,8 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
 };
 
 const MetricPreview = ({ label, value }: { label: string, value: number }) => (
-    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl text-center border border-blue-100 dark:border-blue-800">
+    <div className="bg-orange-50/50 dark:bg-orange-900/10 p-4 rounded-xl text-center border border-orange-100 dark:border-orange-800">
         <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{label}</p>
-        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{value}</p>
+        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{value}</p>
     </div>
 );

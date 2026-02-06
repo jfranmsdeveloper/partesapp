@@ -44,6 +44,8 @@ export interface Parte {
     // Computed fields (for display optimization, though can be derived)
     totalTime: number;
     totalActuaciones: number;
+    clientId?: string;
+    clientName?: string;
 }
 
 export interface Client {

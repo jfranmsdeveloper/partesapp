@@ -135,6 +135,14 @@
   .text-glow {
     text-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
   }
+
+  .card-hover-glow:hover {
+    box-shadow: 0 0 30px -5px rgba(249, 115, 22, 0.3),
+      0 10px 20px -5px rgba(0, 0, 0, 0.1);
+    border-color: rgba(253, 186, 116, 0.6);
+    background-image: linear-gradient(120deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
+    backdrop-filter: blur(16px);
+  }
 }
 
 body {

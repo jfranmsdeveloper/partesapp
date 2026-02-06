@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useAppStore } from '../../store/useAppStore';
 import type { ActuacionType } from '../../types';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
-import { X, Check, Mic, MicOff, Save } from 'lucide-react';
-
-import { ALLOWED_USERS } from '../../utils/constants';
+import { X, Check, Mic, MicOff } from 'lucide-react';
+import { toLocalISOString } from '../../utils/dateUtils';
 
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
@@ -18,17 +18,44 @@ interface AddActuacionFormProps {
     onAdd: (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => void;
     onCancel: () => void;
     initialData?: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string };
+    defaultTimestamp?: string;
 }
 
-const DRAFT_KEY = 'actuacion_draft_v1';
+export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp }: AddActuacionFormProps) => {
+    const { users, currentUser } = useAppStore();
 
-export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionFormProps) => {
     const [type, setType] = useState<ActuacionType | null>(initialData?.type || null);
     const [duration, setDuration] = useState<string>(initialData?.duration.toString() || '');
     const [notes, setNotes] = useState(initialData?.notes || '');
-    const [user, setUser] = useState<string>(initialData?.user || ALLOWED_USERS[0]);
-    const [customTimestamp, setCustomTimestamp] = useState(new Date().toISOString().slice(0, 16));
-    const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+    // Default to current user as requested
+    const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
+
+    // Initialize timestamp. This acts as the visual "Result" time.
+    const [customTimestamp, setCustomTimestamp] = useState(() => {
+        if (initialData?.timestamp) return toLocalISOString(new Date(initialData.timestamp));
+        if (defaultTimestamp) return toLocalISOString(new Date(defaultTimestamp));
+        return toLocalISOString(new Date());
+    });
+
+    // baseDate represents the "Start Time" effectively. 
+    // Visual Time = BaseTime + Duration.
+    // When form loads, we assume the provided defaultTimestamp is the "Start" (or calculated end from previous).
+    // Actually, if defaultTimestamp is "End of previous", allowing user to add duration to it implies defaultTimestamp in this context acts as START of new one.
+    // So BaseTime = customTimestamp (initially).
+    const [baseDate, setBaseDate] = useState(() => new Date(customTimestamp));
+
+    // When duration changes, update the CustomTimestamp (Visual Time)
+    useEffect(() => {
+        const mins = parseInt(duration);
+        if (!isNaN(mins) && mins > 0) {
+            const newTime = new Date(baseDate.getTime() + mins * 60000);
+            setCustomTimestamp(toLocalISOString(newTime));
+        } else {
+            // If duration is clear/0, revert to base? Or just stay? 
+            // Staying is safer to avoid jumps.
+            setCustomTimestamp(toLocalISOString(baseDate));
+        }
+    }, [duration]); // We specifically DON'T list baseDate here to avoid loops if we were updating it, but here it's fine.
 
     // Voice Dictation
     const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport } = useSpeechRecognition();
@@ -38,57 +65,16 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionF
         if (transcript) {
             // Simple accumulation: add space if needed
             setNotes(prev => {
+                // Clean up transcript and append
                 const cleanTranscript = transcript.trim();
                 if (!cleanTranscript) return prev;
-                return prev + (prev.endsWith(' ') || prev.endsWith('</p>') ? '' : ' ') + cleanTranscript;
+                // Avoid empty p tags at start if it was empty
+                if (prev === '<p><br></p>' || prev === '') return cleanTranscript;
+                return prev + ' ' + cleanTranscript;
             });
             resetTranscript();
         }
     }, [transcript, resetTranscript]);
-
-
-    // Auto-save Logic
-    useEffect(() => {
-        // Don't save if we are editing existing data (initialData present) or if it's completely empty
-        if (initialData) return;
-
-        const timeoutId = setTimeout(() => {
-            if (type || duration || notes || user !== ALLOWED_USERS[0]) {
-                const draft = { type, duration, notes, user, customTimestamp };
-                localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-            }
-        }, 1000); // Debounce 1s
-
-        return () => clearTimeout(timeoutId);
-    }, [type, duration, notes, user, customTimestamp, initialData]);
-
-    // Load Draft on Mount
-    useEffect(() => {
-        if (!initialData) {
-            const savedDraft = localStorage.getItem(DRAFT_KEY);
-            if (savedDraft) {
-                try {
-                    const parsed = JSON.parse(savedDraft);
-                    setType(parsed.type || null);
-                    setDuration(parsed.duration || '');
-                    setNotes(parsed.notes || '');
-                    setUser(parsed.user || ALLOWED_USERS[0]);
-                    setCustomTimestamp(parsed.customTimestamp || new Date().toISOString().slice(0, 16));
-                    setIsDraftLoaded(true);
-
-                    // Clear the message after 3 seconds
-                    setTimeout(() => setIsDraftLoaded(false), 3000);
-                } catch (e) {
-                    console.error("Failed to load draft", e);
-                }
-            }
-        }
-    }, [initialData]);
-
-    // Clear draft on successful submit or cancel
-    const clearDraft = () => {
-        localStorage.removeItem(DRAFT_KEY);
-    };
 
     // Toolbar settings
     const modules = {
@@ -103,7 +89,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionF
     const formats = [
         'header',
         'bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block',
-        'list', 'bullet'
+        'list'
     ];
 
     // Sync state if initialData changes while component is mounted
@@ -114,7 +100,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionF
             setNotes(initialData.notes);
             setUser(initialData.user);
             if (initialData.timestamp) {
-                setCustomTimestamp(new Date(initialData.timestamp).toISOString().slice(0, 16));
+                setCustomTimestamp(toLocalISOString(new Date(initialData.timestamp)));
             }
         }
     }, [initialData]);
@@ -130,24 +116,14 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionF
             user,
             timestamp: new Date(customTimestamp).toISOString()
         });
-        clearDraft();
     };
 
     const handleCancel = () => {
-        clearDraft();
         onCancel();
     }
 
     return (
         <div className="rounded-2xl border border-blue-100 bg-blue-50/30 p-6 shadow-sm mb-6 relative overflow-hidden transition-all duration-300">
-            {/* Draft Restore Indicator */}
-            {isDraftLoaded && (
-                <div className="absolute top-0 inset-x-0 bg-emerald-100 text-emerald-700 text-xs py-1 text-center font-medium animate-in slide-in-from-top duration-300">
-                    <Save className="w-3 h-3 inline-block mr-1" />
-                    Borrador recuperado automáticamente
-                </div>
-            )}
-
             <div className="flex justify-between items-center mb-6 mt-2">
                 <h3 className="text-lg font-semibold text-slate-800">
                     {initialData ? 'Editar Actuación' : 'Registrar Nueva Actuación'}
@@ -209,7 +185,13 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionF
                                 value={customTimestamp.split('T')[0]}
                                 onChange={(date) => {
                                     const time = customTimestamp.split('T')[1] || '00:00';
-                                    setCustomTimestamp(`${date}T${time}`);
+                                    const newTs = `${date}T${time}`;
+                                    setCustomTimestamp(newTs);
+
+                                    // Update base date (reverse calculate start time: newTs - duration)
+                                    const mins = parseInt(duration) || 0;
+                                    const newBase = new Date(new Date(newTs).getTime() - mins * 60000);
+                                    setBaseDate(newBase);
                                 }}
                                 required
                                 className="bg-white dark:bg-slate-800"
@@ -217,15 +199,39 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionF
                         </div>
                         <div className="w-32">
                             <Input
-                                type="time"
+                                type="text"
                                 label="Hora"
-                                value={customTimestamp.split('T')[1] || '00:00'}
+                                value={customTimestamp.split('T')[1]?.slice(0, 5) || '00:00'}
                                 onChange={(e) => {
                                     const date = customTimestamp.split('T')[0];
-                                    setCustomTimestamp(`${date}T${e.target.value}`);
+                                    const newTs = `${date}T${e.target.value}`;
+                                    setCustomTimestamp(newTs);
+                                }}
+                                onBlur={(e) => {
+                                    let val = e.target.value.replace(/[^0-9]/g, '');
+                                    if (val.length === 3) val = '0' + val;
+
+                                    if (val.length === 4) {
+                                        const hours = parseInt(val.substring(0, 2));
+                                        const mins = parseInt(val.substring(2, 4));
+
+                                        if (hours >= 0 && hours < 24 && mins >= 0 && mins < 60) {
+                                            const formattedTime = `${val.substring(0, 2)}:${val.substring(2, 4)}`;
+                                            const date = customTimestamp.split('T')[0];
+                                            const newTs = `${date}T${formattedTime}`;
+
+                                            setCustomTimestamp(newTs);
+
+                                            // Update base date
+                                            const currentDur = parseInt(duration) || 0;
+                                            const newBase = new Date(new Date(newTs).getTime() - currentDur * 60000);
+                                            setBaseDate(newBase);
+                                        }
+                                    }
                                 }}
                                 required
                                 className="bg-white dark:bg-slate-800"
+                                placeholder="HH:MM"
                             />
                         </div>
                     </div>
@@ -238,9 +244,15 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData }: AddActuacionF
                                 onChange={(e) => setUser(e.target.value)}
                                 className="block w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                             >
-                                {ALLOWED_USERS.map((u) => (
-                                    <option key={u} value={u}>{u}</option>
-                                ))}
+                                <option value="" disabled>Selecciona un usuario</option>
+                                {users.length > 0 ? (
+                                    users.map((u) => {
+                                        const name = u.user_metadata?.full_name || u.name || u.email;
+                                        return <option key={u.id} value={name}>{name}</option>
+                                    })
+                                ) : (
+                                    <option value="" disabled>Cargando usuarios...</option>
+                                )}
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
                                 <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
