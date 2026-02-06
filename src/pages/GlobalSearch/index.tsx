@@ -21,7 +21,12 @@ export default function GlobalSearch() {
         if (!searchTerm.trim()) return [];
         const term = searchTerm.toLowerCase();
 
-        return partes.map(parte => {
+        // Filter by user first if one is selected
+        const sourcePartes = selectedWorkerId
+            ? partes.filter(p => p.userId === selectedWorkerId)
+            : partes;
+
+        return sourcePartes.map(parte => {
             const titleMatch = parte.title.toLowerCase().includes(term);
             const idMatch = parte.id.toString().includes(term);
             const creatorMatch = parte.createdBy.toLowerCase().includes(term);
@@ -36,7 +41,7 @@ export default function GlobalSearch() {
             }
             return null;
         }).filter(item => item !== null) as { parte: any, matchingActuaciones: any[] }[];
-    }, [partes, searchTerm]);
+    }, [partes, searchTerm, selectedWorkerId]);
 
     // --- Worker Aggregation ---
     const workers = useMemo(() => {
@@ -80,7 +85,7 @@ export default function GlobalSearch() {
                     <p className="text-slate-500">
                         {activeView === 'grid' && "Selecciona un trabajador para ver sus partes."}
                         {activeView === 'detail' && "Visualizando partes del trabajador."}
-                        {activeView === 'search' && "Resultados de búsqueda global."}
+                        {activeView === 'search' && (selectedWorkerId ? "Resultados de búsqueda filtrados por usuario." : "Resultados de búsqueda global.")}
                     </p>
                 </div>
 
@@ -93,6 +98,50 @@ export default function GlobalSearch() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 dark:text-slate-100 shadow-sm text-lg placeholder:text-slate-400"
                     />
+                </div>
+
+                {/* User Filter Bar */}
+                <div className="flex overflow-x-auto pb-2 gap-3 no-scrollbar scroll-smooth snap-x">
+                    <button
+                        onClick={() => { setSelectedWorkerId(null); setSearchTerm(''); }}
+                        className={clsx(
+                            "flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all whitespace-nowrap snap-start",
+                            !selectedWorkerId && !searchTerm
+                                ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 scale-105"
+                                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                        )}
+                    >
+                        <div className={clsx("w-2 h-2 rounded-full", !selectedWorkerId && !searchTerm ? "bg-white" : "bg-slate-300")} />
+                        <span className="font-medium">Todos</span>
+                    </button>
+
+                    {workers.map(worker => (
+                        <button
+                            key={worker.email}
+                            onClick={() => { setSelectedWorkerId(worker.email); setSearchTerm(''); }}
+                            className={clsx(
+                                "flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-full border transition-all whitespace-nowrap snap-start group",
+                                selectedWorkerId === worker.email
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 scale-105"
+                                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                            )}
+                        >
+                            <div className={clsx(
+                                "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shadow-sm transition-transform",
+                                selectedWorkerId === worker.email
+                                    ? "bg-white text-blue-600"
+                                    : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:scale-110"
+                            )}>
+                                {worker.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex flex-col items-start leading-tight">
+                                <span className="font-bold text-sm">{worker.name}</span>
+                                <span className={clsx("text-[10px]", selectedWorkerId === worker.email ? "text-blue-100" : "text-slate-400")}>
+                                    {worker.totalPartes} partes
+                                </span>
+                            </div>
+                        </button>
+                    ))}
                 </div>
             </div>
 
