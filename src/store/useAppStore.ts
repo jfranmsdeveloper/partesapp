@@ -45,6 +45,7 @@ interface AppState {
     updateUserRole: (userId: string, role: string) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
     adminCreateUser: (user: User) => Promise<boolean>;
+    fixLegacyAuthorship: (correctName: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -271,12 +272,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
 
     updateParteStatus: async (id, status) => {
+        console.log('Updating Parte Status:', id, status);
+        const closedAt = status === 'CERRADO' ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+
         const { error } = await supabase
             .from('partes')
-            .update({ status, closed_at: status === 'CERRADO' ? new Date().toISOString() : null })
+            .update({ status, closed_at: closedAt })
             .eq('id', id);
 
-        if (!error) await get().fetchData();
+        if (error) {
+            console.error('Error updating status:', error);
+            alert(`Error al actualizar estado: ${error.message}`);
+        } else {
+            await get().fetchData();
+        }
     },
 
     updateParte: async (id, data) => {
@@ -284,10 +293,26 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (data.title) updatePayload.description = data.title;
         if (data.status) updatePayload.status = data.status;
         if (data.createdAt) updatePayload.start_date = data.createdAt;
-        if (data.pdfFile) updatePayload.pdf_file = data.pdfFile; // Assuming col exists or need to create
+        if (data.createdBy) updatePayload.created_by = data.createdBy;
+        if (data.pdfFile) updatePayload.pdf_file = data.pdfFile;
+        if (data.clientId) updatePayload.client_id = data.clientId;
 
         if (Object.keys(updatePayload).length > 0) {
             await supabase.from('partes').update(updatePayload).eq('id', id);
+            await get().fetchData();
+        }
+    },
+
+    fixLegacyAuthorship: async (correctName) => {
+        const { error } = await supabase
+            .from('partes')
+            .update({ created_by: correctName })
+            .eq('created_by', 'Usuario Actual');
+
+        if (error) {
+            console.error('Error fixing authorship:', error);
+            alert('Error al corregir autoría: ' + error.message);
+        } else {
             await get().fetchData();
         }
     },

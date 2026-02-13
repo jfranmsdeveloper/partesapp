@@ -4,6 +4,7 @@ import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import { Trash2, Clock, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import DOMPurify from 'dompurify';
 
 interface ActuacionesListProps {
     actuaciones: Actuacion[];
@@ -46,7 +47,7 @@ export const ActuacionesList = ({ actuaciones, onDelete, onEdit, readOnly = fals
                             {actuacion.notes && (
                                 <div
                                     className="text-sm text-slate-600 dark:text-slate-300 mt-1 prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden"
-                                    dangerouslySetInnerHTML={{ __html: actuacion.notes }}
+                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(actuacion.notes) }}
                                 />
                             )}
 

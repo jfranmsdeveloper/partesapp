@@ -34,16 +34,13 @@ const MAIN_INDICATORS = [
     { label: "- Número total de correos remitidos", key: 'act_correo_enviado' },
 ];
 
-const OTHER_INDICATORS: ActuacionType[] = [
-    'Actualización', 'Cargas/Proceso', 'Desplazamiento', 'Formación', 'Incidencias',
-    'Informe Corporativo', 'Investigación', 'Modificaciones', 'Otros', 'Tratamiento de Fichero',
-];
+import { ACTUACION_CONFIG } from './actuacionConfig';
 
-const MATRIX_ROWS: ActuacionType[] = [
-    'Actualización', 'Cargas/Proceso', 'Correo Enviado', 'Correo Recibido', 'Desplazamiento',
-    'Formación', 'Incidencias', 'Informe Corporativo', 'Investigación', 'Llamada Realizada',
-    'Llamada Recibida', 'Modificaciones', 'Otros', 'Traslado', 'Tratamiento de Fichero'
-];
+const OTHER_INDICATORS = Object.keys(ACTUACION_CONFIG).filter(type =>
+    !['Llamada Realizada', 'Llamada Recibida', 'Correo Enviado', 'Correo Recibido', 'Traslado'].includes(type)
+) as ActuacionType[];
+
+const MATRIX_ROWS = Object.keys(ACTUACION_CONFIG).sort() as ActuacionType[];
 
 export const generateExcelReport = async (data: ReportData) => {
     const workbook = utils.book_new();
@@ -64,11 +61,12 @@ export const generateExcelReport = async (data: ReportData) => {
         const trasladosCount = countType('Traslado');
         const cerrados = partes.filter(p => p.status === 'CERRADO').length;
         const resueltasDirectas = Math.max(0, cerrados - trasladosCount);
-        const uniqueClients = new Set(partes.map(p => p.clientId).filter(Boolean)).size;
-        const finalUsers = uniqueClients > 0 ? uniqueClients : partes.length;
+        // Count all partes with clientId (allowing duplicates)
+        // Si un cliente tiene 5 partes, cuenta como 5 usuarios atendidos
+        const totalUsersAttended = partes.filter(p => p.clientId).length;
 
         return {
-            users: finalUsers,
+            users: totalUsersAttended,
             abiertos: partes.filter(p => p.status === 'ABIERTO').length,
             cerrados: cerrados,
             resueltas_directas: resueltasDirectas,
@@ -127,7 +125,7 @@ export const generateExcelReport = async (data: ReportData) => {
         const userName = uData?.user_metadata?.full_name || uData?.name || uData?.email || "Usuario";
         const metrics: any = calculateMetrics(uPartes);
 
-        const wsData = [
+        const wsData: (string | number)[][] = [
             ["INDICADORES APLICACIONES"],
             [format(data.startDate, 'MMMM yyyy', { locale: es }).toUpperCase()],
             ["Usuario:", userName],

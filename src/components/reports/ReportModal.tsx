@@ -8,7 +8,7 @@ import { ActivityTypeChart } from '../dashboard/ActivityTypeChart';
 import { TrendChart } from '../dashboard/TrendChart';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { X, Calendar as CalendarIcon, Download, Loader2, FileSpreadsheet as ExcelIcon, FileText as WordIcon } from 'lucide-react';
+import { X, Download, Loader2, FileSpreadsheet as ExcelIcon, FileText as WordIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -48,11 +48,68 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
     // Then by Date
     const filteredPartes = scopePartes.filter(p => {
         const pDate = new Date(p.createdAt);
-        return isWithinInterval(pDate, {
-            start: new Date(startDate),
-            end: new Date(endDate)
-        });
+        // Correctly include the entire day for start and end
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        return isWithinInterval(pDate, { start, end });
     });
+
+    // 🔍 DEBUG LOGS - Temporal para diagnóstico
+    console.log('=== DEBUG INFORME ===');
+    console.log('📅 Rango de fechas:', { startDate, endDate });
+    console.log('👤 Alcance:', reportScope);
+    console.log('👤 Usuario actual:', currentUser?.email || currentUser?.id);
+    console.log('📊 Total partes en store:', partes.length);
+    console.log('🔍 Partes después de filtro scope:', scopePartes.length);
+    console.log('📆 Partes después de filtro fecha:', filteredPartes.length);
+
+    // Mostrar partes excluidos por fecha
+    const excludedByDate = scopePartes.filter(p => {
+        const pDate = new Date(p.createdAt);
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        return !isWithinInterval(pDate, { start, end });
+    });
+
+    if (excludedByDate.length > 0) {
+        console.log('⚠️ Partes excluidos por fecha:', excludedByDate.length);
+        console.table(excludedByDate.map(p => ({
+            id: p.id,
+            fecha: p.createdAt,
+            estado: p.status,
+            cliente: p.clientName || '(sin cliente)'
+        })));
+    }
+
+    console.log('📈 Distribución de estados:', {
+        abiertos: filteredPartes.filter(p => p.status === 'ABIERTO').length,
+        enTramite: filteredPartes.filter(p => p.status === 'EN TRÁMITE').length,
+        cerrados: filteredPartes.filter(p => p.status === 'CERRADO').length
+    });
+
+    const partesConCliente = filteredPartes.filter(p => p.clientId).length;
+    const partesSinCliente = filteredPartes.filter(p => !p.clientId).length;
+
+    console.log('👥 Total usuarios atendidos (con repeticiones):', partesConCliente);
+    console.log('📋 Partes con clientId:', partesConCliente);
+    console.log('📋 Partes sin clientId:', partesSinCliente);
+
+    // Mostrar partes sin cliente
+    if (partesSinCliente > 0) {
+        const sinCliente = filteredPartes.filter(p => !p.clientId);
+        console.log('⚠️ Partes SIN CLIENTE asignado:');
+        console.table(sinCliente.map(p => ({
+            id: p.id,
+            titulo: p.title,
+            estado: p.status,
+            fecha: p.createdAt
+        })));
+    }
 
     const metrics = {
         totalPartes: filteredPartes.length,
@@ -65,7 +122,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
     const statusData = [
         { name: 'ABIERTO', value: filteredPartes.filter(p => p.status === 'ABIERTO').length, color: '#f59e0b' },
         { name: 'EN TRÁMITE', value: filteredPartes.filter(p => p.status === 'EN TRÁMITE').length, color: '#3b82f6' },
-        { name: 'CERRADO', value: filteredPartes.filter(p => p.status === 'CERRADO').length, color: '#ef4444' },
+        { name: 'CERRADO', value: filteredPartes.filter(p => p.status === 'CERRADO').length, color: '#10b981' },
     ];
 
     // Quick Activity Data

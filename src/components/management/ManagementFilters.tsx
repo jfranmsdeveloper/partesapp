@@ -19,8 +19,8 @@ interface ManagementFiltersProps {
     filters: FilterState;
     onFilterChange: (key: keyof FilterState, value: string) => void;
     onClearFilters: () => void;
-    view: 'list' | 'kanban';
-    onViewChange: (val: 'list' | 'kanban') => void;
+    view: 'list' | 'kanban' | 'calendar';
+    onViewChange: (val: 'list' | 'kanban' | 'calendar') => void;
     onAddClient: () => void;
 }
 
@@ -86,6 +86,15 @@ export const ManagementFilters = ({
                                 }`}
                         >
                             Kanban
+                        </button>
+                        <button
+                            onClick={() => onViewChange('calendar')}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'calendar'
+                                ? 'bg-white dark:bg-slate-700 text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900'
+                                }`}
+                        >
+                            Calendario
                         </button>
                     </div>
                 </div>

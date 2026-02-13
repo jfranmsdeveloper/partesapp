@@ -42,16 +42,13 @@ const MAIN_INDICATORS = [
     { label: "- Número total de correos remitidos", key: 'act_correo_enviado' },
 ];
 
-const OTHER_INDICATORS: ActuacionType[] = [
-    'Actualización', 'Cargas/Proceso', 'Desplazamiento', 'Formación', 'Incidencias',
-    'Informe Corporativo', 'Investigación', 'Modificaciones', 'Otros', 'Tratamiento de Fichero',
-];
+import { ACTUACION_CONFIG } from './actuacionConfig';
 
-const MATRIX_ROWS: ActuacionType[] = [
-    'Actualización', 'Cargas/Proceso', 'Correo Enviado', 'Correo Recibido', 'Desplazamiento',
-    'Formación', 'Incidencias', 'Informe Corporativo', 'Investigación', 'Llamada Realizada',
-    'Llamada Recibida', 'Modificaciones', 'Otros', 'Traslado', 'Tratamiento de Fichero'
-];
+const OTHER_INDICATORS = Object.keys(ACTUACION_CONFIG).filter(type =>
+    !['Llamada Realizada', 'Llamada Recibida', 'Correo Enviado', 'Correo Recibido', 'Traslado'].includes(type)
+) as ActuacionType[];
+
+const MATRIX_ROWS = Object.keys(ACTUACION_CONFIG).sort() as ActuacionType[];
 
 export const generatePdfReport = async (data: ReportData) => {
     const doc = new jsPDF();
@@ -59,7 +56,7 @@ export const generatePdfReport = async (data: ReportData) => {
     const pageWidth = doc.internal.pageSize.width;
 
     // --- HELPER: LOGO & HEADER ---
-    const addPageHeader = (title: string, subtitle?: string) => {
+    const addPageHeader = (_title: string, subtitle?: string) => {
         try {
             const imgProps = doc.getImageProperties(logoUrl);
             const ratio = imgProps.width / imgProps.height;
@@ -93,11 +90,12 @@ export const generatePdfReport = async (data: ReportData) => {
         const cerrados = partes.filter(p => p.status === 'CERRADO').length;
         const resueltasDirectas = Math.max(0, cerrados - trasladosCount);
 
-        const uniqueClients = new Set(partes.map(p => p.clientId).filter(Boolean)).size;
-        const finalUsers = uniqueClients > 0 ? uniqueClients : partes.length;
+        // Count all partes with clientId (allowing duplicates)
+        // Si un cliente tiene 5 partes, cuenta como 5 usuarios atendidos
+        const totalUsersAttended = partes.filter(p => p.clientId).length;
 
         return {
-            users: finalUsers,
+            users: totalUsersAttended,
             abiertos: partes.filter(p => p.status === 'ABIERTO').length,
             cerrados: cerrados,
             resueltas_directas: resueltasDirectas,
@@ -172,11 +170,6 @@ export const generatePdfReport = async (data: ReportData) => {
         if (data.bolsaHoras && (data.bolsaHoras.nominas || data.bolsaHoras.covid)) {
             const finalY = (doc as any).lastAutoTable.finalY + 10;
             const bolsaRows = [];
-            // Rows for bolsa de hora
-            // The image usually shows:
-            // Header (Orange): Bolsa de hora | (Empty) | (Empty)
-            // Row: - Actualización Nóminas | (Empty) | Value (in last user column essentially, or separate?)
-            // We'll mimic the request: "aparece tal y como en la imagen". Assuming a simple table.
 
             if (data.bolsaHoras.nominas) bolsaRows.push(['- Actualización Nóminas', data.bolsaHoras.nominas]);
             if (data.bolsaHoras.covid) bolsaRows.push(['- COVID', data.bolsaHoras.covid]);
@@ -211,7 +204,7 @@ export const generatePdfReport = async (data: ReportData) => {
     }
 
     // --- 2. INDIVIDUAL SUMMARY PAGES ---
-    userIds.forEach((userId, idx) => {
+    userIds.forEach((userId, _idx) => {
         doc.addPage();
 
         const uPartes = partesByUser[userId];

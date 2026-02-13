@@ -11,6 +11,8 @@ export interface StateStorage {
 // In a real app this should come from ENV, but for client-side-only app 
 // we at least obfuscate it from plain localStorage readers.
 // V5: We admit this is a weak secret management (hardcoded), but inevitable for purely client-side apps without backend.
+// SECURITY WARNING: This key is exposed in the client bundle. Do not use for highly sensitive data.
+// TODO: Move to environment variable VITE_STORAGE_KEY and consider backend encryption.
 const SECRET_KEY = import.meta.env.VITE_STORAGE_KEY || 'partes-app-secure-key-v1';
 
 export const secureStorage: StateStorage = {

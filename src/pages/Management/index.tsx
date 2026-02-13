@@ -1,19 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useUserStore } from '../../hooks/useUserStore';
 import { ParteCard } from '../../components/management/ParteCard';
 import { KanbanBoard } from '../../components/management/KanbanBoard';
+import { CalendarView } from '../../components/management/CalendarView';
 import { ManagementFilters } from '../../components/management/ManagementFilters';
 import type { FilterState } from '../../components/management/ManagementFilters';
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
-import { Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import type { Parte } from '../../types';
 
 export default function Management() {
-    const navigate = useNavigate();
-    const { partes } = useUserStore();
-    const [view, setView] = useState<'list' | 'kanban'>('list');
+    const { partes, fixLegacyAuthorship, currentUser } = useUserStore();
+    const [view, setView] = useState<'list' | 'kanban' | 'calendar'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
     const [filters, setFilters] = useState<FilterState>({
@@ -52,13 +50,13 @@ export default function Management() {
 
             // Date Range Filter
             if (filters.startDate) {
-                const pDate = new Date(p.createdAt).setHours(0, 0, 0, 0);
+                const pDate = new Date(p.createdAt).getTime();
                 const fDate = new Date(filters.startDate).setHours(0, 0, 0, 0);
                 if (pDate < fDate) return false;
             }
             if (filters.endDate) {
-                const pDate = new Date(p.createdAt).setHours(0, 0, 0, 0);
-                const fDate = new Date(filters.endDate).setHours(0, 0, 0, 0);
+                const pDate = new Date(p.createdAt).getTime();
+                const fDate = new Date(filters.endDate).setHours(23, 59, 59, 999);
                 if (pDate > fDate) return false;
             }
 
@@ -82,14 +80,39 @@ export default function Management() {
         });
     };
 
+    // Auto-check for legacy data (Usuario Actual) and prompt to fix
+    useEffect(() => {
+        if (!currentUser || partes.length === 0) return;
+
+        const checkAndFix = async () => {
+            const correctName = currentUser.user_metadata?.full_name || currentUser.name || currentUser.email;
+            if (!correctName) return;
+
+            const partesToFix = partes.filter(p => p.createdBy === 'Usuario Actual');
+
+            if (partesToFix.length > 0) {
+                // Use a slight delay to ensure UI is ready
+                setTimeout(async () => {
+                    if (confirm(`⚠️ DETECTADOS PARTES ANTIGUOS SIN NOMBRE DE AUTOR\n\nHemos encontrado ${partesToFix.length} partes asignados a "Usuario Actual".\n\n¿Quieres actualizarlos automáticamente a tu nombre: "${correctName}"?`)) {
+                        await fixLegacyAuthorship(correctName);
+                        alert(`✅ Se han corregido los partes exitosamente.`);
+                    }
+                }, 1000);
+            }
+        };
+
+        checkAndFix();
+    }, [partes.length, currentUser]); // Run once when data loads
+
     return (
-        <div className="h-[calc(100vh-8rem)] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-slate-800 font-heading">Gestión de Partes</h1>
-                <Button onClick={() => navigate('/new')}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nuevo Parte
-                </Button>
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                    Gestión de Partes
+                </h1>
+                <div className="flex gap-2">
+                    {/* Button removed as per user request to use Sidebar only */}
+                </div>
             </div>
 
             <ManagementFilters
@@ -121,8 +144,10 @@ export default function Management() {
                             </div>
                         )}
                     </div>
-                ) : (
+                ) : view === 'kanban' ? (
                     <KanbanBoard partes={filteredPartes} />
+                ) : (
+                    <CalendarView partes={filteredPartes} />
                 )}
             </div>
 

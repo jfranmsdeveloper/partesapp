@@ -37,25 +37,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         return toLocalISOString(new Date());
     });
 
-    // baseDate represents the "Start Time" effectively. 
-    // Visual Time = BaseTime + Duration.
-    // When form loads, we assume the provided defaultTimestamp is the "Start" (or calculated end from previous).
-    // Actually, if defaultTimestamp is "End of previous", allowing user to add duration to it implies defaultTimestamp in this context acts as START of new one.
-    // So BaseTime = customTimestamp (initially).
-    const [baseDate, setBaseDate] = useState(() => new Date(customTimestamp));
 
-    // When duration changes, update the CustomTimestamp (Visual Time)
-    useEffect(() => {
-        const mins = parseInt(duration);
-        if (!isNaN(mins) && mins > 0) {
-            const newTime = new Date(baseDate.getTime() + mins * 60000);
-            setCustomTimestamp(toLocalISOString(newTime));
-        } else {
-            // If duration is clear/0, revert to base? Or just stay? 
-            // Staying is safer to avoid jumps.
-            setCustomTimestamp(toLocalISOString(baseDate));
-        }
-    }, [duration]); // We specifically DON'T list baseDate here to avoid loops if we were updating it, but here it's fine.
 
     // Voice Dictation
     const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport } = useSpeechRecognition();
@@ -114,7 +96,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             duration: parseInt(duration),
             notes,
             user,
-            timestamp: new Date(customTimestamp).toISOString()
+            // Send local time string formatted for MySQL (YYYY-MM-DD HH:MM:SS)
+            timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : '')
         });
     };
 
@@ -187,11 +170,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     const time = customTimestamp.split('T')[1] || '00:00';
                                     const newTs = `${date}T${time}`;
                                     setCustomTimestamp(newTs);
-
-                                    // Update base date (reverse calculate start time: newTs - duration)
-                                    const mins = parseInt(duration) || 0;
-                                    const newBase = new Date(new Date(newTs).getTime() - mins * 60000);
-                                    setBaseDate(newBase);
                                 }}
                                 required
                                 className="bg-white dark:bg-slate-800"
@@ -221,11 +199,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                             const newTs = `${date}T${formattedTime}`;
 
                                             setCustomTimestamp(newTs);
-
-                                            // Update base date
-                                            const currentDur = parseInt(duration) || 0;
-                                            const newBase = new Date(new Date(newTs).getTime() - currentDur * 60000);
-                                            setBaseDate(newBase);
                                         }
                                     }
                                 }}

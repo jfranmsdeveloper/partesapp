@@ -4,6 +4,7 @@ import { useUserStore } from '../../hooks/useUserStore';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
+import { ClientSelect } from '../ui/ClientSelect';
 import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
@@ -20,12 +21,28 @@ export const ParteEditor = () => {
     const { id } = useParams();
     const isNew = !id;
 
-    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, addClient, currentUser, users } = useUserStore();
+    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users } = useUserStore();
 
     const [title, setTitle] = useState('');
+    const [selectedClientId, setSelectedClientId] = useState('');
     const [customId, setCustomId] = useState('');
     const [customDate, setCustomDate] = useState(toLocalISOString(new Date())); // Default to now (Local)
-    const [createdBy, setCreatedBy] = useState('Usuario Actual');
+
+
+    // Initialize with current user name if available
+    const [createdBy, setCreatedBy] = useState(() => {
+        if (currentUser) {
+            return currentUser.user_metadata?.full_name || currentUser.name || currentUser.email || 'Usuario Actual';
+        }
+        return 'Usuario Actual';
+    });
+
+    // Update createdBy when currentUser loads (if it was default)
+    useEffect(() => {
+        if (isNew && currentUser && createdBy === 'Usuario Actual') {
+            setCreatedBy(currentUser.user_metadata?.full_name || currentUser.name || currentUser.email || 'Usuario Actual');
+        }
+    }, [currentUser, isNew]);
     const [uploadedPdf, setUploadedPdf] = useState<string | undefined>(undefined);
     const [showAddActuacion, setShowAddActuacion] = useState(false);
     const [editingActuacion, setEditingActuacion] = useState<{ id: string, data: any } | null>(null);
@@ -40,6 +57,7 @@ export const ParteEditor = () => {
             setCreatedBy(currentParte.createdBy);
             setCustomId(currentParte.id.toString());
             setCustomDate(toLocalISOString(new Date(currentParte.createdAt)));
+            setSelectedClientId(currentParte.clientId || '');
             // Note: We don't load the full PDF into state to save memory unless needed, 
             // but for "viewing" we rely on currentParte.pdfFile
         }
@@ -53,26 +71,30 @@ export const ParteEditor = () => {
         if (!title) return;
 
         if (!isNew && currentParte) {
+            // Fix: Send local time string formatted for MySQL (YYYY-MM-DD HH:MM:SS)
+            // avoiding UTC conversion which shifts time by -1/-2 hours.
+            const formattedDate = customDate.replace('T', ' ') + (customDate.includes(':') && customDate.split(':').length === 2 ? ':00' : '');
+
             await updateParte(currentParte.id, {
                 title,
-                createdAt: new Date(customDate).toISOString()
+                createdAt: formattedDate,
+                createdBy, // Include createdBy to save authorship changes
+                clientId: selectedClientId
             });
             alert('✅ Parte actualizado correctamente');
             return;
         }
 
-        // Auto-save client
-        await addClient({
-            name: title,
-        });
+
 
         await addParte({
             title,
             status: 'ABIERTO',
             createdBy,
             id: customId ? parseInt(customId) : undefined,
-            createdAt: new Date(customDate).toISOString(),
-            pdfFile: uploadedPdf
+            createdAt: customDate.replace('T', ' ') + (customDate.includes(':') && customDate.split(':').length === 2 ? ':00' : ''),
+            pdfFile: uploadedPdf,
+            clientId: selectedClientId
         });
 
         // Ensure we navigate after async operations complete
@@ -127,9 +149,14 @@ export const ParteEditor = () => {
             updateActuacion(currentParte.id, editingActuacion.id, actuacion);
             setEditingActuacion(null);
         } else {
+            // Default timestamp if missing: Local time
+            const now = new Date();
+            const localIso = toLocalISOString(now);
+            const formattedNow = localIso.replace('T', ' ') + (localIso.includes(':') && localIso.split(':').length === 2 ? ':00' : '');
+
             addActuacion(currentParte.id, {
                 ...actuacion,
-                timestamp: actuacion.timestamp || new Date().toISOString()
+                timestamp: actuacion.timestamp || formattedNow
             });
         }
         setShowAddActuacion(false);
@@ -366,10 +393,11 @@ export const ParteEditor = () => {
                 </div>
             </div>
 
-            {/* Main Form */}
-            <div className={clsx("grid gap-6", isNew ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3")}>
-                {/* Left Column: Details */}
-                <div className={isNew ? "w-full" : "space-y-6"}>
+            {/* Main Form Layout - Refactored to Vertical Stack (90% Width) */}
+            <div className="flex flex-col items-center w-full gap-8 pb-20">
+
+                {/* 1. Datos Generales (Always Visible) */}
+                <div className="w-[90%] max-w-7xl">
                     <Card>
                         <h2 className="text-lg font-semibold mb-4">Datos Generales</h2>
 
@@ -491,8 +519,9 @@ export const ParteEditor = () => {
                         )}
 
                         <form id="parte-form" onSubmit={handleCreateParte} className="space-y-6">
-                            <div className={clsx("grid gap-6", isNew ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1")}>
-                                <div className={clsx("grid gap-4", isNew ? "grid-cols-2 col-span-2" : "grid-cols-2")}>
+                            {/* Row 1: Key Metadata (Full Width usage) */}
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                                <div className="md:col-span-2">
                                     <Input
                                         label="Nº Parte"
                                         type="number"
@@ -502,34 +531,31 @@ export const ParteEditor = () => {
                                         disabled={!isNew}
                                         title={customId || "Auto"}
                                     />
-                                    <div className="flex gap-2">
-                                        <div className="flex-1">
-                                            <DatePicker
-                                                label="Fecha Creación"
-                                                value={customDate.split('T')[0]}
-                                                onChange={(date) => {
-                                                    const time = customDate.split('T')[1] || '09:00';
-                                                    setCustomDate(`${date}T${time}`);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="w-24">
-                                            <Input
-                                                label="Hora"
-                                                type="time"
-                                                value={customDate.split('T')[1] || '09:00'}
-                                                onChange={(e) => {
-                                                    const date = customDate.split('T')[0];
-                                                    setCustomDate(`${date}T${e.target.value}`);
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
-
-                                <div className="w-full">
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Emitido por</label>
-                                    {!isNew ? (
+                                <div className="md:col-span-3">
+                                    <DatePicker
+                                        label="Fecha Creación"
+                                        value={customDate.split('T')[0]}
+                                        onChange={(date) => {
+                                            const time = customDate.split('T')[1] || '09:00';
+                                            setCustomDate(`${date}T${time}`);
+                                        }}
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Input
+                                        label="Hora"
+                                        type="time"
+                                        value={customDate.split('T')[1] || '09:00'}
+                                        onChange={(e) => {
+                                            const date = customDate.split('T')[0];
+                                            setCustomDate(`${date}T${e.target.value}`);
+                                        }}
+                                    />
+                                </div>
+                                <div className="md:col-span-5">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">Emitido por</label>
+                                    {!isNew && createdBy !== 'Usuario Actual' ? (
                                         <Input
                                             value={createdBy}
                                             onChange={(e) => setCreatedBy(e.target.value)}
@@ -539,19 +565,20 @@ export const ParteEditor = () => {
                                     ) : (
                                         <div className="relative">
                                             <select
-                                                value={createdBy}
+                                                value={createdBy === 'Usuario Actual' ? '' : createdBy}
                                                 onChange={(e) => setCreatedBy(e.target.value)}
                                                 required
-                                                disabled={!isNew}
-                                                className="block w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400"
+                                                className="block w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 focus:border-orange-500 focus:outline-none focus:ring-4 focus:ring-orange-500/10 placeholder:text-slate-400"
                                             >
-                                                <option value="" disabled>Selecciona un usuario</option>
+                                                <option value="" disabled>
+                                                    {createdBy === 'Usuario Actual' ? 'Selecciona el usuario correcto' : 'Selecciona un usuario'}
+                                                </option>
                                                 {users.map((u) => {
                                                     const name = u.user_metadata?.full_name || u.name || u.email;
                                                     return <option key={u.id} value={name}>{name}</option>
                                                 })}
                                             </select>
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
                                                 <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                                     <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
                                                 </svg>
@@ -559,6 +586,16 @@ export const ParteEditor = () => {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* Row 2: Title */}
+                            <div className="mb-6">
+                                <ClientSelect
+                                    label="Solicitado por (Usuario / Empleado)"
+                                    value={selectedClientId}
+                                    onChange={setSelectedClientId}
+                                    disabled={false} // Always editable?
+                                />
                             </div>
 
                             <Input
@@ -572,7 +609,7 @@ export const ParteEditor = () => {
                             />
 
                             <div className="pt-2 flex flex-col items-center">
-                                <Button type="submit" className="w-full md:w-auto md:px-12 md:py-3 text-lg">
+                                <Button type="submit" className="w-full md:w-auto md:px-12 md:py-3 text-lg bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20">
                                     <Save className="w-5 h-5 mr-2" />
                                     {isNew ? 'Crear Parte' : 'Guardar Cambios'}
                                 </Button>
@@ -584,27 +621,11 @@ export const ParteEditor = () => {
                             </div>
                         </form>
                     </Card>
-
-                    {!isNew && currentParte && (
-                        <Card>
-                            <h2 className="text-lg font-semibold mb-4">Resumen</h2>
-                            <div className="space-y-3">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-600 dark:text-slate-400">Total Tiempo</span>
-                                    <span className="font-bold text-slate-900 dark:text-slate-100">{currentParte.totalTime} min</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-600 dark:text-slate-400">Actuaciones</span>
-                                    <span className="font-bold text-slate-900 dark:text-slate-100">{currentParte.totalActuaciones}</span>
-                                </div>
-                            </div>
-                        </Card>
-                    )}
                 </div>
 
-                {/* Right Column: Actuaciones (Only visible if not new) */}
+                {/* 2. Actuaciones (Only if !isNew) */}
                 {!isNew && currentParte && (
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="w-[90%] max-w-7xl">
                         <Card className="min-h-[500px]">
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-lg font-semibold">Actuaciones</h2>
@@ -654,54 +675,88 @@ export const ParteEditor = () => {
                                 onEdit={handleEditClick}
                             />
                         </Card>
+                    </div>
+                )}
 
-                        <div className="flex flex-col sm:flex-row justify-between items-center pt-6 pb-20 border-t border-slate-100 gap-4">
-                            <Button
-                                variant="ghost"
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                onClick={handleDeleteParte}
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Eliminar Parte
-                            </Button>
-
-                            <div className="flex items-center gap-6">
-                                {/* Avatares de participantes */}
-                                <div className="flex -space-x-3">
-                                    {Array.from(new Set(currentParte.actuaciones.map(a => a.user))).map((userName) => {
-                                        const userObj = users.find(u => (u.user_metadata?.full_name || u.name) === userName || u.email === userName);
-                                        const hasAvatar = userObj?.avatar_url;
-
-                                        return (
-                                            <div key={userName} className="relative z-10 transition-transform hover:scale-110 hover:z-20 group" title={userName}>
-                                                {hasAvatar ? (
-                                                    <img
-                                                        src={userObj.avatar_url}
-                                                        alt={userName}
-                                                        className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow-md"
-                                                    />
-                                                ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-xs text-orange-700 dark:text-orange-200 font-bold uppercase ring-2 ring-white dark:ring-slate-900 shadow-md">
-                                                        {userName.charAt(0)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                {/* 3. Resumen (Only if !isNew) */}
+                {!isNew && currentParte && (
+                    <div className="w-[90%] max-w-7xl">
+                        <Card>
+                            <h2 className="text-lg font-semibold mb-4">Resumen</h2>
+                            <div className="flex flex-col md:flex-row gap-8 justify-around items-center p-4">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Total Tiempo</span>
+                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100 flex items-start">
+                                        {currentParte.totalTime}
+                                        <span className="text-lg text-slate-400 font-bold ml-1 mt-1">min</span>
+                                    </span>
                                 </div>
+                                <div className="w-px h-16 bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Actuaciones</span>
+                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100">
+                                        {currentParte.totalActuaciones}
+                                    </span>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                )}
 
+                {/* 4. Footer Actions (Only if !isNew) */}
+                {!isNew && currentParte && (
+                    <div className="w-[90%] max-w-7xl flex flex-col sm:flex-row justify-between items-center py-6 border-t border-slate-100 dark:border-slate-800/50 gap-4">
+                        <Button
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={handleDeleteParte}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Eliminar Parte
+                        </Button>
+
+                        <div className="flex items-center gap-6">
+                            {/* Avatares de participantes */}
+                            <div className="flex -space-x-3">
+                                {Array.from(new Set(currentParte.actuaciones.map(a => a.user))).map((userName) => {
+                                    const userObj = users.find(u => (u.user_metadata?.full_name || u.name) === userName || u.email === userName);
+                                    const hasAvatar = userObj?.avatar_url;
+
+                                    return (
+                                        <div key={userName} className="relative z-10 transition-transform hover:scale-110 hover:z-20 group" title={userName}>
+                                            {hasAvatar ? (
+                                                <img
+                                                    src={userObj.avatar_url}
+                                                    alt={userName}
+                                                    className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow-md"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-xs text-orange-700 dark:text-orange-200 font-bold uppercase ring-2 ring-white dark:ring-slate-900 shadow-md">
+                                                    {userName.charAt(0)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex gap-3">
                                 <div className="flex gap-3">
                                     {currentParte.status !== 'CERRADO' && (
                                         <Button
+                                            type="button"
                                             variant="danger"
-                                            onClick={() => updateParteStatus(currentParte.id, 'CERRADO')}
+                                            onClick={() => {
+                                                console.log('Close button clicked');
+                                                updateParteStatus(currentParte.id, 'CERRADO');
+                                            }}
                                             disabled={currentParte.actuaciones.length === 0}
                                         >
                                             Cerrar Parte
                                         </Button>
                                     )}
                                     {currentParte.status === 'CERRADO' && (
-                                        <Button variant="outline" onClick={() => updateParteStatus(currentParte.id, 'EN TRÁMITE')}>
+                                        <Button type="button" variant="outline" onClick={() => updateParteStatus(currentParte.id, 'EN TRÁMITE')}>
                                             Reabrir Parte
                                         </Button>
                                     )}

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../utils/supabase';
 import { useAppStore } from '../../store/useAppStore';
-import type { User } from '../../types';
-import { Search, User as UserIcon, Shield, Mail, Calendar, Loader2, Trash2, Plus, X } from 'lucide-react';
+import { Search, User as UserIcon, Mail, Calendar, Loader2, Trash2, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '../../components/ui/Button';
@@ -142,7 +140,7 @@ export default function Users() {
                                                 onClick={() => user.id && handleRoleToggle(user.id, user.role || 'user')}
                                                 disabled={user.id === currentUser?.id}
                                                 className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wide transition-all border ${(user.role === 'admin' || user.email === 'admin@admin.com')
-                                                    ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 hover:bg-purple-200 cursor-pointer'
+                                                    ? 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800 hover:bg-orange-200 cursor-pointer'
                                                     : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:bg-slate-200 cursor-pointer'
                                                     }`}
                                                 title={user.id === currentUser?.id ? "No puedes cambiar tu propio rol" : "Click para cambiar rol"}
@@ -168,7 +166,7 @@ export default function Users() {
                                     {/* Read-Only Role Badge for others */}
                                     {currentUser?.email !== 'fran.molina@serglobin.es' && (
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wide ${(user.role === 'admin' || user.email === 'admin@admin.com')
-                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
                                             : 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-400'
                                             }`}>
                                             {(user.role === 'admin' || user.email === 'admin@admin.com') ? 'Administrador' : 'Usuario'}

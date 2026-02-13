@@ -1,9 +1,7 @@
-// @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday, setMonth, setYear, getYear, getMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import 'cally';
 import { clsx } from 'clsx';
 
 interface DatePickerProps {
@@ -17,10 +15,15 @@ interface DatePickerProps {
     disabled?: boolean;
 }
 
-export const DatePicker = ({ value, onChange, label, className, required, min, max, disabled }: DatePickerProps) => {
+export const DatePicker = ({ value, onChange, label, className, required, disabled }: DatePickerProps) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [currentMonth, setCurrentMonth] = useState(value ? new Date(value) : new Date());
     const containerRef = useRef<HTMLDivElement>(null);
-    const calendarRef = useRef<HTMLElement>(null);
+
+    // Sync current month when value changes
+    useEffect(() => {
+        if (value) setCurrentMonth(new Date(value));
+    }, [value]);
 
     // Handle click outside
     useEffect(() => {
@@ -29,31 +32,37 @@ export const DatePicker = ({ value, onChange, label, className, required, min, m
                 setIsOpen(false);
             }
         }
-        if (isOpen) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        if (isOpen) document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [isOpen]);
 
-    // Handle custom element event listener
-    useEffect(() => {
-        const calendarElement = calendarRef.current;
-        if (!calendarElement || !isOpen) return;
+    const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+    const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
-        const handleChange = (e: any) => {
-            // Stop propagation to prevent bubbling issues if any
-            e.stopPropagation();
-            onChange(e.target.value);
-            setIsOpen(false);
-        };
+    const handleDayClick = (day: Date) => {
+        onChange(format(day, 'yyyy-MM-dd'));
+        setIsOpen(false);
+    };
 
-        calendarElement.addEventListener('change', handleChange);
-        return () => {
-            calendarElement.removeEventListener('change', handleChange);
-        };
-    }, [isOpen, onChange]);
+    const handleMonthSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setCurrentMonth(setMonth(currentMonth, parseInt(e.target.value)));
+    };
+
+    const handleYearSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setCurrentMonth(setYear(currentMonth, parseInt(e.target.value)));
+    };
+
+    // Generate days
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart, { locale: es });
+    const endDate = endOfWeek(monthEnd, { locale: es });
+    const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+
+    const weekDays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    const months = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), 'MMMM', { locale: es }));
+    const currentYear = getYear(currentMonth);
+    const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
 
     return (
         <div className={clsx("relative", className, disabled && "opacity-60 pointer-events-none")} ref={containerRef}>
@@ -64,16 +73,16 @@ export const DatePicker = ({ value, onChange, label, className, required, min, m
             )}
 
             <div
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
                 className={clsx(
-                    "w-full flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm transition-all cursor-pointer bg-white dark:bg-slate-800",
+                    "w-full flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm transition-all cursor-pointer bg-white dark:bg-slate-900/50",
                     isOpen
-                        ? "border-blue-500 ring-4 ring-blue-500/10"
-                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                        ? "border-orange-500 ring-4 ring-orange-500/10"
+                        : "border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700"
                 )}
             >
                 <div className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
-                    <CalendarIcon className="w-4 h-4 text-slate-400" />
+                    <CalendarIcon className={clsx("w-4 h-4", value ? "text-orange-500" : "text-slate-400")} />
                     <span className={clsx(!value && "text-slate-400")}>
                         {value ? format(new Date(value), "d 'de' MMMM, yyyy", { locale: es }) : "Seleccionar fecha"}
                     </span>
@@ -81,39 +90,74 @@ export const DatePicker = ({ value, onChange, label, className, required, min, m
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 z-50 mt-2 animate-in slide-in-from-top-2 duration-200">
-                    <div className="p-4 rounded-xl glass-card border border-white/20 shadow-xl bg-white dark:bg-slate-900 ring-1 ring-black/5">
-                        {/* @ts-ignore */}
-                        <calendar-date
-                            ref={calendarRef}
-                            value={value}
-                            min={min}
-                            max={max}
-                            locale="es-ES"
-                            className="text-slate-700 dark:text-slate-200"
-                        >
-                            <div className="flex justify-between items-center mb-4">
-                                <button slot="previous" type="button" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-                                </button>
-                                <span slot="month" className="font-display font-semibold text-lg capitalize"></span>
-                                <button slot="next" type="button" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                                </button>
+                <div className="absolute top-full left-0 z-50 mt-2 p-4 w-[320px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl animate-in fade-in zoom-in-95 duration-200 ring-1 ring-black/5">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                        <button type="button" onClick={prevMonth} className="p-1.5 hover:bg-orange-50 dark:hover:bg-orange-900/30 text-slate-500 hover:text-orange-600 rounded-full transition-colors">
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex gap-1">
+                            <select
+                                value={getMonth(currentMonth)}
+                                onChange={handleMonthSelect}
+                                className="bg-transparent font-semibold capitalize text-slate-700 dark:text-slate-200 text-sm hover:text-orange-600 cursor-pointer outline-none appearance-none"
+                            >
+                                {months.map((m, i) => (
+                                    <option key={i} value={i} className="text-slate-900 bg-white">{m}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={getYear(currentMonth)}
+                                onChange={handleYearSelect}
+                                className="bg-transparent font-semibold text-slate-700 dark:text-slate-200 text-sm hover:text-orange-600 cursor-pointer outline-none appearance-none"
+                            >
+                                {years.map((y) => (
+                                    <option key={y} value={y} className="text-slate-900 bg-white">{y}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <button type="button" onClick={nextMonth} className="p-1.5 hover:bg-orange-50 dark:hover:bg-orange-900/30 text-slate-500 hover:text-orange-600 rounded-full transition-colors">
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Weekdays */}
+                    <div className="grid grid-cols-7 mb-2 text-center">
+                        {weekDays.map(d => (
+                            <div key={d} className="text-xs font-bold text-slate-400 dark:text-slate-500 h-8 flex items-center justify-center">
+                                {d}
                             </div>
+                        ))}
+                    </div>
 
-                            <calendar-month></calendar-month>
-                        </calendar-date>
+                    {/* Days */}
+                    <div className="grid grid-cols-7 gap-1">
+                        {calendarDays.map((day, i) => {
+                            const isSelected = value ? isSameDay(day, new Date(value)) : false;
+                            const isCurrentMonth = isSameMonth(day, currentMonth);
+                            const isTodayDate = isToday(day);
 
-                        <style>{`
-                    calendar-date {
-                        --color-accent: #3b82f6;
-                        --color-text-on-accent: #ffffff;
-                    }
-                    calendar-month::part(button today) { color: #3b82f6; font-weight: bold; }
-                    calendar-month::part(button):hover { background-color: rgba(59, 130, 246, 0.1); }
-                    calendar-month::part(button selected) { background-color: #3b82f6; color: white; }
-                `}</style>
+                            return (
+                                <button
+                                    key={i}
+                                    onClick={() => handleDayClick(day)}
+                                    disabled={!isCurrentMonth}
+                                    className={clsx(
+                                        "h-9 w-9 rounded-full flex items-center justify-center text-sm transition-all duration-200",
+                                        !isCurrentMonth && "text-slate-300 dark:text-slate-700 opacity-0 pointer-events-none",
+                                        isSelected
+                                            ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-105 font-bold"
+                                            : isTodayDate
+                                                ? "text-orange-600 font-bold bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-200 dark:ring-orange-800"
+                                                : "text-slate-700 dark:text-slate-200 hover:bg-orange-50 dark:hover:bg-orange-900/30 hover:text-orange-600"
+                                    )}
+                                >
+                                    {format(day, 'd')}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}

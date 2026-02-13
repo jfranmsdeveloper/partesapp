@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
 import { type Parte, type ActuacionType, type User } from '../types';
 import { format } from 'date-fns';
@@ -37,16 +37,13 @@ const MAIN_INDICATORS = [
     { label: "- Número total de correos remitidos", key: 'act_correo_enviado' },
 ];
 
-const OTHER_INDICATORS: ActuacionType[] = [
-    'Actualización', 'Cargas/Proceso', 'Desplazamiento', 'Formación', 'Incidencias',
-    'Informe Corporativo', 'Investigación', 'Modificaciones', 'Otros', 'Tratamiento de Fichero',
-];
+import { ACTUACION_CONFIG } from './actuacionConfig';
 
-const MATRIX_ROWS: ActuacionType[] = [
-    'Actualización', 'Cargas/Proceso', 'Correo Enviado', 'Correo Recibido', 'Desplazamiento',
-    'Formación', 'Incidencias', 'Informe Corporativo', 'Investigación', 'Llamada Realizada',
-    'Llamada Recibida', 'Modificaciones', 'Otros', 'Traslado', 'Tratamiento de Fichero'
-];
+const OTHER_INDICATORS = Object.keys(ACTUACION_CONFIG).filter(type =>
+    !['Llamada Realizada', 'Llamada Recibida', 'Correo Enviado', 'Correo Recibido', 'Traslado'].includes(type)
+) as ActuacionType[];
+
+const MATRIX_ROWS = Object.keys(ACTUACION_CONFIG).sort() as ActuacionType[];
 
 export const generateWordReport = async (data: ReportData) => {
     // helpers
@@ -66,11 +63,12 @@ export const generateWordReport = async (data: ReportData) => {
         const trasladosCount = countType('Traslado');
         const cerrados = partes.filter(p => p.status === 'CERRADO').length;
         const resueltasDirectas = Math.max(0, cerrados - trasladosCount);
-        const uniqueClients = new Set(partes.map(p => p.clientId).filter(Boolean)).size;
-        const finalUsers = uniqueClients > 0 ? uniqueClients : partes.length;
+        // Count all partes with clientId (allowing duplicates)
+        // Si un cliente tiene 5 partes, cuenta como 5 usuarios atendidos
+        const totalUsersAttended = partes.filter(p => p.clientId).length;
 
         return {
-            users: finalUsers,
+            users: totalUsersAttended,
             abiertos: partes.filter(p => p.status === 'ABIERTO').length,
             cerrados: cerrados,
             resueltas_directas: resueltasDirectas,
@@ -98,8 +96,8 @@ export const generateWordReport = async (data: ReportData) => {
 
         const headerRow = new TableRow({
             children: [
-                new TableCell({ children: [new Paragraph({ text: "Indicadores Por Técnico", bold: true })], shading: { fill: ORANGE_HEX } }),
-                ...userCols.map(u => new TableCell({ children: [new Paragraph({ text: u.name, bold: true })], shading: { fill: ORANGE_HEX } }))
+                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Indicadores Por Técnico", bold: true })] })], shading: { fill: ORANGE_HEX } }),
+                ...userCols.map(u => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: u.name, bold: true })] })], shading: { fill: ORANGE_HEX } }))
             ]
         });
 
@@ -143,7 +141,7 @@ export const generateWordReport = async (data: ReportData) => {
                     rows: [
                         new TableRow({
                             children: [
-                                new TableCell({ children: [new Paragraph({ text: "Bolsa de hora", bold: true })], shading: { fill: ORANGE_HEX } }),
+                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Bolsa de hora", bold: true })] })], shading: { fill: ORANGE_HEX } }),
                                 new TableCell({ children: [new Paragraph({ text: "" })], shading: { fill: ORANGE_HEX } })
                             ]
                         }),
@@ -156,7 +154,7 @@ export const generateWordReport = async (data: ReportData) => {
         const matrixChildren = [
             new Paragraph({ text: "INDICADORES APLICACIONES", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
             new Paragraph({ text: format(data.startDate, 'MMMM yyyy', { locale: es }).toUpperCase(), heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { after: 400 } }),
-            new Paragraph({ text: "Resumen Global (Matriz)", bold: true, spacing: { after: 200 } }),
+            new Paragraph({ children: [new TextRun({ text: "Resumen Global (Matriz)", bold: true })], spacing: { after: 200 } }),
             new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [headerRow, ...bodyRows]
@@ -186,8 +184,8 @@ export const generateWordReport = async (data: ReportData) => {
             const fill = isHeader ? ORANGE_HEX : undefined;
             return new TableRow({
                 children: [
-                    new TableCell({ children: [new Paragraph({ text: ind.label, bold: isHeader })], shading: fill ? { fill } : undefined }),
-                    new TableCell({ children: [new Paragraph({ text: metrics[ind.key].toString(), alignment: AlignmentType.CENTER, bold: true })], shading: fill ? { fill } : undefined, width: { size: 15, type: WidthType.PERCENTAGE } })
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: ind.label, bold: isHeader })] })], shading: fill ? { fill } : undefined }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: metrics[ind.key].toString(), bold: true })], alignment: AlignmentType.CENTER })], shading: fill ? { fill } : undefined, width: { size: 15, type: WidthType.PERCENTAGE } })
                 ]
             });
         });
@@ -195,15 +193,15 @@ export const generateWordReport = async (data: ReportData) => {
         const otherSum = OTHER_INDICATORS.reduce((acc, t) => acc + (metrics[t] || 0), 0);
         const t2Header = new TableRow({
             children: [
-                new TableCell({ children: [new Paragraph({ text: "Número total de otros indicadores", bold: true })], shading: { fill: ORANGE_HEX } }),
-                new TableCell({ children: [new Paragraph({ text: otherSum.toString(), alignment: AlignmentType.CENTER, bold: true })], shading: { fill: ORANGE_HEX }, width: { size: 15, type: WidthType.PERCENTAGE } })
+                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Número total de otros indicadores", bold: true })] })], shading: { fill: ORANGE_HEX } }),
+                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: otherSum.toString(), bold: true })], alignment: AlignmentType.CENTER })], shading: { fill: ORANGE_HEX }, width: { size: 15, type: WidthType.PERCENTAGE } })
             ]
         });
 
         const t2Body = OTHER_INDICATORS.map(t => new TableRow({
             children: [
                 new TableCell({ children: [new Paragraph({ text: ` - ${formatLabel(t)}` })] }),
-                new TableCell({ children: [new Paragraph({ text: (metrics[t] || 0).toString(), alignment: AlignmentType.CENTER, bold: true })] })
+                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (metrics[t] || 0).toString(), bold: true })], alignment: AlignmentType.CENTER })] })
             ]
         }));
 
@@ -217,7 +215,7 @@ export const generateWordReport = async (data: ReportData) => {
                 new Table({
                     width: { size: 100, type: WidthType.PERCENTAGE },
                     rows: t1Rows,
-                    spacing: { after: 400 }
+                    // spacing: { after: 400 } // Removed invalid spacing property
                 }),
 
                 new Paragraph({ text: "", spacing: { after: 300 } }),

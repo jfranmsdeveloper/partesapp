@@ -83,9 +83,9 @@ export default function Dashboard() {
         <div className="min-h-screen bg-[#f2f4f8] dark:bg-[#0c0c0e] pb-24 font-sans selection:bg-indigo-500/30">
             {/* Animated Mesh Gradient Background - Subtle & Premium */}
             <div className="fixed inset-0 pointer-events-none opacity-60 dark:opacity-30">
-                <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-rose-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob" />
-                <div className="absolute top-[-10%] right-[-10%] w-[70vw] h-[70vw] bg-indigo-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob animation-delay-2000" />
-                <div className="absolute bottom-[-20%] left-[20%] w-[70vw] h-[70vw] bg-blue-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob animation-delay-4000" />
+                <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-orange-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob" />
+                <div className="absolute top-[-10%] right-[-10%] w-[70vw] h-[70vw] bg-amber-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob animation-delay-2000" />
+                <div className="absolute bottom-[-20%] left-[20%] w-[70vw] h-[70vw] bg-rose-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob animation-delay-4000" />
             </div>
 
             <div className="relative z-10 max-w-[1920px] mx-auto p-6 md:p-12 space-y-12">
@@ -107,9 +107,9 @@ export default function Dashboard() {
 
                     <Button
                         onClick={() => setIsReportModalOpen(true)}
-                        className="group relative overflow-hidden bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 rounded-[24px] px-8 py-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                        className="group relative overflow-hidden bg-orange-500 dark:bg-orange-400 hover:bg-orange-600 dark:hover:bg-orange-300 text-white dark:text-slate-900 rounded-[24px] px-8 py-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
                         <div className="relative flex items-center gap-3 font-semibold text-lg">
                             <FileDown className="w-5 h-5" />
                             <span>Exportar Informe</span>
@@ -142,14 +142,14 @@ export default function Dashboard() {
                                 className={clsx(
                                     "flex items-center gap-3 pl-2 pr-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 shadow-sm whitespace-nowrap border border-transparent",
                                     selectedUser === user.id
-                                        ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50 scale-105 shadow-xl shadow-indigo-500/10"
+                                        ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900/50 scale-105 shadow-xl shadow-orange-500/10"
                                         : "bg-white/40 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:bg-white/80 dark:hover:bg-slate-700 hover:scale-105"
                                 )}
                             >
                                 {user.avatar_url ? (
                                     <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-slate-800" />
                                 ) : (
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white dark:ring-slate-800">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-300 to-amber-300 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white dark:ring-slate-800">
                                         {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
                                     </div>
                                 )}
@@ -165,7 +165,7 @@ export default function Dashboard() {
                         title="Total Partes"
                         value={metrics.totalPartes}
                         icon={FileText}
-                        color="indigo"
+                        color="orange"
                         trend={{ value: 12, isPositive: true }}
                     />
                     <KPICard
@@ -277,9 +277,9 @@ export default function Dashboard() {
                             {metrics.activityData.slice(0, 4).map((act, idx) => {
                                 const colors = [
                                     'from-blue-200 to-indigo-200 text-indigo-700',
-                                    'from-rose-200 to-orange-200 text-orange-700',
+                                    'from-amber-200 to-orange-200 text-orange-700',
                                     'from-emerald-200 to-teal-200 text-teal-700',
-                                    'from-violet-200 to-fuchsia-200 text-fuchsia-700'
+                                    'from-rose-200 to-pink-200 text-pink-700'
                                 ];
                                 const colorClass = colors[idx % colors.length];
 
@@ -299,7 +299,7 @@ export default function Dashboard() {
                         </div>
 
                         {/* Efficiency Card */}
-                        <div className="rounded-[2.5rem] bg-slate-900 text-white p-10 relative overflow-hidden shadow-2xl">
+                        <div className="rounded-[2.5rem] bg-orange-500 text-white p-10 relative overflow-hidden shadow-2xl">
                             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
                             <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-emerald-500/30 via-transparent to-transparent blur-3xl" />
 

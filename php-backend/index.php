@@ -279,7 +279,9 @@ elseif ($method === 'POST') {
     }
 
     // Map array keys to columns
-    $columns = array_keys($body);
+    $columns = array_filter(array_keys($body), function($k) {
+        return preg_match('/^[a-zA-Z0-9_]+$/', $k);
+    });
     $placeholders = array_map(function($c) { return ":$c"; }, $columns);
     
     $sql = "INSERT INTO $table (" . implode(", ", $columns) . ") VALUES (" . implode(", ", $placeholders) . ")";
@@ -315,6 +317,7 @@ elseif ($method === 'PATCH') {
     
     $sets = [];
     foreach ($body as $key => $val) {
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $key)) continue; // Security: Skip invalid column names
         $sets[] = "$key = :$key";
     }
     
