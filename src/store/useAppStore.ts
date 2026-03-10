@@ -252,13 +252,13 @@ export const useAppStore = create<AppState>((set, get) => ({
             description: parteData.title,
             status: parteData.status,
             start_date: parteData.createdAt,
-            user_id: (await supabase.auth.getUser()).data.user?.id,
-            created_by: parteData.createdBy, // Save the manual name
+            user_id: currentUser.id,
+            created_by: parteData.createdBy,
             pdf_file: parteData.pdfFile,
+            pdf_file_signed: (parteData as any).pdfFileSigned,
             client_id: parteData.clientId
         };
 
-        // Respect custom ID if provided
         if (parteData.id) {
             payload.id = parteData.id;
         }
@@ -299,6 +299,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (data.createdAt) updatePayload.start_date = data.createdAt;
         if (data.createdBy) updatePayload.created_by = data.createdBy;
         if (data.pdfFile) updatePayload.pdf_file = data.pdfFile;
+        if (data.pdfFileSigned) updatePayload.pdf_file_signed = data.pdfFileSigned;
         if (data.clientId) updatePayload.client_id = data.clientId;
 
         if (Object.keys(updatePayload).length > 0) {

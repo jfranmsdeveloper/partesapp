@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useUserStore } from '../../hooks/useUserStore';
+import { supabase } from '../../utils/supabase';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
@@ -184,13 +185,35 @@ export const ParteEditor = () => {
         setEditingActuacion(null);
     };
 
-    const handleViewPdf = () => {
+    const handleViewPdf = async () => {
         const pdfData = currentParte?.pdfFile;
         if (pdfData) {
+            let src = pdfData;
+            if (pdfData.startsWith('local://')) {
+                const url = await (supabase as any).getFileUrl(pdfData);
+                if (url) src = url;
+            }
             const newWindow = window.open();
             if (newWindow) {
                 newWindow.document.write(
-                    `<iframe src="${pdfData}" style="width:100%; height:100%; border:none;"></iframe>`
+                    `<iframe src="${src}" style="width:100%; height:100%; border:none;"></iframe>`
+                );
+            }
+        }
+    };
+
+    const handleViewSignedPdf = async () => {
+        const pdfData = currentParte?.pdfFileSigned;
+        if (pdfData) {
+            let src = pdfData;
+            if (pdfData.startsWith('local://')) {
+                const url = await (supabase as any).getFileUrl(pdfData);
+                if (url) src = url;
+            }
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(
+                    `<iframe src="${src}" style="width:100%; height:100%; border:none;"></iframe>`
                 );
             }
         }
@@ -479,10 +502,7 @@ export const ParteEditor = () => {
                                 <div>
                                     <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">PDF Cerrado</h3>
                                     {currentParte.pdfFileSigned ? (
-                                        <Button variant="primary" className="w-full" onClick={() => {
-                                            const w = window.open();
-                                            w?.document.write(`<iframe src="${currentParte.pdfFileSigned}" style="width:100%;height:100%;border:none;"></iframe>`);
-                                        }}>
+                                        <Button variant="primary" className="w-full" onClick={handleViewSignedPdf}>
                                             <Eye className="w-4 h-4 mr-2" />
                                             Ver Cerrado
                                         </Button>

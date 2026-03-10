@@ -117,10 +117,12 @@ class FileSystemAdapter {
             // Try restore session from localStorage immediately so getSession works
             const savedSession = localStorage.getItem('local-session');
             if (savedSession) {
-                const sessionData = JSON.parse(savedSession);
-                if (sessionData && sessionData.user) {
-                    this.activeSessionUser = sessionData.user;
-                }
+                try {
+                    const sessionData = JSON.parse(savedSession);
+                    if (sessionData && sessionData.user) {
+                        this.activeSessionUser = sessionData.user;
+                    }
+                } catch (e) { console.warn("Error parsing session:", e); }
             }
 
             let dirHandle = await getHandleFromIDB();
@@ -188,12 +190,18 @@ class FileSystemAdapter {
             const text = await file.text();
 
             let loadedState: DBState;
-            if (text) {
-                loadedState = JSON.parse(text);
-                // Migrate missing tables
-                if (!loadedState.users) loadedState.users = [];
-                if (!loadedState.actuaciones) loadedState.actuaciones = [];
-                if (!loadedState.clients) loadedState.clients = [];
+            if (text && text.trim().startsWith('{')) {
+                try {
+                    loadedState = JSON.parse(text);
+                    // Migrate missing tables
+                    if (!loadedState.users) loadedState.users = [];
+                    if (!loadedState.partes) loadedState.partes = [];
+                    if (!loadedState.actuaciones) loadedState.actuaciones = [];
+                    if (!loadedState.clients) loadedState.clients = [];
+                } catch (e) {
+                    console.error("Malformed JSON in database.json, resetting to default.", e);
+                    loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
+                }
             } else {
                 loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
             }
@@ -201,7 +209,7 @@ class FileSystemAdapter {
             console.log('FSA: Base de datos cargada. Usuarios actuales:', loadedState.users.map(u => u.email));
 
             // Sync predefined users (Upsert)
-            let modified = !text; // If new file, it's already modified
+            let modified = !text;
 
             DEFAULT_DB.users.forEach(defUser => {
                 const existingIndex = loadedState.users.findIndex(u => u.email === defUser.email);
@@ -220,6 +228,13 @@ class FileSystemAdapter {
 
             this.state = loadedState;
 
+            // Run migration for existing base64 data
+            const migrationCount = await this.migrateBase64ToFiles();
+            if (migrationCount > 0) {
+                console.log(`FSA: Migrados ${migrationCount} archivos base64 a archivos físicos.`);
+                modified = true;
+            }
+
             if (modified) {
                 await this.saveDatabase();
             }
@@ -231,24 +246,97 @@ class FileSystemAdapter {
         }
     }
 
+    /**
+     * Scans through partes and users to find any base64 strings and migrate them to physical files.
+     */
+    private async migrateBase64ToFiles(): Promise<number> {
+        let count = 0;
+        if (!this.state) return 0;
+
+        // 1. Migrate Partes PDFs
+        for (const parte of this.state.partes) {
+            if (parte.pdf_file && parte.pdf_file.startsWith('data:')) {
+                const userName = parte.created_by || 'Sistema';
+                const path = await this.saveFile(parte.pdf_file, userName, 'parte');
+                if (path && path.startsWith('local://')) {
+                    parte.pdf_file = path;
+                    count++;
+                }
+            }
+            if (parte.pdf_file_signed && parte.pdf_file_signed.startsWith('data:')) {
+                const userName = parte.created_by || 'Sistema';
+                const path = await this.saveFile(parte.pdf_file_signed, userName, 'parte_signed');
+                if (path && path.startsWith('local://')) {
+                    parte.pdf_file_signed = path;
+                    count++;
+                }
+            }
+        }
+
+        // 2. Migrate User Avatars
+        for (const user of this.state.users) {
+            if (user.avatar_url && user.avatar_url.startsWith('data:')) {
+                const userName = user.user_metadata?.full_name || user.name || 'Avatar';
+                const path = await this.saveFile(user.avatar_url, userName, 'avatar');
+                if (path && path.startsWith('local://')) {
+                    user.avatar_url = path;
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
     private async saveDatabase() {
         if (!this.handle) return;
         try {
+            console.log("FSA: Guardando base de datos...");
             const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
             const writable = await fileHandle.createWritable();
             await writable.write(JSON.stringify(this.state, null, 2));
             await writable.close();
+            console.log("FSA: Base de datos guardada con éxito.");
         } catch (e) {
             console.error('Error saving DB:', e);
         }
     }
 
-    // Storage: Save files per user
+    /**
+     * getFileUrl retrieves a physical file from the handle and returns a temporary URL (Blob URL)
+     * This is used to preview PDFs or images without storing base64 in the JSON.
+     */
+    async getFileUrl(path: string): Promise<string | null> {
+        if (!this.handle || !path) return null;
+        if (!path.startsWith('local://')) return path; // Already a URL or base64
+
+        try {
+            const relativePath = path.replace('local://', '');
+            const parts = relativePath.split('/');
+
+            let currentHandle: any = this.handle;
+            for (let i = 0; i < parts.length - 1; i++) {
+                currentHandle = await currentHandle.getDirectoryHandle(parts[i]);
+            }
+
+            const fileName = parts[parts.length - 1];
+            const fileHandle = await currentHandle.getFileHandle(fileName);
+            const file = await fileHandle.getFile();
+            return URL.createObjectURL(file);
+        } catch (e) {
+            console.error("Error retrieving file for preview:", e);
+            return null;
+        }
+    }
+
+    // Storage: Save files per user physically
     async saveFile(base64: string, folderName: string, prefix: string = 'file'): Promise<string | null> {
         if (!this.handle) return null;
+        if (!base64 || !base64.startsWith('data:')) return base64; // Not base64 or already a path
+
         try {
             const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (!matches || matches.length !== 3) return null;
+            if (!matches || matches.length !== 3) return base64;
 
             const mime = matches[1];
             const dataBase64 = matches[2];
@@ -282,16 +370,13 @@ class FileSystemAdapter {
             await writable.write(blob);
             await writable.close();
 
-            // We must return a way to read it back. We can return an internal URI, 
-            // but browsers can't serve local files by paths. We have to read and serve as ObjectURL or keep Base64.
-            // Actuallly, for PDFs/Avatars in a PWA without an internal server, we need to load them as ObjectURLs directly.
-            // For now, let's just return a placeholder or the base64 itself so UI doesn't break.
-            // Vercel apps cannot serve from C:/...
-            return base64; // Storing the base64 in JSON guarantees it reads back, but writes large JSON.
-            // However, we just DID save it to the local physical folder so the user has the actual PDF!
+            // Return a "virtual" relative path to store in JSON
+            return `local://Archivos/${safeFolderName}/${fileName}`;
         } catch (e) {
             console.error('Error saving physical file:', e);
-            return base64; // Fallback
+            // If failed, return null to avoid bloating JSON with base64 if it's too large
+            // or return base64 if it's small (avatar), but for PDF we prefer relative paths.
+            return base64.length > 50000 ? null : base64;
         }
     }
 
@@ -313,18 +398,28 @@ class FileSystemAdapter {
                     if (pendingAction.id) {
                         const index = collection.findIndex(item => item.id == pendingAction.id || item.id === pendingAction.id);
                         if (index > -1) {
+                            // If updating file paths
+                            const userName = this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
+
+                            if (pendingAction.body.pdf_file && pendingAction.body.pdf_file.startsWith('data:')) {
+                                pendingAction.body.pdf_file = await this.saveFile(pendingAction.body.pdf_file, userName, 'parte');
+                            }
+                            if (pendingAction.body.pdf_file_signed && pendingAction.body.pdf_file_signed.startsWith('data:')) {
+                                pendingAction.body.pdf_file_signed = await this.saveFile(pendingAction.body.pdf_file_signed, userName, 'parte_signed');
+                            }
+
                             collection[index] = { ...collection[index], ...pendingAction.body };
                             await this.saveDatabase();
                         }
                     } else if (pendingAction.column && pendingAction.val) {
                         // Update by other eq
                         let updated = false;
-                        collection.forEach((item, i) => {
-                            if (item[pendingAction.column] === pendingAction.val) {
+                        for (let i = 0; i < collection.length; i++) {
+                            if (collection[i][pendingAction.column] === pendingAction.val) {
                                 collection[i] = { ...collection[i], ...pendingAction.body };
                                 updated = true;
                             }
-                        });
+                        }
                         if (updated) await this.saveDatabase();
                     }
                     return { data: collection, error: null };
@@ -339,12 +434,18 @@ class FileSystemAdapter {
                 } else if (pendingAction.type === 'insert') {
                     let newItem = { ...pendingAction.body };
 
-                    // If it's a "parte", physically save the PDF and Avatar
-                    if (table === 'partes' && newItem.pdf_file) {
-                        // Find user to use as folder name
-                        const userNameStr = newItem.created_by || 'Sistema';
-                        const saved = await this.saveFile(newItem.pdf_file, userNameStr, 'parte');
-                        newItem.pdf_file = saved;
+                    // Physically save the PDF/Avatar if present
+                    if (newItem.pdf_file && newItem.pdf_file.startsWith('data:')) {
+                        const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
+                        newItem.pdf_file = await this.saveFile(newItem.pdf_file, userName, 'parte');
+                    }
+                    if (newItem.pdf_file_signed && newItem.pdf_file_signed.startsWith('data:')) {
+                        const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
+                        newItem.pdf_file_signed = await this.saveFile(newItem.pdf_file_signed, userName, 'parte_signed');
+                    }
+                    if (newItem.avatar_url && newItem.avatar_url.startsWith('data:')) {
+                        const userName = newItem.user_metadata?.full_name || 'Avatar';
+                        newItem.avatar_url = await this.saveFile(newItem.avatar_url, userName, 'avatar');
                     }
 
                     this.state[table].push(newItem);
@@ -424,7 +525,8 @@ class FileSystemAdapter {
         },
         signInWithPassword: async ({ email, password }: any) => {
             if (!this.isInitialized) {
-                return { data: { user: null }, error: { message: "Carpeta de datos local no seleccionada." } };
+                const checked = await this.init(true);
+                if (!checked) return { data: { user: null }, error: { message: "Carpeta de datos local no seleccionada." } };
             }
             const user = this.state.users.find(u => u.email === email && u.password === password);
             if (user) {
@@ -436,7 +538,7 @@ class FileSystemAdapter {
         },
         signUp: async ({ email, password, options }: any) => {
             if (this.state.users.find(u => u.email === email)) {
-                return { data: null, error: { message: "User already exists" } };
+                return { data: null, error: { message: "El usuario ya existe" } };
             }
             const newUser = {
                 id: crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}`,
@@ -456,7 +558,7 @@ class FileSystemAdapter {
             return { error: null };
         },
         updateUser: async ({ data, password }: any) => {
-            if (!this.activeSessionUser) return { error: { message: "No session" } };
+            if (!this.activeSessionUser) return { error: { message: "No hay sesión activa" } };
 
             const index = this.state.users.findIndex(u => u.id === this.activeSessionUser.id);
             if (index > -1) {
@@ -471,7 +573,7 @@ class FileSystemAdapter {
                 await this.saveDatabase();
                 return { data: { user: this.activeSessionUser }, error: null };
             }
-            return { error: { message: "User not found" } };
+            return { error: { message: "Usuario no encontrado" } };
         }
     };
 }
