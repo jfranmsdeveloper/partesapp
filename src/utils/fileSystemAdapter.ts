@@ -186,13 +186,38 @@ class FileSystemAdapter {
             const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
             const file = await fileHandle.getFile();
             const text = await file.text();
+
+            let loadedState: DBState;
             if (text) {
-                this.state = JSON.parse(text);
+                loadedState = JSON.parse(text);
                 // Migrate missing tables
-                if (!this.state.actuaciones) this.state.actuaciones = [];
-                if (!this.state.clients) this.state.clients = [];
+                if (!loadedState.actuaciones) loadedState.actuaciones = [];
+                if (!loadedState.clients) loadedState.clients = [];
             } else {
-                // First time setup
+                loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
+            }
+
+            // Sync predefined users (Upsert)
+            let modified = !text; // If new file, it's already modified
+
+            DEFAULT_DB.users.forEach(defUser => {
+                const existingIndex = loadedState.users.findIndex(u => u.email === defUser.email);
+                if (existingIndex === -1) {
+                    loadedState.users.push(defUser);
+                    modified = true;
+                }
+            });
+
+            // Remove old default admin if it's there and not in the new list
+            const oldAdmin = loadedState.users.findIndex(u => u.id === 'admin-id' || u.email === 'admin@admin.com');
+            if (oldAdmin > -1) {
+                loadedState.users.splice(oldAdmin, 1);
+                modified = true;
+            }
+
+            this.state = loadedState;
+
+            if (modified) {
                 await this.saveDatabase();
             }
         } catch (e) {
