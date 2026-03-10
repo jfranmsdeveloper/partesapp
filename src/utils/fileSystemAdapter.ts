@@ -191,11 +191,14 @@ class FileSystemAdapter {
             if (text) {
                 loadedState = JSON.parse(text);
                 // Migrate missing tables
+                if (!loadedState.users) loadedState.users = [];
                 if (!loadedState.actuaciones) loadedState.actuaciones = [];
                 if (!loadedState.clients) loadedState.clients = [];
             } else {
                 loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
             }
+
+            console.log('FSA: Base de datos cargada. Usuarios actuales:', loadedState.users.map(u => u.email));
 
             // Sync predefined users (Upsert)
             let modified = !text; // If new file, it's already modified

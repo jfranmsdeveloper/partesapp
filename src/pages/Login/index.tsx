@@ -8,7 +8,7 @@ import logo from '../../assets/logo.png';
 
 export default function Login() {
     const navigate = useNavigate();
-    const { loginUser, checkSession } = useAppStore();
+    const { loginUser, checkSession, error: storeError } = useAppStore();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -36,7 +36,7 @@ export default function Login() {
         if (success) {
             navigate('/dashboard');
         } else {
-            setError('Credenciales inválidas o no se seleccionó la carpeta.');
+            // Error is now handled by the store and displayed below
         }
     };
 
@@ -83,12 +83,12 @@ export default function Login() {
                     </p>
                 </div>
 
-                {error && (
+                {(error || storeError) && (
                     <div className="mb-6 bg-red-50/80 backdrop-blur-sm text-red-700 p-4 rounded-xl text-sm border border-red-200 shadow-sm flex items-center gap-2 animate-shake">
                         <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        {error}
+                        {error || storeError}
                     </div>
                 )}
 
