@@ -63,15 +63,18 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     checkSession: async () => {
         try {
+            // Check if we have permission to the local file system
+            const isReady = await supabase.init(false);
+
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
+            if (isReady && session?.user) {
                 set({
                     currentUser: {
                         id: session.user.id,
                         email: session.user.email!,
                         name: session.user.user_metadata.full_name || '',
                         password: '', // Not needed/available
-                        role: session.user.user_metadata?.role || 'user'
+                        role: session.user.role || session.user.user_metadata?.role || 'user'
                     }
                 });
                 // Load data when session exists
@@ -87,15 +90,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
     },
 
-    // ... (keep loginUser, registerUser, etc. unchanged if possible, or just replace the block if needed. 
-    // To match the ReplaceFileContent strictness, I should target specific blocks or the whole file if scattered.
-    // It's safer to target checkSession independently if I can, but I want to fix fetchData too.)
-
-    // Let's do checkSession first.
-
-
     loginUser: async (email, password) => {
         set({ isLoading: true, error: null });
+
+        // Ensure folder is selected before login
+        const isReady = await supabase.init(true);
+        if (!isReady) {
+            set({ isLoading: false, error: 'Debes seleccionar la carpeta local primero para que la aplicación funcione.' });
+            return false;
+        }
+
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
@@ -108,9 +112,9 @@ export const useAppStore = create<AppState>((set, get) => ({
                 currentUser: {
                     id: data.user.id,
                     email: data.user.email!,
-                    name: data.user.user_metadata.full_name || '',
+                    name: data.user.user_metadata?.full_name || data.user.name || '',
                     password: '',
-                    role: 'user'
+                    role: data.user.role || 'user'
                 }
             });
             await get().fetchData();

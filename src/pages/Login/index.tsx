@@ -87,7 +87,7 @@ export default function Login() {
                         type="submit"
                         className="w-full py-3 mt-6 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl"
                     >
-                        Iniciar Sesión
+                        Seleccionar Carpeta e Iniciar Sesión
                     </Button>
                 </form>
 
