@@ -51,15 +51,49 @@ interface DBState {
     clients: any[];
 }
 
+const dateIso = new Date().toISOString();
+
 const DEFAULT_DB: DBState = {
     users: [
         {
-            id: 'admin-id',
-            email: 'admin@admin.com',
+            id: 'usr-jmolin01',
+            email: 'jmolin01@melilla.es',
             password: 'admin',
             role: 'admin',
-            user_metadata: { full_name: 'Administrador' },
-            created_at: new Date().toISOString()
+            user_metadata: { full_name: 'J. Molin' },
+            created_at: dateIso
+        },
+        {
+            id: 'usr-mferna04',
+            email: 'mferna04@melilla.es',
+            password: 'user',
+            role: 'user',
+            user_metadata: { full_name: 'M. Ferna' },
+            created_at: dateIso
+        },
+        {
+            id: 'usr-rlopez02',
+            email: 'rlopez02@melilla.es',
+            password: 'user',
+            role: 'user',
+            user_metadata: { full_name: 'R. Lopez' },
+            created_at: dateIso
+        },
+        {
+            id: 'usr-mflore01',
+            email: 'mflore01@melilla.es',
+            password: 'user',
+            role: 'user',
+            user_metadata: { full_name: 'M. Flore' },
+            created_at: dateIso
+        },
+        {
+            id: 'usr-mcobo01',
+            email: 'mcobo01@melilla.es',
+            password: 'user',
+            role: 'user',
+            user_metadata: { full_name: 'M. Cobo' },
+            created_at: dateIso
         }
     ],
     partes: [],
@@ -80,6 +114,15 @@ class FileSystemAdapter {
         }
 
         try {
+            // Try restore session from localStorage immediately so getSession works
+            const savedSession = localStorage.getItem('local-session');
+            if (savedSession) {
+                const sessionData = JSON.parse(savedSession);
+                if (sessionData && sessionData.user) {
+                    this.activeSessionUser = sessionData.user;
+                }
+            }
+
             let dirHandle = await getHandleFromIDB();
 
             if (dirHandle) {
@@ -87,17 +130,29 @@ class FileSystemAdapter {
                 const permission = await (dirHandle as any).queryPermission({ mode: 'readwrite' });
                 if (permission !== 'granted') {
                     if (promptUserIfNeeded) {
-                        const newPerm = await (dirHandle as any).requestPermission({ mode: 'readwrite' });
-                        if (newPerm !== 'granted') dirHandle = null;
+                        try {
+                            const newPerm = await (dirHandle as any).requestPermission({ mode: 'readwrite' });
+                            if (newPerm !== 'granted') dirHandle = null;
+                        } catch (err) {
+                            console.warn('Browser denied requestPermission or missing user gesture:', err);
+                            dirHandle = null;
+                        }
                     } else {
-                        dirHandle = null;
+                        // Keep handle to request permission later
+                        this.handle = dirHandle;
+                        return false;
                     }
                 }
             }
 
             if (!dirHandle && promptUserIfNeeded) {
-                dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-                await saveHandleToIDB(dirHandle as any);
+                try {
+                    dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+                    await saveHandleToIDB(dirHandle as any);
+                } catch (err) {
+                    console.warn('User cancelled folder selection:', err);
+                    return false;
+                }
             }
 
             if (dirHandle) {
@@ -105,14 +160,13 @@ class FileSystemAdapter {
                 await this.loadDatabase();
                 this.isInitialized = true;
 
-                // Try restore session from localStorage
-                const savedSession = localStorage.getItem('local-session');
-                if (savedSession) {
-                    const sessionData = JSON.parse(savedSession);
-                    const userEx = this.state.users.find(u => u.id === sessionData.user.id);
+                // Validate session against real DB
+                if (this.activeSessionUser) {
+                    const userEx = this.state.users.find(u => u.id === this.activeSessionUser.id);
                     if (userEx) {
                         this.activeSessionUser = userEx;
                     } else {
+                        this.activeSessionUser = null;
                         localStorage.removeItem('local-session');
                     }
                 }

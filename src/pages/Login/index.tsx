@@ -1,17 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAppStore } from '../../store/useAppStore';
+import { supabase } from '../../utils/supabase';
 import logo from '../../assets/logo.png';
 
 export default function Login() {
     const navigate = useNavigate();
-    const { loginUser } = useAppStore();
+    const { loginUser, checkSession } = useAppStore();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [savedUser, setSavedUser] = useState<any>(null);
+
+    useEffect(() => {
+        const s = localStorage.getItem('local-session');
+        if (s) {
+            try {
+                const sessionData = JSON.parse(s);
+                if (sessionData?.user) {
+                    setSavedUser(sessionData.user);
+                }
+            } catch (e) { }
+        }
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,8 +36,25 @@ export default function Login() {
         if (success) {
             navigate('/dashboard');
         } else {
-            setError('Credenciales inválidas');
+            setError('Credenciales inválidas o no se seleccionó la carpeta.');
         }
+    };
+
+    const handleReconnect = async () => {
+        setError('');
+        // init(true) will prompt the user to allow permission without asking for email/password
+        const success = await supabase.init(true);
+        if (success) {
+            await checkSession();
+            navigate('/dashboard');
+        } else {
+            setError('No se pudo reanudar la sesión. Por favor, selecciona la carpeta nuevamente o inicia sesión con tus datos.');
+        }
+    };
+
+    const handleClearSession = () => {
+        localStorage.removeItem('local-session');
+        setSavedUser(null);
     };
 
     return (
@@ -61,42 +92,66 @@ export default function Login() {
                     </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-5">
-                    <div className="space-y-1">
-                        <Input
-                            label="Correo Electrónico"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="bg-white/50 border-orange-200 focus:border-orange-500 focus:ring-orange-500/20"
-                        />
+                {savedUser ? (
+                    <div className="space-y-5 animate-fade-in text-center">
+                        <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 mb-4">
+                            <p className="text-slate-700 text-sm mb-2">Sesión detectada como:</p>
+                            <p className="font-semibold text-lg text-slate-900">{savedUser.full_name || savedUser.name || savedUser.email}</p>
+                            <p className="text-xs text-orange-600 mt-2 font-medium">Por seguridad, el navegador requiere que vuelvas a dar acceso a la carpeta de datos.</p>
+                        </div>
+                        <Button
+                            onClick={handleReconnect}
+                            className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl"
+                        >
+                            Conectar Carpeta y Continuar
+                        </Button>
+                        <button
+                            onClick={handleClearSession}
+                            className="mt-4 text-sm text-slate-500 hover:text-slate-800 transition-colors underline"
+                        >
+                            Cambiar de cuenta
+                        </button>
                     </div>
-                    <div className="space-y-1">
-                        <Input
-                            label="Contraseña"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="bg-white/50 border-orange-200 focus:border-orange-500 focus:ring-orange-500/20"
-                        />
+                ) : (
+                    <form onSubmit={handleLogin} className="space-y-5 animate-fade-in">
+                        <div className="space-y-1">
+                            <Input
+                                label="Correo Electrónico"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                className="bg-white/50 border-orange-200 focus:border-orange-500 focus:ring-orange-500/20"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Input
+                                label="Contraseña"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="bg-white/50 border-orange-200 focus:border-orange-500 focus:ring-orange-500/20"
+                            />
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full py-3 mt-6 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl"
+                        >
+                            Seleccionar Carpeta e Iniciar Sesión
+                        </Button>
+                    </form>
+                )}
+
+                {!savedUser && (
+                    <div className="mt-8 text-center text-sm text-slate-600">
+                        ¿No tienes cuenta?{' '}
+                        <Link to="/signup" className="font-semibold text-orange-600 hover:text-orange-500 transition-colors hover:underline">
+                            Regístrate aquí
+                        </Link>
                     </div>
-
-                    <Button
-                        type="submit"
-                        className="w-full py-3 mt-6 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl"
-                    >
-                        Seleccionar Carpeta e Iniciar Sesión
-                    </Button>
-                </form>
-
-                <div className="mt-8 text-center text-sm text-slate-600">
-                    ¿No tienes cuenta?{' '}
-                    <Link to="/signup" className="font-semibold text-orange-600 hover:text-orange-500 transition-colors hover:underline">
-                        Regístrate aquí
-                    </Link>
-                </div>
+                )}
             </div>
 
             <div className="fixed bottom-4 text-slate-400 text-xs text-center w-full opacity-60">
