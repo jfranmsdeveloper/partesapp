@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { Search, Clock, ChevronRight, ArrowLeft, FileText, Calendar, User, MoreHorizontal, ArrowUpRight } from 'lucide-react';
+import { Search, Clock, ChevronRight, ArrowLeft, FileText, Calendar, User, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -13,7 +13,7 @@ export default function GlobalSearch() {
     const { partes, users } = useAppStore();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
-    const [expandedParteId, setExpandedParteId] = useState<number | null>(null);
+
 
     // --- Search Logic ---
     const searchResults = useMemo(() => {
@@ -136,7 +136,7 @@ export default function GlobalSearch() {
                     {workers.map(worker => (
                         <button
                             key={worker.id}
-                            onClick={() => { setSelectedWorkerId(worker.id); setSearchTerm(''); }}
+                            onClick={() => { setSelectedWorkerId(worker.id || ''); setSearchTerm(''); }}
                             className={clsx(
                                 "group flex items-center gap-3 pl-2 pr-4 py-2 rounded-full transition-all duration-300 shadow-sm border",
                                 selectedWorkerId === worker.id
@@ -193,7 +193,7 @@ export default function GlobalSearch() {
                         <Card
                             key={worker.id}
                             className="group relative cursor-pointer hover:shadow-xl transition-all duration-300 border border-slate-200 dark:border-slate-800 overflow-visible hover:border-orange-500/50"
-                            onClick={() => setSelectedWorkerId(worker.id)}
+                            onClick={() => setSelectedWorkerId(worker.id || '')}
                         >
                             <div className="absolute top-0 left-0 w-1 h-full bg-slate-200 dark:bg-slate-700 group-hover:bg-orange-500 transition-colors rounded-l-2xl" />
 
@@ -210,7 +210,7 @@ export default function GlobalSearch() {
                                         )}
                                     </div>
                                     <div className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 text-[10px] font-bold text-slate-500">
-                                        ID: {worker.id.slice(0, 4)}...
+                                        ID: {worker.id?.slice(0, 4)}...
                                     </div>
                                 </div>
 
@@ -298,7 +298,7 @@ export default function GlobalSearch() {
                                 </div>
                             </div>
                         </div>
-                        <Button variant="outline" onClick={() => { setSelectedWorkerId(null); setExpandedParteId(null); }} className="rounded-xl border-slate-300">
+                        <Button variant="outline" onClick={() => { setSelectedWorkerId(null); }} className="rounded-xl border-slate-300">
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Volver
                         </Button>
