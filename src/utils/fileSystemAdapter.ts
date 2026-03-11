@@ -47,6 +47,28 @@ export async function getHandleFromIDB(): Promise<FileSystemDirectoryHandle | nu
     });
 }
 
+export async function clearHandleFromIDB(): Promise<void> {
+    return new Promise((resolve) => {
+        const req = indexedDB.open('PartesAppDB', 1);
+        req.onupgradeneeded = () => {
+            req.result.createObjectStore(IDB_STORE);
+        };
+        req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                resolve();
+                return;
+            }
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            const store = tx.objectStore(IDB_STORE);
+            store.delete(IDB_KEY);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => resolve();
+        };
+        req.onerror = () => resolve();
+    });
+}
+
 // ---------------------------------------------------------------------------
 // DB schema
 // ---------------------------------------------------------------------------
@@ -679,8 +701,24 @@ class FileSystemAdapter {
                 await this.deleteSessionFile(uname);
             }
             this.activeSessionUser = null;
-            // Also clear any legacy localStorage entry that might exist
-            try { localStorage.removeItem('local-session'); } catch { /* ignore */ }
+            this.handle = null;
+            this.isInitialized = false;
+            this.hasPendingHandle = false;
+            this.pendingUsername = null;
+            // Reset state to default
+            this.state = JSON.parse(JSON.stringify(DEFAULT_DB));
+            
+            // Clear any legacy localStorage entry and all other browser storages
+            try { 
+                localStorage.clear(); 
+                sessionStorage.clear();
+            } catch { /* ignore */ }
+
+            // Clear the stored directory handle so there is no trace of the connection
+            try {
+                await clearHandleFromIDB();
+            } catch { /* ignore */ }
+
             return { error: null };
         },
 
