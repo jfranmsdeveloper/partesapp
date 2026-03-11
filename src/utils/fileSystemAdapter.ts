@@ -1,10 +1,13 @@
 // Using native crypto.randomUUID instead of external uuid library
 
 export const DB_FILE_NAME = 'database.json';
+export const SESSION_FILE_NAME = 'session.json';
 export const IDB_STORE = 'PartesAppStore';
 export const IDB_KEY = 'rootDirectoryHandle';
 
-// We store the handle in IndexedDB
+// ---------------------------------------------------------------------------
+// IndexedDB helpers — persist the root folder handle across sessions
+// ---------------------------------------------------------------------------
 export async function saveHandleToIDB(handle: FileSystemDirectoryHandle): Promise<void> {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open('PartesAppDB', 1);
@@ -44,6 +47,9 @@ export async function getHandleFromIDB(): Promise<FileSystemDirectoryHandle | nu
     });
 }
 
+// ---------------------------------------------------------------------------
+// DB schema
+// ---------------------------------------------------------------------------
 interface DBState {
     users: any[];
     partes: any[];
@@ -101,12 +107,32 @@ const DEFAULT_DB: DBState = {
     clients: []
 };
 
+// ---------------------------------------------------------------------------
+// Helper: derive a safe folder name from an email
+//   "jmolin01@melilla.es" → "jmolin01"
+// ---------------------------------------------------------------------------
+function userFolderName(email: string): string {
+    return email.split('@')[0].replace(/[^a-z0-9_\-]/gi, '_');
+}
+
+// ---------------------------------------------------------------------------
+// FileSystemAdapter — wraps the File System Access API as a Supabase-like client
+// ---------------------------------------------------------------------------
 class FileSystemAdapter {
     private handle: FileSystemDirectoryHandle | null = null;
     private state: DBState = JSON.parse(JSON.stringify(DEFAULT_DB));
     public isInitialized = false;
+    /** True when IndexedDB has a stored handle but the browser needs a user gesture to re-grant permission */
+    public hasPendingHandle = false;
     private activeSessionUser: any = null;
+    /** The username inferred from the last session file found (used to speed up reconnect) */
+    private pendingUsername: string | null = null;
 
+    // -----------------------------------------------------------------------
+    // init — restore or acquire the root folder handle
+    //   promptUserIfNeeded = true  → show directory picker if not stored yet
+    //   promptUserIfNeeded = false → silent check only (used by checkSession)
+    // -----------------------------------------------------------------------
     async init(promptUserIfNeeded = false): Promise<boolean> {
         if (!('showDirectoryPicker' in window)) {
             alert('Tu navegador no soporta File System Access API. Usa Chrome o Edge en PC/Mac.');
@@ -114,39 +140,33 @@ class FileSystemAdapter {
         }
 
         try {
-            // Try restore session from localStorage immediately so getSession works
-            const savedSession = localStorage.getItem('local-session');
-            if (savedSession) {
-                try {
-                    const sessionData = JSON.parse(savedSession);
-                    if (sessionData && sessionData.user) {
-                        this.activeSessionUser = sessionData.user;
-                    }
-                } catch (e) { console.warn("Error parsing session:", e); }
-            }
-
             let dirHandle = await getHandleFromIDB();
 
             if (dirHandle) {
-                // Verify permission
+                // Check current permission status
                 const permission = await (dirHandle as any).queryPermission({ mode: 'readwrite' });
+
                 if (permission !== 'granted') {
                     if (promptUserIfNeeded) {
+                        // requestPermission needs a user gesture — it works when called
+                        // from a button click handler (loginUser / checkSession from App mount).
                         try {
                             const newPerm = await (dirHandle as any).requestPermission({ mode: 'readwrite' });
                             if (newPerm !== 'granted') dirHandle = null;
                         } catch (err) {
-                            console.warn('Browser denied requestPermission or missing user gesture:', err);
+                            console.warn('requestPermission failed or no user gesture:', err);
                             dirHandle = null;
                         }
                     } else {
-                        // Keep handle to request permission later
+                        // Silent check: keep handle but mark as not fully initialised yet
                         this.handle = dirHandle;
+                        this.hasPendingHandle = true;
                         return false;
                     }
                 }
             }
 
+            // No stored handle (or permission denied) and we can prompt → show picker once
             if (!dirHandle && promptUserIfNeeded) {
                 try {
                     dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
@@ -159,28 +179,116 @@ class FileSystemAdapter {
 
             if (dirHandle) {
                 this.handle = dirHandle;
+                this.hasPendingHandle = false;
                 await this.loadDatabase();
                 this.isInitialized = true;
 
-                // Validate session against real DB
-                if (this.activeSessionUser) {
-                    const userEx = this.state.users.find(u => u.id === this.activeSessionUser.id);
-                    if (userEx) {
-                        this.activeSessionUser = userEx;
-                    } else {
-                        this.activeSessionUser = null;
-                        localStorage.removeItem('local-session');
-                    }
-                }
+                // Try to restore session from the file-based session.json
+                await this.restoreSessionFromFile();
 
                 return true;
             }
+
             return false;
         } catch (e) {
             console.error('Error init filesystem:', e);
             return false;
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Session persistence — read/write <username>/session.json
+    // -----------------------------------------------------------------------
+
+    /** Read session.json for a given username folder. Returns null if not found. */
+    private async readSessionFile(username: string): Promise<any | null> {
+        if (!this.handle) return null;
+        try {
+            const userDir = await this.handle.getDirectoryHandle(username, { create: false });
+            const fileHandle = await userDir.getFileHandle(SESSION_FILE_NAME, { create: false });
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            return text ? JSON.parse(text) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    /** Write session data to <username>/session.json */
+    private async writeSessionFile(username: string, sessionData: any): Promise<void> {
+        if (!this.handle) return;
+        try {
+            // Ensure the user folder exists
+            const userDir = await this.handle.getDirectoryHandle(username, { create: true });
+            const fileHandle = await userDir.getFileHandle(SESSION_FILE_NAME, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(sessionData, null, 2));
+            await writable.close();
+            console.log(`FSA: session.json guardado en ${username}/`);
+        } catch (e) {
+            console.error('Error writing session file:', e);
+        }
+    }
+
+    /** Delete <username>/session.json (on logout) */
+    private async deleteSessionFile(username: string): Promise<void> {
+        if (!this.handle) return;
+        try {
+            const userDir = await this.handle.getDirectoryHandle(username, { create: false });
+            await userDir.removeEntry(SESSION_FILE_NAME);
+        } catch {
+            // File might not exist, that's fine
+        }
+    }
+
+    /**
+     * After the folder is successfully opened, scan all user folders for a valid session.
+     * This replaces the old localStorage-based restore.
+     */
+    private async restoreSessionFromFile(): Promise<void> {
+        if (!this.handle) return;
+
+        // We iterate over known users to find whose session.json exists and is valid
+        for (const user of this.state.users) {
+            const uname = userFolderName(user.email);
+            const session = await this.readSessionFile(uname);
+            if (session && session.userId) {
+                // Validate against DB
+                const dbUser = this.state.users.find(u => u.id === session.userId);
+                if (dbUser) {
+                    this.activeSessionUser = dbUser;
+                    this.pendingUsername = uname;
+                    console.log(`FSA: sesión restaurada para ${dbUser.email}`);
+                    return;
+                }
+            }
+        }
+
+        // No valid session found
+        this.activeSessionUser = null;
+        this.pendingUsername = null;
+    }
+
+    /**
+     * Called from the Login page reconnect button.
+     * Requests folder permission (needs user gesture) and then restores the session.
+     * Returns true if session was successfully restored.
+     */
+    async requestPermissionAndRestore(): Promise<boolean> {
+        const ready = await this.init(true);
+        return ready && !!this.activeSessionUser;
+    }
+
+    /** Returns the email of the user whose session.json was found, if any. */
+    get pendingSessionEmail(): string | null {
+        if (!this.pendingUsername) return null;
+        const user = this.state.users.find(u => userFolderName(u.email) === this.pendingUsername);
+        return user?.email || null;
+    }
+
+    // -----------------------------------------------------------------------
+    // Database load / save
+    // -----------------------------------------------------------------------
 
     private async loadDatabase() {
         if (!this.handle) return;
@@ -193,24 +301,22 @@ class FileSystemAdapter {
             if (text && text.trim().startsWith('{')) {
                 try {
                     loadedState = JSON.parse(text);
-                    // Migrate missing tables
                     if (!loadedState.users) loadedState.users = [];
                     if (!loadedState.partes) loadedState.partes = [];
                     if (!loadedState.actuaciones) loadedState.actuaciones = [];
                     if (!loadedState.clients) loadedState.clients = [];
                 } catch (e) {
-                    console.error("Malformed JSON in database.json, resetting to default.", e);
+                    console.error('Malformed JSON in database.json, resetting to default.', e);
                     loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
                 }
             } else {
                 loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
             }
 
-            console.log('FSA: Base de datos cargada. Usuarios actuales:', loadedState.users.map(u => u.email));
+            console.log('FSA: Base de datos cargada. Usuarios:', loadedState.users.map(u => u.email));
 
-            // Sync predefined users (Upsert)
+            // Upsert predefined users
             let modified = !text;
-
             DEFAULT_DB.users.forEach(defUser => {
                 const existingIndex = loadedState.users.findIndex(u => u.email === defUser.email);
                 if (existingIndex === -1) {
@@ -219,7 +325,7 @@ class FileSystemAdapter {
                 }
             });
 
-            // Remove old default admin if it's there and not in the new list
+            // Remove old default admin
             const oldAdmin = loadedState.users.findIndex(u => u.id === 'admin-id' || u.email === 'admin@admin.com');
             if (oldAdmin > -1) {
                 loadedState.users.splice(oldAdmin, 1);
@@ -240,7 +346,6 @@ class FileSystemAdapter {
             }
         } catch (e) {
             console.error('Error loading DB:', e);
-            // Fallback to default
             this.state = JSON.parse(JSON.stringify(DEFAULT_DB));
             await this.saveDatabase();
         }
@@ -253,35 +358,24 @@ class FileSystemAdapter {
         let count = 0;
         if (!this.state) return 0;
 
-        // 1. Migrate Partes PDFs
         for (const parte of this.state.partes) {
             if (parte.pdf_file && parte.pdf_file.startsWith('data:')) {
                 const userName = parte.created_by || 'Sistema';
                 const path = await this.saveFile(parte.pdf_file, userName, 'parte');
-                if (path && path.startsWith('local://')) {
-                    parte.pdf_file = path;
-                    count++;
-                }
+                if (path && path.startsWith('local://')) { parte.pdf_file = path; count++; }
             }
             if (parte.pdf_file_signed && parte.pdf_file_signed.startsWith('data:')) {
                 const userName = parte.created_by || 'Sistema';
                 const path = await this.saveFile(parte.pdf_file_signed, userName, 'parte_signed');
-                if (path && path.startsWith('local://')) {
-                    parte.pdf_file_signed = path;
-                    count++;
-                }
+                if (path && path.startsWith('local://')) { parte.pdf_file_signed = path; count++; }
             }
         }
 
-        // 2. Migrate User Avatars
         for (const user of this.state.users) {
             if (user.avatar_url && user.avatar_url.startsWith('data:')) {
                 const userName = user.user_metadata?.full_name || user.name || 'Avatar';
                 const path = await this.saveFile(user.avatar_url, userName, 'avatar');
-                if (path && path.startsWith('local://')) {
-                    user.avatar_url = path;
-                    count++;
-                }
+                if (path && path.startsWith('local://')) { user.avatar_url = path; count++; }
             }
         }
 
@@ -291,24 +385,24 @@ class FileSystemAdapter {
     private async saveDatabase() {
         if (!this.handle) return;
         try {
-            console.log("FSA: Guardando base de datos...");
+            console.log('FSA: Guardando base de datos...');
             const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
             const writable = await fileHandle.createWritable();
             await writable.write(JSON.stringify(this.state, null, 2));
             await writable.close();
-            console.log("FSA: Base de datos guardada con éxito.");
+            console.log('FSA: Base de datos guardada con éxito.');
         } catch (e) {
             console.error('Error saving DB:', e);
         }
     }
 
-    /**
-     * getFileUrl retrieves a physical file from the handle and returns a temporary URL (Blob URL)
-     * This is used to preview PDFs or images without storing base64 in the JSON.
-     */
+    // -----------------------------------------------------------------------
+    // File helpers
+    // -----------------------------------------------------------------------
+
     async getFileUrl(path: string): Promise<string | null> {
         if (!this.handle || !path) return null;
-        if (!path.startsWith('local://')) return path; // Already a URL or base64
+        if (!path.startsWith('local://')) return path;
 
         try {
             const relativePath = path.replace('local://', '');
@@ -324,15 +418,14 @@ class FileSystemAdapter {
             const file = await fileHandle.getFile();
             return URL.createObjectURL(file);
         } catch (e) {
-            console.error("Error retrieving file for preview:", e);
+            console.error('Error retrieving file for preview:', e);
             return null;
         }
     }
 
-    // Storage: Save files per user physically
     async saveFile(base64: string, folderName: string, prefix: string = 'file'): Promise<string | null> {
         if (!this.handle) return null;
-        if (!base64 || !base64.startsWith('data:')) return base64; // Not base64 or already a path
+        if (!base64 || !base64.startsWith('data:')) return base64;
 
         try {
             const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -343,7 +436,6 @@ class FileSystemAdapter {
             const extMap: any = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
             const ext = extMap[mime] || 'bin';
 
-            // Convert base64 to Blob
             const byteCharacters = atob(dataBase64);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
@@ -354,12 +446,10 @@ class FileSystemAdapter {
 
             const safeFolderName = folderName.replace(/[^a-z0-9]/gi, '_');
 
-            // Get or create Archives folder
             let archivesHandle;
             try { archivesHandle = await this.handle.getDirectoryHandle('Archivos', { create: true }); }
             catch { archivesHandle = this.handle; }
 
-            // Get or create User folder
             let userHandle;
             try { userHandle = await archivesHandle.getDirectoryHandle(safeFolderName, { create: true }); }
             catch { userHandle = archivesHandle; }
@@ -370,17 +460,16 @@ class FileSystemAdapter {
             await writable.write(blob);
             await writable.close();
 
-            // Return a "virtual" relative path to store in JSON
             return `local://Archivos/${safeFolderName}/${fileName}`;
         } catch (e) {
             console.error('Error saving physical file:', e);
-            // If failed, return null to avoid bloating JSON with base64 if it's too large
-            // or return base64 if it's small (avatar), but for PDF we prefer relative paths.
             return base64.length > 50000 ? null : base64;
         }
     }
 
-    // -------- SUPABASE API MIRROR --------
+    // -----------------------------------------------------------------------
+    // Supabase-compatible API
+    // -----------------------------------------------------------------------
 
     from(table: keyof DBState) {
         let queryParams: any = {};
@@ -388,7 +477,7 @@ class FileSystemAdapter {
 
         const execute = async () => {
             if (!this.isInitialized) {
-                return { data: null, error: { message: "Carpeta no inicializada. Por favor, selecciona una carpeta raíz primero." } };
+                return { data: null, error: { message: 'Carpeta no inicializada. Por favor, inicia sesión primero.' } };
             }
 
             let collection = this.state[table] || [];
@@ -396,9 +485,8 @@ class FileSystemAdapter {
             if (pendingAction) {
                 if (pendingAction.type === 'update') {
                     if (pendingAction.id) {
-                        const index = collection.findIndex(item => item.id == pendingAction.id || item.id === pendingAction.id);
+                        const index = collection.findIndex((item: any) => item.id == pendingAction.id || item.id === pendingAction.id);
                         if (index > -1) {
-                            // If updating file paths
                             const userName = this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
 
                             if (pendingAction.body.pdf_file && pendingAction.body.pdf_file.startsWith('data:')) {
@@ -412,7 +500,6 @@ class FileSystemAdapter {
                             await this.saveDatabase();
                         }
                     } else if (pendingAction.column && pendingAction.val) {
-                        // Update by other eq
                         let updated = false;
                         for (let i = 0; i < collection.length; i++) {
                             if (collection[i][pendingAction.column] === pendingAction.val) {
@@ -423,18 +510,19 @@ class FileSystemAdapter {
                         if (updated) await this.saveDatabase();
                     }
                     return { data: collection, error: null };
+
                 } else if (pendingAction.type === 'delete') {
                     if (pendingAction.id) {
-                        this.state[table] = collection.filter(item => item.id != pendingAction.id);
+                        this.state[table] = collection.filter((item: any) => item.id != pendingAction.id);
                     } else if (pendingAction.column && pendingAction.val) {
-                        this.state[table] = collection.filter(item => item[pendingAction.column] != pendingAction.val);
+                        this.state[table] = collection.filter((item: any) => item[pendingAction.column] != pendingAction.val);
                     }
                     await this.saveDatabase();
                     return { data: null, error: null };
+
                 } else if (pendingAction.type === 'insert') {
                     let newItem = { ...pendingAction.body };
 
-                    // Physically save the PDF/Avatar if present
                     if (newItem.pdf_file && newItem.pdf_file.startsWith('data:')) {
                         const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
                         newItem.pdf_file = await this.saveFile(newItem.pdf_file, userName, 'parte');
@@ -457,16 +545,14 @@ class FileSystemAdapter {
             // SELECT
             let results = [...collection];
 
-            // apply eq filters
             for (const key of Object.keys(queryParams)) {
                 if (key === 'order' || key === 'select') continue;
-                results = results.filter(item => item[key] == queryParams[key]);
+                results = results.filter((item: any) => item[key] == queryParams[key]);
             }
 
-            // apply order (simple mock)
             if (queryParams.order) {
                 const { column, asc } = queryParams.order;
-                results.sort((a, b) => {
+                results.sort((a: any, b: any) => {
                     if (a[column] < b[column]) return asc ? -1 : 1;
                     if (a[column] > b[column]) return asc ? 1 : -1;
                     return 0;
@@ -520,25 +606,59 @@ class FileSystemAdapter {
             }
             return { data: { session: { user: this.activeSessionUser } }, error: null };
         },
+
         getUser: async () => {
             return { data: { user: this.activeSessionUser }, error: null };
         },
+
         signInWithPassword: async ({ email, password }: any) => {
+            // Step 1: Validate credentials against the in-memory DEFAULT_DB first
+            // (database might not be loaded yet if folder wasn't selected before)
+            const defaultUser = DEFAULT_DB.users.find(u => u.email === email && u.password === password);
+            if (!defaultUser) {
+                // Try in loaded state if already initialised
+                if (this.isInitialized) {
+                    const user = this.state.users.find((u: any) => u.email === email && u.password === password);
+                    if (!user) {
+                        return { data: { user: null }, error: { message: 'Credenciales incorrectas' } };
+                    }
+                } else {
+                    return { data: { user: null }, error: { message: 'Credenciales incorrectas' } };
+                }
+            }
+
+            // Step 2: Make sure the root folder is accessible (prompt if first time)
             if (!this.isInitialized) {
-                const checked = await this.init(true);
-                if (!checked) return { data: { user: null }, error: { message: "Carpeta de datos local no seleccionada." } };
+                const ready = await this.init(true);
+                if (!ready) {
+                    return { data: { user: null }, error: { message: 'Es necesario seleccionar la carpeta de datos para continuar.' } };
+                }
             }
-            const user = this.state.users.find(u => u.email === email && u.password === password);
-            if (user) {
-                this.activeSessionUser = user;
-                localStorage.setItem('local-session', JSON.stringify({ user }));
-                return { data: { user }, error: null };
+
+            // Step 3: Find user in the now-loaded database
+            const user = this.state.users.find((u: any) => u.email === email && u.password === password);
+            if (!user) {
+                return { data: { user: null }, error: { message: 'Credenciales incorrectas' } };
             }
-            return { data: { user: null }, error: { message: "Credenciales incorrectas" } };
+
+            // Step 4: Create the user's personal subfolder and save session
+            const uname = userFolderName(email);
+            await this.ensureUserFolder(uname);
+            await this.writeSessionFile(uname, { userId: user.id, email: user.email, loginAt: new Date().toISOString() });
+
+            this.activeSessionUser = user;
+            console.log(`FSA: sesión iniciada y guardada en ${uname}/session.json`);
+
+            return { data: { user }, error: null };
         },
+
         signUp: async ({ email, password, options }: any) => {
-            if (this.state.users.find(u => u.email === email)) {
-                return { data: null, error: { message: "El usuario ya existe" } };
+            if (!this.isInitialized) {
+                const ready = await this.init(true);
+                if (!ready) return { data: null, error: { message: 'Carpeta de datos no seleccionada.' } };
+            }
+            if (this.state.users.find((u: any) => u.email === email)) {
+                return { data: null, error: { message: 'El usuario ya existe' } };
             }
             const newUser = {
                 id: crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}`,
@@ -552,15 +672,22 @@ class FileSystemAdapter {
             await this.saveDatabase();
             return { data: { user: newUser }, error: null };
         },
+
         signOut: async () => {
+            if (this.activeSessionUser) {
+                const uname = userFolderName(this.activeSessionUser.email);
+                await this.deleteSessionFile(uname);
+            }
             this.activeSessionUser = null;
-            localStorage.removeItem('local-session');
+            // Also clear any legacy localStorage entry that might exist
+            try { localStorage.removeItem('local-session'); } catch { /* ignore */ }
             return { error: null };
         },
-        updateUser: async ({ data, password }: any) => {
-            if (!this.activeSessionUser) return { error: { message: "No hay sesión activa" } };
 
-            const index = this.state.users.findIndex(u => u.id === this.activeSessionUser.id);
+        updateUser: async ({ data, password }: any) => {
+            if (!this.activeSessionUser) return { error: { message: 'No hay sesión activa' } };
+
+            const index = this.state.users.findIndex((u: any) => u.id === this.activeSessionUser.id);
             if (index > -1) {
                 if (data) {
                     this.state.users[index].user_metadata = { ...this.state.users[index].user_metadata, ...data };
@@ -569,13 +696,30 @@ class FileSystemAdapter {
                     this.state.users[index].password = password;
                 }
                 this.activeSessionUser = this.state.users[index];
-                localStorage.setItem('local-session', JSON.stringify({ user: this.activeSessionUser }));
+
+                // Refresh session file
+                const uname = userFolderName(this.activeSessionUser.email);
+                await this.writeSessionFile(uname, { userId: this.activeSessionUser.id, email: this.activeSessionUser.email, loginAt: new Date().toISOString() });
+
                 await this.saveDatabase();
                 return { data: { user: this.activeSessionUser }, error: null };
             }
-            return { error: { message: "Usuario no encontrado" } };
+            return { error: { message: 'Usuario no encontrado' } };
         }
     };
+
+    // -----------------------------------------------------------------------
+    // Ensure the user personal folder exists
+    // -----------------------------------------------------------------------
+    private async ensureUserFolder(username: string): Promise<void> {
+        if (!this.handle) return;
+        try {
+            await this.handle.getDirectoryHandle(username, { create: true });
+            console.log(`FSA: carpeta de usuario '${username}' asegurada.`);
+        } catch (e) {
+            console.error(`FSA: no se pudo crear la carpeta del usuario '${username}':`, e);
+        }
+    }
 }
 
 export const localDb = new FileSystemAdapter();

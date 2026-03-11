@@ -11,10 +11,12 @@ interface AppState {
 
     // Auth State
     currentUser: User | null;
+    hasPendingHandle: boolean;
     checkSession: () => Promise<void>;
     loginUser: (email: string, pass: string) => Promise<boolean>;
     registerUser: (user: User) => Promise<boolean>;
     logoutUser: () => Promise<void>;
+    reconnectSession: () => Promise<boolean>;
 
     // Data State
     partes: Parte[];
@@ -57,13 +59,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     error: null,
 
     currentUser: null,
+    hasPendingHandle: false,
     partes: [],
     clients: [],
     users: [],
 
     checkSession: async () => {
         try {
-            // Check if we have permission to the local file system
+            // Try to silently restore the root-folder handle from IndexedDB.
+            // init(false) = do NOT prompt the user for a new folder selection.
+            // If the handle exists and we can get permission (or it is already granted)
+            // the adapter will also load the database AND restore the session from file.
             const isReady = await supabase.init(false);
 
             const { data: { session } } = await supabase.auth.getSession();
@@ -72,15 +78,14 @@ export const useAppStore = create<AppState>((set, get) => ({
                     currentUser: {
                         id: session.user.id,
                         email: session.user.email!,
-                        name: session.user.user_metadata.full_name || '',
-                        password: '', // Not needed/available
+                        name: session.user.user_metadata?.full_name || session.user.name || '',
+                        password: '',
                         role: session.user.role || session.user.user_metadata?.role || 'user'
                     }
                 });
-                // Load data when session exists
                 await get().fetchData();
             } else {
-                set({ currentUser: null, partes: [], clients: [] });
+                set({ currentUser: null, partes: [], clients: [], hasPendingHandle: (supabase as any).hasPendingHandle || false });
             }
         } catch (error) {
             console.error('Session check failed:', error);
@@ -93,13 +98,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     loginUser: async (email, password) => {
         set({ isLoading: true, error: null });
 
-        // Ensure folder is selected before login
-        const isReady = await supabase.init(true);
-        if (!isReady) {
-            set({ isLoading: false, error: 'Debes seleccionar la carpeta local primero para que la aplicación funcione.' });
-            return false;
-        }
-
+        // signInWithPassword now handles:
+        //  1. Credential validation
+        //  2. Folder selection (only first time via showDirectoryPicker)
+        //  3. Session persistence in <username>/session.json
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
@@ -114,7 +116,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                     email: data.user.email!,
                     name: data.user.user_metadata?.full_name || data.user.name || '',
                     password: '',
-                    role: data.user.role || 'user'
+                    role: data.user.role || data.user.user_metadata?.role || 'user'
                 }
             });
             await get().fetchData();
@@ -143,7 +145,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     logoutUser: async () => {
         await supabase.auth.signOut();
-        set({ currentUser: null, partes: [], clients: [] });
+        set({ currentUser: null, partes: [], clients: [], hasPendingHandle: false });
+    },
+
+    reconnectSession: async () => {
+        // Called from the Login page reconnect button (requires user gesture)
+        const ok = await (supabase as any).requestPermissionAndRestore();
+        if (ok) {
+            await get().checkSession();
+        }
+        return ok;
     },
 
     fetchData: async () => {

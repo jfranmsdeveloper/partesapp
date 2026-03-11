@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -8,54 +8,48 @@ import logo from '../../assets/logo.png';
 
 export default function Login() {
     const navigate = useNavigate();
-    const { loginUser, checkSession, error: storeError } = useAppStore();
+    const { loginUser, reconnectSession, hasPendingHandle, error: storeError } = useAppStore();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [savedUser, setSavedUser] = useState<any>(null);
+    const [localError, setLocalError] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [isReconnecting, setIsReconnecting] = useState(false);
 
-    useEffect(() => {
-        const s = localStorage.getItem('local-session');
-        if (s) {
-            try {
-                const sessionData = JSON.parse(s);
-                if (sessionData?.user) {
-                    setSavedUser(sessionData.user);
-                }
-            } catch (e) { }
-        }
-    }, []);
+    // Email of user whose session.json was found (shown in reconnect banner)
+    const pendingEmail = (supabase as any).pendingSessionEmail as string | null;
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        setLocalError('');
+        setIsLoggingIn(true);
 
         const success = await loginUser(email, password);
 
         if (success) {
             navigate('/dashboard');
-        } else {
-            // Error is now handled by the store and displayed below
         }
+
+        setIsLoggingIn(false);
     };
 
+    // Called from the reconnect banner — needs user gesture, restores session from file
     const handleReconnect = async () => {
-        setError('');
-        // init(true) will prompt the user to allow permission without asking for email/password
-        const success = await supabase.init(true);
-        if (success) {
-            await checkSession();
+        setLocalError('');
+        setIsReconnecting(true);
+
+        const ok = await reconnectSession();
+
+        if (ok) {
             navigate('/dashboard');
         } else {
-            setError('No se pudo reanudar la sesión. Por favor, selecciona la carpeta nuevamente o inicia sesión con tus datos.');
+            setLocalError('No se pudo restaurar la sesión. Por favor inicia sesión con tus credenciales.');
         }
+
+        setIsReconnecting(false);
     };
 
-    const handleClearSession = () => {
-        localStorage.removeItem('local-session');
-        setSavedUser(null);
-    };
+    const displayError = localError || storeError;
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
@@ -83,36 +77,50 @@ export default function Login() {
                     </p>
                 </div>
 
-                {(error || storeError) && (
+                {displayError && (
                     <div className="mb-6 bg-red-50/80 backdrop-blur-sm text-red-700 p-4 rounded-xl text-sm border border-red-200 shadow-sm flex items-center gap-2 animate-shake">
-                        <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        {error || storeError}
+                        {displayError}
                     </div>
                 )}
 
-                {savedUser ? (
-                    <div className="space-y-5 animate-fade-in text-center">
-                        <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 mb-4">
-                            <p className="text-slate-700 text-sm mb-2">Sesión detectada como:</p>
-                            <p className="font-semibold text-lg text-slate-900">{savedUser.full_name || savedUser.name || savedUser.email}</p>
-                            <p className="text-xs text-orange-600 mt-2 font-medium">Por seguridad, el navegador requiere que vuelvas a dar acceso a la carpeta de datos.</p>
+                {/* Reconnect banner — shown when the handle is stored in IndexedDB but the browser
+                    needs a user gesture to re-grant access (e.g. after a browser restart). */}
+                {hasPendingHandle && !displayError && (
+                    <div className="mb-6 space-y-3 animate-fade-in">
+                        <div className="bg-orange-50/80 backdrop-blur-sm p-4 rounded-xl border border-orange-200 shadow-sm text-center">
+                            <p className="text-slate-700 text-sm font-medium mb-1">
+                                {pendingEmail
+                                    ? `Sesión guardada para ${pendingEmail}`
+                                    : 'Sesión guardada detectada'}
+                            </p>
+                            <p className="text-xs text-orange-600">
+                                El navegador necesita que confirmes el acceso a tu carpeta de datos.
+                            </p>
                         </div>
                         <Button
                             onClick={handleReconnect}
-                            className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl"
+                            disabled={isReconnecting}
+                            className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-base font-medium rounded-xl disabled:opacity-60"
                         >
-                            Conectar Carpeta y Continuar
+                            {isReconnecting ? 'Conectando...' : 'Continuar sesión →'}
                         </Button>
-                        <button
-                            onClick={handleClearSession}
-                            className="mt-4 text-sm text-slate-500 hover:text-slate-800 transition-colors underline"
-                        >
-                            Cambiar de cuenta
-                        </button>
+                        <div className="text-center">
+                            <button
+                                type="button"
+                                onClick={() => useAppStore.setState({ hasPendingHandle: false })}
+                                className="text-xs text-slate-400 hover:text-slate-600 transition-colors underline"
+                            >
+                                Iniciar sesión con otra cuenta
+                            </button>
+                        </div>
                     </div>
-                ) : (
+                )}
+
+                {/* Standard login form — always shown when no pending handle */}
+                {!hasPendingHandle && (
                     <form onSubmit={handleLogin} className="space-y-5 animate-fade-in">
                         <div className="space-y-1">
                             <Input
@@ -137,14 +145,19 @@ export default function Login() {
 
                         <Button
                             type="submit"
-                            className="w-full py-3 mt-6 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl"
+                            disabled={isLoggingIn}
+                            className="w-full py-3 mt-6 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            Seleccionar Carpeta e Iniciar Sesión
+                            {isLoggingIn ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                         </Button>
+
+                        <p className="text-center text-xs text-slate-400 pt-1">
+                            La primera vez se te pedirá elegir una carpeta donde guardar tus datos.
+                        </p>
                     </form>
                 )}
 
-                {!savedUser && (
+                {!hasPendingHandle && (
                     <div className="mt-8 text-center text-sm text-slate-600">
                         ¿No tienes cuenta?{' '}
                         <Link to="/signup" className="font-semibold text-orange-600 hover:text-orange-500 transition-colors hover:underline">
