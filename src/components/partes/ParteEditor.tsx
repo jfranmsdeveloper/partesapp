@@ -130,7 +130,7 @@ export const ParteEditor = () => {
             if (data.date) {
                 // Heuristic: Convert DD/MM/YYYY to YYYY-MM-DD for input
                 const [d, m, y] = data.date.split(/[-/]/);
-                let dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
                 let timeStr = '09:00'; // default
                 if (data.time) {
@@ -428,6 +428,88 @@ export const ParteEditor = () => {
             {/* Main Form Layout - Refactored to Vertical Stack (90% Width) */}
             <div className="flex flex-col items-center w-full gap-8 pb-20">
 
+                {/* 2. Actuaciones (Only if !isNew) */}
+                {!isNew && currentParte && (
+                    <div className="w-[90%] max-w-7xl">
+                        <Card className="min-h-[500px]">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-lg font-semibold">Actuaciones</h2>
+                                {!showAddActuacion && (
+                                    <div className="flex gap-2">
+                                        <Button onClick={handleExportActuaciones} variant="outline" size="sm">
+                                            <Printer className="w-4 h-4 mr-2" />
+                                            Informe
+                                        </Button>
+                                        <Button
+                                            onClick={handleCopyEmail}
+                                            variant="outline"
+                                            size="sm"
+                                            className={clsx("transition-all duration-300", showCopied ? "border-green-500 text-green-600 bg-green-50" : "")}
+                                        >
+                                            {showCopied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                                            {showCopied ? '¡Copiado!' : 'Copiar Email'}
+                                        </Button>
+                                        <Button onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} size="sm">
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Nueva Actuación
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mb-6">
+                                <ActuacionesList
+                                    actuaciones={currentParte.actuaciones}
+                                    onDelete={(actuacionId) => deleteActuacion(currentParte.id, actuacionId)}
+                                    onEdit={handleEditClick}
+                                />
+                            </div>
+
+                            {showAddActuacion && (
+                                <div className="mt-4 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                    <AddActuacionForm
+                                        onAdd={handleAddOrUpdateActuacion}
+                                        onCancel={handleCancelForm}
+                                        initialData={editingActuacion?.data}
+                                        defaultTimestamp={(() => {
+                                            if (currentParte.actuaciones.length === 0) return currentParte.createdAt;
+                                            const lastAct = currentParte.actuaciones[currentParte.actuaciones.length - 1];
+                                            const endDate = new Date(new Date(lastAct.timestamp).getTime() + lastAct.duration * 60000);
+                                            return endDate.toISOString();
+                                        })()}
+                                        key={editingActuacion?.id || 'new'} // Force re-render on switch
+                                    />
+                                </div>
+                            )}
+                        </Card>
+                    </div>
+                )}
+
+                {/* 3. Resumen (Only if !isNew) */}
+                {!isNew && currentParte && (
+                    <div className="w-[90%] max-w-7xl">
+                        <Card>
+                            <h2 className="text-lg font-semibold mb-4">Resumen</h2>
+                            <div className="flex flex-col md:flex-row gap-8 justify-around items-center p-4">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Total Tiempo</span>
+                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100 flex items-start">
+                                        {currentParte.totalTime}
+                                        <span className="text-lg text-slate-400 font-bold ml-1 mt-1">min</span>
+                                    </span>
+                                </div>
+                                <div className="w-px h-16 bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Actuaciones</span>
+                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100">
+                                        {currentParte.totalActuaciones}
+                                    </span>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                )}
+
                 {/* 1. Datos Generales (Always Visible) */}
                 <div className="w-[90%] max-w-7xl">
                     <Card>
@@ -651,88 +733,6 @@ export const ParteEditor = () => {
                         </form>
                     </Card>
                 </div>
-
-                {/* 2. Actuaciones (Only if !isNew) */}
-                {!isNew && currentParte && (
-                    <div className="w-[90%] max-w-7xl">
-                        <Card className="min-h-[500px]">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-lg font-semibold">Actuaciones</h2>
-                                {!showAddActuacion && (
-                                    <div className="flex gap-2">
-                                        <Button onClick={handleExportActuaciones} variant="outline" size="sm">
-                                            <Printer className="w-4 h-4 mr-2" />
-                                            Informe
-                                        </Button>
-                                        <Button
-                                            onClick={handleCopyEmail}
-                                            variant="outline"
-                                            size="sm"
-                                            className={clsx("transition-all duration-300", showCopied ? "border-green-500 text-green-600 bg-green-50" : "")}
-                                        >
-                                            {showCopied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                                            {showCopied ? '¡Copiado!' : 'Copiar Email'}
-                                        </Button>
-                                        <Button onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} size="sm">
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Nueva Actuación
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="mb-6">
-                                <ActuacionesList
-                                    actuaciones={currentParte.actuaciones}
-                                    onDelete={(actuacionId) => deleteActuacion(currentParte.id, actuacionId)}
-                                    onEdit={handleEditClick}
-                                />
-                            </div>
-
-                            {showAddActuacion && (
-                                <div className="mt-4 pt-6 border-t border-slate-100 dark:border-slate-800">
-                                    <AddActuacionForm
-                                        onAdd={handleAddOrUpdateActuacion}
-                                        onCancel={handleCancelForm}
-                                        initialData={editingActuacion?.data}
-                                        defaultTimestamp={(() => {
-                                            if (currentParte.actuaciones.length === 0) return currentParte.createdAt;
-                                            const lastAct = currentParte.actuaciones[currentParte.actuaciones.length - 1];
-                                            const endDate = new Date(new Date(lastAct.timestamp).getTime() + lastAct.duration * 60000);
-                                            return endDate.toISOString();
-                                        })()}
-                                        key={editingActuacion?.id || 'new'} // Force re-render on switch
-                                    />
-                                </div>
-                            )}
-                        </Card>
-                    </div>
-                )}
-
-                {/* 3. Resumen (Only if !isNew) */}
-                {!isNew && currentParte && (
-                    <div className="w-[90%] max-w-7xl">
-                        <Card>
-                            <h2 className="text-lg font-semibold mb-4">Resumen</h2>
-                            <div className="flex flex-col md:flex-row gap-8 justify-around items-center p-4">
-                                <div className="flex flex-col items-center">
-                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Total Tiempo</span>
-                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100 flex items-start">
-                                        {currentParte.totalTime}
-                                        <span className="text-lg text-slate-400 font-bold ml-1 mt-1">min</span>
-                                    </span>
-                                </div>
-                                <div className="w-px h-16 bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Actuaciones</span>
-                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100">
-                                        {currentParte.totalActuaciones}
-                                    </span>
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
-                )}
 
                 {/* 4. Footer Actions (Only if !isNew) */}
                 {!isNew && currentParte && (
