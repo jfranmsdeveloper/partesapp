@@ -22,7 +22,7 @@ export const ParteEditor = () => {
     const { id } = useParams();
     const isNew = !id;
 
-    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertUserFromPDF } = useUserStore();
+    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF } = useUserStore();
 
     const [title, setTitle] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
@@ -116,11 +116,14 @@ export const ParteEditor = () => {
             if (data.title) setTitle(data.title);
             if (data.id) setCustomId(data.id);
 
-            // If a user name was extracted from the PDF, auto-register them in the DB
+            // The name from 'Emitido por el usuario' becomes the SOLICITADO POR (client),
+            // NOT the 'Emitido por' (which is only for the 5 internal app users).
             if (data.createdBy) {
-                setUploadStatus('Registrando usuario...');
-                const savedName = await upsertUserFromPDF(data.createdBy, data.createdByCode);
-                setCreatedBy(savedName);
+                setUploadStatus('Registrando solicitante...');
+                const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
+                if (clientId) {
+                    setSelectedClientId(clientId);
+                }
             }
 
             // Construct date time if available

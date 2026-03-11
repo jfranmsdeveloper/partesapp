@@ -35,7 +35,7 @@ interface AppState {
     updateActuacion: (parteId: number, actuacionId: string, data: Partial<Actuacion>) => Promise<void>;
     deleteActuacion: (parteId: number, actuacionId: string) => Promise<void>;
 
-    addClient: (client: Omit<Client, 'id' | 'userId'>) => Promise<void>;
+    addClient: (client: Omit<Client, 'id' | 'userId'>) => Promise<string | null>; // Returns the new client ID
     updateClient: (id: string, data: Partial<Client>) => Promise<void>;
 
     getParte: (id: number) => Parte | undefined;
@@ -49,10 +49,11 @@ interface AppState {
     adminCreateUser: (user: User) => Promise<boolean>;
     fixLegacyAuthorship: (correctName: string) => Promise<void>;
     /**
-     * Auto-create a user extracted from a PDF if they don't already exist.
-     * Does NOT affect manually created users. Returns the full_name string.
+     * Auto-create a CLIENT from the PDF 'Emitido por el usuario' field if not already present.
+     * Returns the client ID so it can be set in the 'Solicitado por' field.
+     * Does NOT touch the 'Emitido por' field (which is only for the 5 internal app users).
      */
-    upsertUserFromPDF: (fullName: string, code?: string) => Promise<string>;
+    upsertClientFromPDF: (fullName: string, code?: string) => Promise<string | null>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -379,17 +380,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
 
     addClient: async (client) => {
+        const newId = `client-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
         const { error } = await supabase
             .from('clients')
             .insert({
+                id: newId,
                 full_name: client.name
             });
 
         if (error) {
             console.error('Error adding client:', error);
-        } else {
-            await get().fetchData();
+            return null;
         }
+        await get().fetchData();
+        return newId;
     },
     updateClient: async () => { console.warn('Update Client placeholder'); },
 
@@ -479,50 +483,43 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
     },
 
-    upsertUserFromPDF: async (fullName, code) => {
+
+    upsertClientFromPDF: async (fullName: string, code?: string) => {
         const cleanName = fullName.trim();
-        if (!cleanName) return cleanName;
+        if (!cleanName) return null;
 
         try {
-            const { data: existingUsers } = await supabase.from('users').select('*');
-            const users: any[] = existingUsers || [];
+            const { data: existingClients } = await supabase.from('clients').select('*');
+            const clients: any[] = existingClients || [];
 
-            // Check if a user with this full_name already exists
-            const alreadyExists = users.some((u: any) => {
-                const uName = u.user_metadata?.full_name || u.name || '';
-                return uName.trim().toUpperCase() === cleanName.toUpperCase();
-            });
+            // Check if a client with this name already exists (case-insensitive)
+            const existing = clients.find((c: any) =>
+                (c.name || c.full_name || '').trim().toUpperCase() === cleanName.toUpperCase()
+            );
 
-            if (alreadyExists) {
-                console.log(`FSA: usuario "${cleanName}" ya existe en la BD, no se crea de nuevo.`);
-                return cleanName;
+            if (existing) {
+                console.log(`FSA: cliente "${cleanName}" ya existe en la BD (ID: ${existing.id}), no se crea de nuevo.`);
+                return existing.id as string;
             }
 
-            // Auto-create the user from the PDF data
-            const newUser = {
-                id: `pdf-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
-                // No email/password — this user was imported from a PDF
-                email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/gi, '.')}@imported.pdf`,
-                password: '',
-                role: 'user',
-                source: 'pdf-import',
-                user_metadata: {
-                    full_name: cleanName,
-                    pdf_code: code || null,
-                    imported_at: new Date().toISOString()
-                },
-                created_at: new Date().toISOString()
-            };
+            // Auto-create the client from the PDF data
+            const newId = `client-pdf-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
+            await supabase.from('clients').insert({
+                id: newId,
+                full_name: cleanName,
+                pdf_code: code || null
+            });
 
-            await supabase.from('users').insert(newUser);
-            console.log(`FSA: usuario "${cleanName}" (código: ${code || 'N/A'}) creado automáticamente desde PDF.`);
+            console.log(`FSA: cliente "${cleanName}" (código: ${code || 'N/A'}) creado automáticamente desde PDF.`);
 
-            // Reload users list in store
+            // Reload clients list in store
             await get().fetchData();
-        } catch (e) {
-            console.error('Error in upsertUserFromPDF:', e);
-        }
 
-        return cleanName;
+            return newId;
+        } catch (e) {
+            console.error('Error in upsertClientFromPDF:', e);
+            return null;
+        }
     }
 }));
+
