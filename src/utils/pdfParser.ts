@@ -8,7 +8,8 @@ interface ParsedParteData {
     id?: string;
     title?: string;
     description?: string;
-    createdBy?: string;
+    createdBy?: string;      // Full name: "APELLIDO1 APELLIDO2, NOMBRE"
+    createdByCode?: string;  // Numeric code preceding the name: "75"
     date?: string;
     time?: string;
     pdfFile?: string; // Base64
@@ -144,26 +145,27 @@ export const parsePartePDF = async (file: File, onProgress?: (status: string) =>
         }
 
         // 3. USER (Orange)
-        // Request: "APELLIDO APELLIDO, NOMBRE" (comma separated) or "USUARIO FICTICIO".
-        // Must exclude "FUNreferente...", "DIRECCION...", etc.
-        const userLineMatch = fullText.match(/Emitido\s+por\s+el\s+usuario\s*(?:\d+)?\s*([^\n]+)/i);
+        // Format: "Emitido por el usuario  75  COBO ROMAN, FERNANDO  FUN"
+        //           label                  ^code  ^name                ^suffix
+        const userLineMatch = fullText.match(/Emitido\s+por\s+el\s+usuario\s*(\d+)?\s*([^\n]+)/i);
         if (userLineMatch) {
-            let text = userLineMatch[1];
+            // Capture numeric code (group 1)
+            if (userLineMatch[1]) {
+                data.createdByCode = userLineMatch[1].trim();
+            }
 
-            // 1. Cut off explicitly at "FUN" or "referente" to remove the noise mentioned by user
-            // Example: "BENAVENTE MONEDERO, JUAN FUNreferente al..." -> "BENAVENTE MONEDERO, JUAN "
+            let text = userLineMatch[2] || '';
+
+            // 1. Cut off at "FUN", "referente", "DIRECCION" to remove trailing noise
             text = text.split(/(?:FUN|referente|DIRECCION)/i)[0].trim();
 
             // 2. Validate format "SURNAME(s), NAME"
-            // If it contains a comma, likely it's the valid name format.
             const commaMatch = text.match(/([A-ZÑ\s]+\s*,\s*[A-ZÑ\s]+)/i);
 
             if (commaMatch) {
-                // Take the matched "Surnames, Name" string
                 data.createdBy = commaMatch[1].trim();
             } else {
-                // Fallback for cases like "USUARIO FICTICIO" which might not have a comma
-                // Using the cleaned text from step 1
+                // Fallback for non-comma names
                 if (text.length > 2) {
                     data.createdBy = text;
                 }

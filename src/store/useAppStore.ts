@@ -48,6 +48,11 @@ interface AppState {
     deleteUser: (userId: string) => Promise<void>;
     adminCreateUser: (user: User) => Promise<boolean>;
     fixLegacyAuthorship: (correctName: string) => Promise<void>;
+    /**
+     * Auto-create a user extracted from a PDF if they don't already exist.
+     * Does NOT affect manually created users. Returns the full_name string.
+     */
+    upsertUserFromPDF: (fullName: string, code?: string) => Promise<string>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -472,5 +477,52 @@ export const useAppStore = create<AppState>((set, get) => ({
             console.error('Admin create user exception:', e);
             return false;
         }
+    },
+
+    upsertUserFromPDF: async (fullName, code) => {
+        const cleanName = fullName.trim();
+        if (!cleanName) return cleanName;
+
+        try {
+            const { data: existingUsers } = await supabase.from('users').select('*');
+            const users: any[] = existingUsers || [];
+
+            // Check if a user with this full_name already exists
+            const alreadyExists = users.some((u: any) => {
+                const uName = u.user_metadata?.full_name || u.name || '';
+                return uName.trim().toUpperCase() === cleanName.toUpperCase();
+            });
+
+            if (alreadyExists) {
+                console.log(`FSA: usuario "${cleanName}" ya existe en la BD, no se crea de nuevo.`);
+                return cleanName;
+            }
+
+            // Auto-create the user from the PDF data
+            const newUser = {
+                id: `pdf-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
+                // No email/password — this user was imported from a PDF
+                email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/gi, '.')}@imported.pdf`,
+                password: '',
+                role: 'user',
+                source: 'pdf-import',
+                user_metadata: {
+                    full_name: cleanName,
+                    pdf_code: code || null,
+                    imported_at: new Date().toISOString()
+                },
+                created_at: new Date().toISOString()
+            };
+
+            await supabase.from('users').insert(newUser);
+            console.log(`FSA: usuario "${cleanName}" (código: ${code || 'N/A'}) creado automáticamente desde PDF.`);
+
+            // Reload users list in store
+            await get().fetchData();
+        } catch (e) {
+            console.error('Error in upsertUserFromPDF:', e);
+        }
+
+        return cleanName;
     }
 }));
