@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { Button } from './Button';
-import { Plus, Search, User, X } from 'lucide-react';
+import { Plus, Search, User, X, Edit2, Trash2, Check } from 'lucide-react';
 import clsx from 'clsx';
 
 interface ClientSelectProps {
@@ -13,10 +13,12 @@ interface ClientSelectProps {
 }
 
 export function ClientSelect({ value, onChange, label, placeholder = "Buscar o crear usuario...", disabled }: ClientSelectProps) {
-    const { clients, addClient } = useAppStore();
+    const { clients, addClient, updateClient, deleteClient } = useAppStore();
     const [searchTerm, setSearchTerm] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [editingClientId, setEditingClientId] = useState<string | null>(null);
+    const [editNameValue, setEditNameValue] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -140,13 +142,72 @@ export function ClientSelect({ value, onChange, label, placeholder = "Buscar o c
                         filteredClients.map(client => (
                             <div
                                 key={client.id}
-                                onClick={() => handleSelect(client.id)}
-                                className="px-4 py-3 hover:bg-orange-50 dark:hover:bg-orange-900/20 cursor-pointer flex items-center gap-3 border-b border-slate-50 dark:border-slate-800/50 last:border-0"
+                                className="px-4 py-3 hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center justify-between border-b border-slate-50 dark:border-slate-800/50 last:border-0 group"
                             >
-                                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 text-xs font-bold">
-                                    {client.name.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="text-slate-700 dark:text-slate-300 font-medium">{client.name}</span>
+                                {editingClientId === client.id ? (
+                                    <div className="flex-1 flex items-center gap-2 pr-2" onClick={(e) => e.stopPropagation()}>
+                                        <input 
+                                            type="text" 
+                                            className="flex-1 border border-slate-300 rounded-md px-2 py-1 text-sm outline-none focus:border-orange-500"
+                                            value={editNameValue}
+                                            autoFocus
+                                            onChange={(e) => setEditNameValue(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    updateClient(client.id, { name: editNameValue });
+                                                    setEditingClientId(null);
+                                                }
+                                                if (e.key === 'Escape') setEditingClientId(null);
+                                            }}
+                                        />
+                                        <button 
+                                            onClick={() => {
+                                                updateClient(client.id, { name: editNameValue });
+                                                setEditingClientId(null);
+                                            }}
+                                            className="p-1.5 text-green-600 bg-green-50 rounded-md hover:bg-green-100"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => setEditingClientId(null)}
+                                            className="p-1.5 text-slate-500 bg-slate-100 rounded-md hover:bg-slate-200"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => handleSelect(client.id)}>
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 text-xs font-bold">
+                                                {client.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span className="text-slate-700 dark:text-slate-300 font-medium">{client.name}</span>
+                                        </div>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingClientId(client.id);
+                                                    setEditNameValue(client.name);
+                                                }}
+                                                className="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-blue-50"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    if(window.confirm(`¿Seguro que deseas eliminar el cliente "${client.name}"?`)) {
+                                                        deleteClient(client.id);
+                                                        if(value === client.id) onChange('');
+                                                    }
+                                                }}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 rounded-md hover:bg-red-50"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ))
                     ) : (

@@ -37,6 +37,7 @@ interface AppState {
 
     addClient: (client: Omit<Client, 'id' | 'userId'>) => Promise<string | null>; // Returns the new client ID
     updateClient: (id: string, data: Partial<Client>) => Promise<void>;
+    deleteClient: (id: string) => Promise<void>;
 
     getParte: (id: number) => Parte | undefined;
     updateUserProfile: (email: string, data: Partial<User>) => Promise<void>;
@@ -410,7 +411,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().fetchData();
         return newId;
     },
-    updateClient: async () => { console.warn('Update Client placeholder'); },
+    updateClient: async (id, data) => { 
+        if(data.name) {
+            await supabase.from('clients').update({ full_name: data.name }).eq('id', id);
+            await get().fetchData();
+        }
+    },
+    deleteClient: async (id) => {
+        await supabase.from('clients').delete().eq('id', id);
+        await get().fetchData();
+    },
 
     getParte: (id: number) => get().partes.find(p => p.id === id),
 
