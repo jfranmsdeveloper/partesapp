@@ -160,7 +160,8 @@ export const parsePartePDF = async (file: File, onProgress?: (status: string) =>
             text = text.split(/(?:FUN|referente|DIRECCION)/i)[0].trim();
 
             // 2. Validate format "SURNAME(s), NAME"
-            const commaMatch = text.match(/([A-ZÑ\s]+\s*,\s*[A-ZÑ\s]+)/i);
+            // Support ª, º and accented characters (Ñ, Á, É, Í, Ó, Ú)
+            const commaMatch = text.match(/([A-ZÑÁÉÍÓÚªº\s]+\s*,\s*[A-ZÑÁÉÍÓÚªº\s]+)/i);
 
             if (commaMatch) {
                 data.createdBy = commaMatch[1].trim();

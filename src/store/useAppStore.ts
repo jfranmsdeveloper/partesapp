@@ -168,6 +168,21 @@ export const useAppStore = create<AppState>((set, get) => ({
         // Loading local state should be handled by components if needed.
 
         try {
+            // 0. Cleanup accidental users (one-time migration check)
+            // Remove any user that was imported from PDF by mistake in previous versions
+            try {
+                const { data: allUsers } = await supabase.from('users').select('email');
+                const usersToPurge = (allUsers || []).filter((u: any) => 
+                    u.email?.includes('@imported.pdf') || u.name === 'COBO ROMAN, FERNANDO'
+                );
+                
+                for (const u of usersToPurge) {
+                    await supabase.from('users').delete().eq('email', u.email);
+                }
+            } catch (e) {
+                console.warn('Cleanup migration error (non-critical):', e);
+            }
+
             // 1. Fetch Clients (Pre-fetch to map accordingly)
             const { data: clientsData, error: clientsError } = await supabase
                 .from('clients')
