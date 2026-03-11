@@ -681,8 +681,16 @@ export const ParteEditor = () => {
                                 )}
                             </div>
 
+                            <div className="mb-6">
+                                <ActuacionesList
+                                    actuaciones={currentParte.actuaciones}
+                                    onDelete={(actuacionId) => deleteActuacion(currentParte.id, actuacionId)}
+                                    onEdit={handleEditClick}
+                                />
+                            </div>
+
                             {showAddActuacion && (
-                                <div className="mb-8">
+                                <div className="mt-4 pt-6 border-t border-slate-100 dark:border-slate-800">
                                     <AddActuacionForm
                                         onAdd={handleAddOrUpdateActuacion}
                                         onCancel={handleCancelForm}
@@ -697,12 +705,6 @@ export const ParteEditor = () => {
                                     />
                                 </div>
                             )}
-
-                            <ActuacionesList
-                                actuaciones={currentParte.actuaciones}
-                                onDelete={(actuacionId) => deleteActuacion(currentParte.id, actuacionId)}
-                                onEdit={handleEditClick}
-                            />
                         </Card>
                     </div>
                 )}

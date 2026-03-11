@@ -156,15 +156,41 @@ export const parsePartePDF = async (file: File, onProgress?: (status: string) =>
 
             let text = userLineMatch[2] || '';
 
-            // 1. Cut off at "FUN", "referente", "DIRECCION" to remove trailing noise
-            text = text.split(/(?:FUN|referente|DIRECCION)/i)[0].trim();
+            // 1. Cut off at known trailing noises if they appear at the end or separated
+            text = text.split(/(?:referente|DIRECCION)\b/i)[0].trim();
 
             // 2. Validate format "SURNAME(s), NAME"
             // Support ª, º and accented characters (Ñ, Á, É, Í, Ó, Ú)
             const commaMatch = text.match(/([A-ZÑÁÉÍÓÚªº\s]+\s*,\s*[A-ZÑÁÉÍÓÚªº\s]+)/i);
 
             if (commaMatch) {
-                data.createdBy = commaMatch[1].trim();
+                let fullName = commaMatch[1].trim();
+                
+                // Limpieza de códigos alfanuméricos o departamentales al final del nombre
+                const parts = fullName.split(',');
+                if (parts.length === 2) {
+                    let surnamePart = parts[0].trim();
+                    let namePart = parts[1].trim();
+                    const nameWords = namePart.split(/\s+/);
+                    
+                    while (nameWords.length > 1) {
+                        const lw = nameWords[nameWords.length - 1].toUpperCase();
+                        // Remover si tiene números (alfanumérico), si es un código conocido (EMP, FUN, etc.), 
+                        // o si son 3-4 letras sin vocales (ej: MNT, SRV)
+                        if (
+                            /[0-9]/.test(lw) || 
+                            /^(EMP|FUN|DIR|TEC|OFI|AUX|ADM|OPR|OPE|EXT|INT)$/.test(lw) || 
+                            (lw.length >= 3 && lw.length <= 4 && !/[AEIOUÁÉÍÓÚ]/.test(lw))
+                        ) {
+                            nameWords.pop();
+                        } else {
+                            break;
+                        }
+                    }
+                    data.createdBy = `${surnamePart}, ${nameWords.join(' ')}`;
+                } else {
+                    data.createdBy = fullName;
+                }
             } else {
                 // Fallback for non-comma names
                 if (text.length > 2) {
