@@ -8,12 +8,11 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
             <div
                 ref={ref}
                 className={twMerge(
-                    'group relative backdrop-blur-xl bg-white/70 dark:bg-slate-800/60 border border-white/60 dark:border-white/5 rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.06)] hover:bg-white/80 dark:hover:bg-slate-800/80',
+                    'group relative bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-[2rem] p-8 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700/50',
                     className
                 )}
                 {...props}
             >
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-[2rem]" />
                 <div className="relative z-10">
                     {props.children}
                 </div>

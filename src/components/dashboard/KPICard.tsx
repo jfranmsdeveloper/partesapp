@@ -56,9 +56,7 @@ export const KPICard = ({ title, value, trend, icon: Icon, color = 'blue' }: KPI
     const currentStyle = styles[color as keyof typeof styles] || styles.blue;
 
     return (
-        <div className="group relative flex flex-col p-6 rounded-[2rem] bg-white/60 dark:bg-slate-800/40 backdrop-blur-3xl border border-white/50 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-500 hover:scale-[1.02]">
-            {/* Soft inner glow gradient */}
-            <div className={clsx("absolute inset-0 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none bg-gradient-to-br from-white/40 to-transparent dark:from-white/5", currentStyle.bg)} />
+        <div className="group flex flex-col p-6 rounded-[2rem] bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border shadow-sm hover:shadow-md transition-shadow duration-200">
 
             <div className="relative z-10 flex justify-between items-start mb-6">
                 <div className={clsx("p-3.5 rounded-2xl transition-colors duration-300", currentStyle.iconBg)}>
@@ -66,8 +64,8 @@ export const KPICard = ({ title, value, trend, icon: Icon, color = 'blue' }: KPI
                 </div>
                 {trend && (
                     <div className={clsx(
-                        "flex items-center text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-md bg-white/50 dark:bg-slate-700/50 shadow-sm",
-                        trend.isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                        "flex items-center text-xs font-bold px-3 py-1.5 rounded-full shadow-sm",
+                        trend.isPositive ? "text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10" : "text-rose-700 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/10"
                     )}>
                         {trend.isPositive ? <ArrowUpRight className="w-3.5 h-3.5 mr-1" /> : <ArrowDownRight className="w-3.5 h-3.5 mr-1" />}
                         {Math.abs(trend.value)}%
@@ -76,8 +74,8 @@ export const KPICard = ({ title, value, trend, icon: Icon, color = 'blue' }: KPI
             </div>
 
             <div className="relative z-10 mt-auto">
-                <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1 pl-1 tracking-wide">{title}</h3>
-                <p className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">{value}</p>
+                <p className="text-[32px] font-bold text-slate-800 dark:text-white/90 tracking-tight leading-none mb-2">{value}</p>
+                <h3 className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">{title}</h3>
             </div>
         </div>
     );

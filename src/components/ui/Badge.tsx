@@ -13,11 +13,11 @@ export const Badge = ({ className, variant = 'neutral', ...props }: BadgeProps) 
                 clsx(
                     'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
                     {
-                        'bg-emerald-100 text-emerald-800': variant === 'success',
-                        'bg-amber-100 text-amber-800': variant === 'warning',
-                        'bg-red-100 text-red-800': variant === 'danger',
-                        'bg-blue-100 text-blue-800': variant === 'info',
-                        'bg-slate-100 text-slate-800': variant === 'neutral',
+                        'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20': variant === 'success',
+                        'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20': variant === 'warning',
+                        'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20': variant === 'danger',
+                        'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20': variant === 'info',
+                        'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20': variant === 'neutral',
                     },
                     className
                 )

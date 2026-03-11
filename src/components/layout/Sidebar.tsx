@@ -34,7 +34,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
             <aside
                 className={clsx(
-                    "fixed top-4 bottom-4 left-4 w-64 glass-panel rounded-[2rem] border border-white/40 dark:border-white/5 z-40 transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) flex flex-col overflow-hidden",
+                    "fixed top-4 bottom-4 left-4 w-64 bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border shadow-sm z-40 transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) flex flex-col overflow-hidden",
                     {
                         "translate-x-0": isOpen,
                         "-translate-x-[110%]": !isOpen,
@@ -42,7 +42,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     }
                 )}
             >
-                <div className="flex h-24 items-center justify-between px-8 border-b border-white/10 dark:border-white/5 bg-white/20 dark:bg-white/5">
+                <div className="flex h-24 items-center justify-between px-8 border-b border-slate-100 dark:border-dark-border bg-transparent">
                     <Link to="/" className="flex items-center gap-3" onClick={onClose}>
                         <div className="relative">
                             <img
@@ -68,10 +68,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             onClick={onClose}
                             className={({ isActive }) =>
                                 clsx(
-                                    'flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold transition-all duration-300 group relative',
+                                    'flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-medium transition-colors duration-200 group relative',
                                     {
-                                        'text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-500/10 ring-1 ring-orange-200 dark:ring-orange-500/20 shadow-sm': isActive,
-                                        'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200': !isActive,
+                                        'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10': isActive,
+                                        'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-dark-surface hover:text-slate-900 dark:hover:text-slate-200': !isActive,
                                     }
                                 )
                             }
@@ -86,12 +86,12 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     ))}
                 </nav>
 
-                <div className="p-4 bg-gradient-to-t from-white/40 to-transparent dark:from-black/20">
+                <div className="p-4 bg-transparent border-t border-slate-100 dark:border-dark-border mt-auto">
                     <div className="flex justify-center mb-6 w-full px-4">
                         <button
                             onClick={toggleTheme}
                             className={clsx(
-                                "relative flex h-10 w-full items-center justify-between rounded-full bg-slate-200/50 dark:bg-slate-800/50 p-1 shadow-inner ring-1 ring-black/5 dark:ring-white/5 transition-all duration-300 hover:bg-slate-200 dark:hover:bg-slate-800",
+                                "relative flex h-10 w-full items-center justify-between rounded-full bg-slate-100 dark:bg-dark-surface p-1 ring-1 ring-slate-200 dark:ring-dark-border transition-colors duration-200",
                             )}
                         >
                             <div className="absolute inset-0 flex w-full items-center justify-between px-4 pointer-events-none">
@@ -105,14 +105,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
                             <div
                                 className={clsx(
-                                    "relative z-10 flex h-8 w-1/2 items-center justify-center rounded-full bg-white dark:bg-slate-600 shadow-sm ring-1 ring-black/5 dark:ring-white/10 transition-transform duration-500 ease-out",
+                                    "relative z-10 flex h-8 w-1/2 items-center justify-center rounded-full bg-white dark:bg-dark-card shadow-sm ring-1 ring-black/5 dark:ring-white/5 transition-transform duration-300 ease-out",
                                     theme === 'dark' ? "translate-x-[95%]" : "translate-x-0"
                                 )}
                             >
                                 {theme === 'light' ? (
-                                    <Sun className="h-4 w-4 text-orange-500 fill-orange-500/20" />
+                                    <Sun className="h-4 w-4 text-orange-500" />
                                 ) : (
-                                    <Moon className="h-4 w-4 text-orange-300 fill-orange-300/20" />
+                                    <Moon className="h-4 w-4 text-orange-400" />
                                 )}
                             </div>
                         </button>
@@ -123,24 +123,24 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             window.location.href = '/profile';
                             onClose();
                         }}
-                        className="group flex items-center gap-3 p-3 rounded-[1.2rem] bg-white/60 dark:bg-slate-800/40 border border-white/50 dark:border-white/5 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 cursor-pointer mb-3"
+                        className="group flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-dark-surface border border-slate-200 dark:border-dark-border hover:border-orange-200 dark:hover:border-orange-500/30 transition-colors duration-200 cursor-pointer mb-3"
                     >
                         {currentUser?.avatar_url ? (
                             <img
                                 src={currentUser.avatar_url}
                                 alt="Profile"
-                                className="w-10 h-10 rounded-xl object-cover shadow-sm ring-2 ring-white dark:ring-slate-700 group-hover:scale-105 transition-transform"
+                                className="w-10 h-10 rounded-[0.8rem] object-cover"
                             />
                         ) : (
-                            <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 text-sm font-bold shadow-sm ring-2 ring-white dark:ring-slate-700 group-hover:scale-105 transition-transform">
+                            <div className="w-10 h-10 rounded-[0.8rem] bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 text-sm font-semibold">
                                 {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
                             </div>
                         )}
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-slate-800 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-white/90 truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                                 {currentUser?.name || 'Usuario'}
                             </p>
-                            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate opacity-80">
                                 {currentUser?.email}
                             </p>
                         </div>

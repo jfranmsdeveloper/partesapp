@@ -115,6 +115,12 @@
   /* Orange 800 */
   --color-primary-900: #7c2d12;
   /* Orange 900 */
+
+  /* UI 2025 Dark Mode Colors */
+  --color-dark-bg: #0F0F0F;
+  --color-dark-card: #1A1A1A;
+  --color-dark-surface: #242424;
+  --color-dark-border: rgba(255, 255, 255, 0.05);
 }
 
 @layer utilities {
@@ -173,8 +179,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  @apply font-sans antialiased text-slate-800 dark:text-slate-100 bg-[#f2f4f8] dark:bg-[#0c0c0e];
-  /* Base texture or gradient handled in Layout/Pages directly for better layering */
+  @apply font-sans antialiased text-slate-800 dark:text-white/90 bg-[#F4F4f5] dark:bg-dark-bg transition-colors duration-200;
+  /* El dato debe respirar, textos claros en dark, fondo gris puro */
 }
 
 h1,

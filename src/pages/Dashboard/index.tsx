@@ -80,15 +80,8 @@ export default function Dashboard() {
     }, [filteredPartes]);
 
     return (
-        <div className="min-h-screen bg-[#f2f4f8] dark:bg-[#0c0c0e] pb-24 font-sans selection:bg-indigo-500/30">
-            {/* Animated Mesh Gradient Background - Subtle & Premium */}
-            <div className="fixed inset-0 pointer-events-none opacity-60 dark:opacity-30">
-                <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-orange-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob" />
-                <div className="absolute top-[-10%] right-[-10%] w-[70vw] h-[70vw] bg-amber-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob animation-delay-2000" />
-                <div className="absolute bottom-[-20%] left-[20%] w-[70vw] h-[70vw] bg-rose-200/40 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-normal animate-blob animation-delay-4000" />
-            </div>
-
-            <div className="relative z-10 max-w-[1920px] mx-auto p-6 md:p-12 space-y-12">
+        <div className="w-full font-sans selection:bg-orange-500/30">
+            <div className="relative z-10 w-full mx-auto space-y-8">
 
                 {/* iOS Header - Clean & Big */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 pl-2">
@@ -188,8 +181,8 @@ export default function Dashboard() {
                     />
                 </div>
 
-                {/* Hero Section: Full Width Glass Graph */}
-                <section className="relative rounded-[3rem] bg-white/40 dark:bg-slate-800/40 backdrop-blur-3xl border border-white/60 dark:border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] p-12 overflow-hidden hover:shadow-[0_30px_80px_-20px_rgba(0,0,0,0.1)] transition-shadow duration-500">
+                {/* Hero Section: Bento Solid Graph */}
+                <section className="relative rounded-[2rem] bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border p-8 md:p-12 shadow-sm transition-shadow duration-300 hover:shadow-md">
                     <div className="flex flex-col lg:flex-row gap-16 items-center">
                         <div className="lg:w-1/3 space-y-8 relative z-10">
                             <div className="space-y-4">
@@ -201,10 +194,10 @@ export default function Dashboard() {
 
                             <div className="grid grid-cols-1 gap-4">
                                 {metrics.statusData.map((item) => (
-                                    <div key={item.name} className="flex items-center justify-between p-5 rounded-[20px] bg-white/60 dark:bg-slate-700/30 border border-white/50 dark:border-white/5 hover:bg-white/80 transition-colors">
+                                    <div key={item.name} className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 dark:bg-dark-surface border border-slate-200 dark:border-dark-border hover:bg-slate-100 dark:hover:border-slate-600 transition-colors duration-200">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-3 h-3 rounded-full shadow-[0_0_10px_currentColor]" style={{ backgroundColor: item.color, color: item.color }} />
-                                            <span className="font-semibold text-slate-600 dark:text-slate-300 tracking-wide">{item.name}</span>
+                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                                            <span className="font-semibold text-slate-700 dark:text-slate-300 tracking-wide">{item.name}</span>
                                         </div>
                                         <span className="text-xl font-bold text-slate-800 dark:text-white">{item.value}</span>
                                     </div>
@@ -213,8 +206,6 @@ export default function Dashboard() {
                         </div>
 
                         <div className="lg:w-2/3 w-full h-[500px] relative">
-                            {/* Ultra-soft glow behind chart */}
-                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-100/50 dark:bg-indigo-900/20 rounded-full blur-[100px] pointer-events-none" />
                             <StatusDistributionChart data={metrics.statusData} />
                         </div>
                     </div>
@@ -224,7 +215,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
 
                     {/* Activity Feed - Clean & Modern */}
-                    <Card className="rounded-[2.5rem] bg-white/50 dark:bg-slate-800/50 backdrop-blur-3xl border-white/60 dark:border-white/5 p-10 shadow-lg">
+                    <Card className="p-8 md:p-10">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
                             <div>
                                 <h3 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Actividad Reciente</h3>
@@ -276,17 +267,17 @@ export default function Dashboard() {
                         <div className="grid grid-cols-2 gap-6">
                             {metrics.activityData.slice(0, 4).map((act, idx) => {
                                 const colors = [
-                                    'from-blue-200 to-indigo-200 text-indigo-700',
-                                    'from-amber-200 to-orange-200 text-orange-700',
-                                    'from-emerald-200 to-teal-200 text-teal-700',
-                                    'from-rose-200 to-pink-200 text-pink-700'
+                                    'text-indigo-600 dark:text-indigo-400',
+                                    'text-orange-600 dark:text-orange-400',
+                                    'text-emerald-600 dark:text-emerald-400',
+                                    'text-rose-600 dark:text-rose-400'
                                 ];
                                 const colorClass = colors[idx % colors.length];
 
                                 return (
-                                    <div key={act.name} className={`relative p-8 rounded-[2.5rem] bg-gradient-to-br ${colorClass} bg-opacity-30 border border-white/40 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-[240px]`}>
-                                        <div className="bg-white/60 backdrop-blur-md w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm mb-4">
-                                            <span className="font-bold text-lg">{idx + 1}</span>
+                                    <div key={act.name} className={`relative p-8 rounded-[2rem] bg-slate-50 dark:bg-dark-surface border border-slate-200 dark:border-dark-border shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-[240px]`}>
+                                        <div className="bg-white dark:bg-dark-card w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm mb-4 border border-slate-100 dark:border-dark-border">
+                                            <span className={`font-bold text-lg ${colorClass}`}>{idx + 1}</span>
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold opacity-70 uppercase tracking-widest mb-2">Tipo</p>
@@ -299,10 +290,7 @@ export default function Dashboard() {
                         </div>
 
                         {/* Efficiency Card */}
-                        <div className="rounded-[2.5rem] bg-orange-500 text-white p-10 relative overflow-hidden shadow-2xl">
-                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
-                            <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-gradient-to-bl from-emerald-500/30 via-transparent to-transparent blur-3xl" />
-
+                        <div className="rounded-[2rem] bg-orange-500 text-white p-10 relative overflow-hidden shadow-sm">
                             <div className="relative z-10 flex flex-col h-full justify-between">
                                 <div>
                                     <h3 className="text-2xl font-bold mb-2">Rendimiento</h3>

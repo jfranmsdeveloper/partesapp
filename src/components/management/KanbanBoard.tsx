@@ -51,14 +51,14 @@ export const KanbanBoard = ({ partes }: KanbanBoardProps) => {
                 <div
                     key={status}
                     className={clsx(
-                        "flex flex-col gap-4 rounded-xl p-2 transition-colors min-h-[200px]",
-                        dragOverColumn === status ? "bg-slate-100 dark:bg-slate-800 ring-2 ring-blue-400 ring-inset" : ""
+                        "flex flex-col gap-4 rounded-[2rem] p-4 transition-colors min-h-[200px] bg-slate-50 dark:bg-dark-surface border border-slate-200 dark:border-dark-border",
+                        dragOverColumn === status ? "ring-2 ring-orange-400 ring-inset" : ""
                     )}
                     onDragOver={(e) => handleDragOver(e, status)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, status)}
                 >
-                    <div className="flex items-center justify-between sticky top-0 bg-slate-50 dark:bg-slate-900/90 py-2 z-10 rounded-t-xl backdrop-blur-sm">
+                    <div className="flex items-center justify-between sticky top-0 py-2 z-10">
                         <h3 className={clsx(
                             "font-semibold",
                             status === 'ABIERTO' ? "text-green-700 dark:text-green-400" :

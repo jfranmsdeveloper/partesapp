@@ -7,12 +7,12 @@ export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
-        <div className="min-h-screen transition-colors duration-300 bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen transition-colors duration-300 bg-[#F4F4F5] dark:bg-dark-bg">
             {/* Mobile Header */}
-            <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-white/20 px-4 py-3 flex items-center justify-between">
+            <div className="md:hidden sticky top-0 z-20 bg-white/90 dark:bg-dark-card/90 backdrop-blur-md border-b border-slate-200 dark:border-dark-border px-4 py-3 flex items-center justify-between">
                 <button
                     onClick={() => setIsSidebarOpen(true)}
-                    className="p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                    className="p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-surface text-slate-600 dark:text-slate-300 transition-colors"
                 >
                     <Menu className="h-6 w-6" />
                 </button>
@@ -24,7 +24,7 @@ export const Layout = () => {
 
             <main className="md:pl-64 transition-all duration-300 ease-in-out">
                 {/* On mobile, remove huge padding to max-width to use full screen real estate */}
-                <div className="mx-auto w-full md:max-w-[95%] p-4 md:p-8 pb-24 md:pb-8">
+                <div className="mx-auto w-full max-w-[1400px] p-4 md:p-6 pb-24 md:pb-6">
                     <Outlet />
                 </div>
             </main>
