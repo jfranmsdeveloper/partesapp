@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, PlusCircle, LogOut, Search, Moon, Sun, X, Users } from 'lucide-react';
+import { LayoutDashboard, FileText, PlusCircle, LogOut, Search, Moon, Sun, X, Users, TrendingUp } from 'lucide-react';
 import { NavLink, Link } from 'react-router-dom';
 import clsx from 'clsx';
 import logoUrl from '../../assets/logo.png';
@@ -7,6 +7,7 @@ import { useTheme } from '../../hooks/useTheme';
 
 const API_NAV_ITEMS = [
     { label: 'Panel de Control', icon: LayoutDashboard, to: '/', adminOnly: false },
+    { label: 'Analíticas', icon: TrendingUp, to: '/analytics', adminOnly: false },
     { label: 'Gestión de Partes', icon: FileText, to: '/management', adminOnly: false },
     { label: 'Nuevo Parte', icon: PlusCircle, to: '/new', adminOnly: false },
     { label: 'Explorador Global', icon: Search, to: '/global', adminOnly: false },

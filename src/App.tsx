@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import GlobalSearch from './pages/GlobalSearch';
 import Profile from './pages/Profile';
 import UsersPage from './pages/Users';
+import Analytics from './pages/Analytics';
 
 import { useAppStore } from './store/useAppStore';
 
@@ -38,6 +39,7 @@ function App() {
           <Route path="/management" element={<Management />} />
           <Route path="/new" element={<Registration />} />
           <Route path="/global" element={<GlobalSearch />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/parte/:id" element={<Registration />} />
