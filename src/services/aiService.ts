@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type AIEngine = 'ollama' | 'webllm';
-export const DEFAULT_WEBLLM_MODEL = "Llama-3-8B-Instruct-v0.1-q4f32_1-MLC";
+export const DEFAULT_WEBLLM_MODEL = "Llama-3-8B-Instruct-q4f32_1-MLC";
 export const LIGHT_WEBLLM_MODEL = "TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC";
 
 interface AIState {
