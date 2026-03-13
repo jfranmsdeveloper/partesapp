@@ -10,7 +10,8 @@ import {
     isSameDay,
     addMonths,
     subMonths,
-    isToday
+    isToday,
+    parseISO
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, User } from 'lucide-react';
@@ -102,7 +103,10 @@ export const CalendarView = ({ partes }: CalendarViewProps) => {
                         const isTodayDate = isToday(day);
 
                         // Filter partes for this day
-                        const dayPartes = partes.filter(p => isSameDay(new Date(p.createdAt), day));
+                        const dayPartes = partes.filter(p => {
+                            const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
+                            return isSameDay(date, day);
+                        });
 
                         return (
                             <div

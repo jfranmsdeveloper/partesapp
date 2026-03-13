@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useUserStore } from '../../hooks/useUserStore';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { 
     ChevronLeft, 
     ChevronRight, 
     Calendar as CalendarIcon, 
     Clock, 
-    ArrowRight
+    User,
+    ArrowRight,
+    FileText
 } from 'lucide-react';
 import { 
     format, 
@@ -25,8 +28,10 @@ import {
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
+import type { ActuacionType } from '../../types';
 
 export default function CalendarPage() {
+    const navigate = useNavigate();
     const { partes } = useUserStore();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -42,24 +47,43 @@ export default function CalendarPage() {
         end: endDate
     });
 
-    // Extract all actions for the calendar
-    const allActions = useMemo(() => {
-        return partes.flatMap(p => 
-            p.actuaciones.map(a => ({
-                ...a,
+    // Extract all items for the calendar (Both Partes and Actions)
+    const calendarData = useMemo(() => {
+        const items: any[] = [];
+        
+        partes.forEach(p => {
+            const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
+            // Add the Parte itself
+            items.push({
+                id: `parte-${p.id}`,
+                type: 'PARTE',
                 parteId: p.id,
-                parteTitle: p.title,
-                // Prioritize Parte date for calendar grouping (The PDF date)
-                // rather than the specific timestamp of the action which might be "Now"
-                date: parseISO(p.createdAt) 
-            }))
-        );
+                title: p.title,
+                date: date,
+                status: p.status,
+                createdBy: p.createdBy
+            });
+
+            // Add its Actions
+            p.actuaciones.forEach((a, idx) => {
+                items.push({
+                    ...a,
+                    id: `act-${a.id}-${idx}`,
+                    type: 'ACTUACION',
+                    parteId: p.id,
+                    parteTitle: p.title,
+                    date: date // Group by Parte date
+                });
+            });
+        });
+        
+        return items;
     }, [partes]);
 
-    // Actions for the selected day
-    const selectedDayActions = useMemo(() => {
-        return allActions.filter(a => isSameDay(a.date, selectedDate));
-    }, [allActions, selectedDate]);
+    // Items for the selected day
+    const selectedDayItems = useMemo(() => {
+        return calendarData.filter(item => isSameDay(item.date, selectedDate));
+    }, [calendarData, selectedDate]);
 
     // Handle navigation
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -106,7 +130,6 @@ export default function CalendarPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Calendar Grid - Liquid Glass Container */}
                 <Card className="lg:col-span-2 p-4 md:p-8 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border-white/40 dark:border-white/5 shadow-2xl rounded-[3rem] overflow-hidden">
-                    {/* Days of week header */}
                     <div className="grid grid-cols-7 mb-4">
                         {weekDays.map(day => (
                             <div key={day} className="text-center py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
@@ -115,10 +138,12 @@ export default function CalendarPage() {
                         ))}
                     </div>
 
-                    {/* Calendar body */}
                     <div className="grid grid-cols-7 gap-1 md:gap-3">
                         {calendarDays.map((day, idx) => {
-                            const dayActions = allActions.filter(a => isSameDay(a.date, day));
+                            const dayItems = calendarData.filter(item => isSameDay(item.date, day));
+                            const dayPartes = dayItems.filter(i => i.type === 'PARTE');
+                            const dayActions = dayItems.filter(i => i.type === 'ACTUACION');
+                            
                             const isCurrentMonth = isSameMonth(day, monthStart);
                             const isSelected = isSameDay(day, selectedDate);
                             const isTodayDay = isToday(day);
@@ -128,55 +153,67 @@ export default function CalendarPage() {
                                     key={idx}
                                     onClick={() => setSelectedDate(day)}
                                     className={clsx(
-                                        "relative h-20 md:h-32 p-2 rounded-[1.5rem] md:rounded-[2rem] border transition-all duration-500 flex flex-col items-center justify-between group overflow-hidden",
+                                        "relative h-28 md:h-40 p-2 rounded-[1.5rem] md:rounded-[2rem] border transition-all duration-500 flex flex-col items-center justify-between group overflow-hidden",
                                         !isCurrentMonth ? "opacity-20 scale-95" : "opacity-100",
                                         isSelected 
                                             ? "bg-blue-500/10 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)] z-10 scale-105" 
                                             : "bg-white/30 dark:bg-white/5 border-white/20 dark:border-white/5 hover:bg-white/60 dark:hover:bg-white/10"
                                     )}
                                 >
-                                    {/* Glass Shine Effect */}
                                     <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
                                     
                                     <div className="w-full flex justify-between items-start relative z-10">
                                         <span className={clsx(
-                                            "text-sm font-black w-8 h-8 flex items-center justify-center rounded-full transition-all",
+                                            "text-xs font-black w-6 h-6 flex items-center justify-center rounded-full transition-all",
                                             isTodayDay ? "bg-blue-600 text-white shadow-lg" : 
                                             isSelected ? "text-blue-600" : "text-slate-700 dark:text-slate-300"
                                         )}>
                                             {format(day, 'd')}
                                         </span>
-                                    </div>
-
-                                    {/* Action Indicators */}
-                                    <div className="flex flex-wrap justify-center gap-1 mt-auto pb-1 max-w-full">
-                                        {dayActions.slice(0, 4).map((action, i) => {
-                                            const config = ACTUACION_CONFIG[action.type];
-                                            const colorClass = config?.themeColor === 'blue' ? 'bg-blue-500' :
-                                                              config?.themeColor === 'green' ? 'bg-green-500' :
-                                                              config?.themeColor === 'red' ? 'bg-red-500' :
-                                                              config?.themeColor === 'orange' ? 'bg-orange-500' :
-                                                              config?.themeColor === 'amber' ? 'bg-amber-500' : 'bg-slate-400';
-                                            
-                                            return (
-                                                <div 
-                                                    key={i} 
-                                                    className={clsx(
-                                                        "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ring-1 ring-white dark:ring-slate-900 shadow-sm",
-                                                        colorClass
-                                                    )} 
-                                                    title={action.type}
-                                                />
-                                            );
-                                        })}
-                                        {dayActions.length > 4 && (
-                                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-slate-300 dark:bg-slate-600 ring-1 ring-white flex items-center justify-center">
-                                                <span className="text-[6px] font-bold text-slate-800">...</span>
-                                            </div>
+                                        {dayPartes.length > 0 && (
+                                            <span className="text-[8px] font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                                                {dayPartes.length} P
+                                            </span>
                                         )}
                                     </div>
 
-                                    {/* Fluid Background Glow */}
+                                    <div className="flex flex-col gap-1 w-full mt-auto">
+                                        <div className="flex flex-wrap justify-center gap-1 pb-1 max-w-full">
+                                            {dayActions.slice(0, 6).map((action, i) => {
+                                                const actionType = action.type as ActuacionType;
+                                                const config = ACTUACION_CONFIG[actionType];
+                                                const themeColor = config?.themeColor || 'blue';
+                                                
+                                                return (
+                                                    <div 
+                                                        key={i} 
+                                                        className={clsx(
+                                                            "w-1.5 h-1.5 rounded-full ring-1 ring-white dark:ring-slate-900 shadow-sm",
+                                                            themeColor === 'blue' ? 'bg-blue-500' :
+                                                            themeColor === 'green' ? 'bg-green-500' :
+                                                            themeColor === 'red' ? 'bg-red-500' :
+                                                            themeColor === 'orange' ? 'bg-orange-500' :
+                                                            themeColor === 'amber' ? 'bg-amber-500' : 'bg-slate-400'
+                                                        )} 
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                        
+                                        <div className="flex gap-0.5 w-full h-1 px-1">
+                                            {dayPartes.slice(0, 10).map((p, i) => (
+                                                <div 
+                                                    key={i} 
+                                                    className={clsx(
+                                                        "flex-1 rounded-full",
+                                                        p.status === 'ABIERTO' ? 'bg-green-400' : 
+                                                        p.status === 'EN TRÁMITE' ? 'bg-blue-400' : 'bg-slate-300'
+                                                    )}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
                                     {isSelected && (
                                         <div className="absolute inset-0 bg-blue-500/5 animate-pulse -z-10" />
                                     )}
@@ -195,36 +232,70 @@ export default function CalendarPage() {
                         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Actividades de este día</p>
                     </div>
 
-                    {selectedDayActions.length > 0 ? (
+                    {selectedDayItems.length > 0 ? (
                         <div className="space-y-4">
-                            {selectedDayActions.map((action, idx) => {
-                                const config = ACTUACION_CONFIG[action.type];
+                            {selectedDayItems.map((item, idx) => {
+                                if (item.type === 'PARTE') {
+                                    return (
+                                        <Card 
+                                            key={idx} 
+                                            className="p-5 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-blue-200/50 dark:border-blue-500/10 rounded-[2rem] hover:scale-[1.02] transition-all group cursor-pointer shadow-lg"
+                                            onClick={() => navigate(`/parte/${item.parteId}`)}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 rounded-2xl bg-indigo-500 text-white shadow-lg">
+                                                    <FileText className="w-5 h-5" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-start">
+                                                        <h4 className="font-bold text-slate-900 dark:text-white truncate">Parte #{item.parteId}</h4>
+                                                        <span className={clsx(
+                                                            "text-[8px] font-black px-2 py-0.5 rounded-full uppercase",
+                                                            item.status === 'ABIERTO' ? 'bg-green-100 text-green-700' : 
+                                                            item.status === 'EN TRÁMITE' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                                                        )}>
+                                                            {item.status}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 italic">{item.title}</p>
+                                                    <div className="flex items-center gap-1 mt-2">
+                                                        <User className="w-3 h-3 text-slate-400" />
+                                                        <span className="text-[10px] text-slate-400 font-bold">{item.createdBy}</span>
+                                                    </div>
+                                                </div>
+                                                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                            </div>
+                                        </Card>
+                                    );
+                                }
+
+                                const itemType = item.type as ActuacionType;
+                                const config = ACTUACION_CONFIG[itemType];
                                 const Icon = config?.icon || CalendarIcon;
                                 const themeColor = config?.themeColor || 'blue';
 
                                 return (
                                     <Card 
                                         key={idx} 
-                                        className="p-5 bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border-white/40 dark:border-white/5 rounded-[2rem] hover:scale-[1.02] transition-all group cursor-pointer"
-                                        onClick={() => window.location.href = `/parte/${action.parteId}`}
+                                        className="p-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border-white/20 dark:border-white/5 rounded-2xl hover:scale-[1.02] transition-all group cursor-pointer ml-4 border-l-4 border-l-blue-500"
+                                        onClick={() => navigate(`/parte/${item.parteId}`)}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className={clsx(
-                                                "p-3 rounded-2xl transition-all shadow-sm",
+                                                "p-2 rounded-xl transition-all",
                                                 `bg-${themeColor}-500/10 text-${themeColor}-600`
                                             )}>
-                                                <Icon className="w-5 h-5" />
+                                                <Icon className="w-4 h-4" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start">
-                                                    <h4 className="font-bold text-slate-900 dark:text-white truncate">{action.type}</h4>
-                                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">
-                                                        {format(action.date, 'HH:mm')}
+                                                    <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">{item.type}</h4>
+                                                    <span className="text-[10px] font-bold text-slate-400">
+                                                        {item.duration} min
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{action.parteTitle}</p>
+                                                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">En Parte #{item.parteId}</p>
                                             </div>
-                                            <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
                                         </div>
                                     </Card>
                                 );
@@ -235,55 +306,11 @@ export default function CalendarPage() {
                             <div className="p-4 bg-white dark:bg-slate-800 rounded-full mb-4 shadow-sm">
                                 <Clock className="w-8 h-8 text-slate-300" />
                             </div>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium">No hay actuaciones registradas para este día.</p>
-                        </div>
-                    )}
-
-                    {/* Quick Stats of the day */}
-                    {selectedDayActions.length > 0 && (
-                        <div className="p-6 rounded-[2rem] bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                                    <TrendingUp className="w-4 h-4" />
-                                </div>
-                                <span className="text-xs font-black uppercase tracking-widest text-indigo-100">Resumen del día</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-3xl font-black tabular-nums">{selectedDayActions.length}</p>
-                                    <p className="text-[10px] uppercase font-bold opacity-70">Tareas</p>
-                                </div>
-                                <div>
-                                    <p className="text-3xl font-black tabular-nums">
-                                        {selectedDayActions.reduce((acc, a) => acc + (a.duration || 0), 0)}
-                                    </p>
-                                    <p className="text-[10px] uppercase font-bold opacity-70">Minutos</p>
-                                </div>
-                            </div>
+                            <p className="text-slate-500 dark:text-slate-400 font-medium">No hay registros para este día.</p>
                         </div>
                     )}
                 </div>
             </div>
         </div>
     );
-}
-
-function TrendingUp(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-            <polyline points="16 7 22 7 22 13" />
-        </svg>
-    )
 }

@@ -6,7 +6,14 @@ import { TrendChart } from '../../components/dashboard/TrendChart';
 import { StatusDistributionChart } from '../../components/dashboard/StatusDistributionChart';
 import { Card } from '../../components/ui/Card';
 import { Users, TrendingUp, Clock } from 'lucide-react';
-import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import {
+    format,
+    subDays,
+    startOfDay,
+    endOfDay,
+    isWithinInterval,
+    parseISO
+} from 'date-fns';
 import clsx from 'clsx';
 
 export default function Analytics() {
@@ -20,7 +27,7 @@ export default function Analytics() {
         const end = endOfDay(new Date());
 
         return partes.filter(p => {
-            const date = new Date(p.createdAt);
+            const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
             const isInRange = isWithinInterval(date, { start, end });
             const isSelectedUser = selectedUser === 'all' || p.userId === selectedUser;
             return isInRange && isSelectedUser;
@@ -46,7 +53,8 @@ export default function Analytics() {
         }
         filteredPartes.forEach(p => {
             // Use p.createdAt (which is start_date if available) for the trend
-            const d = format(new Date(p.createdAt), 'yyyy-MM-dd');
+            const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
+            const d = format(date, 'yyyy-MM-dd');
             if (trendMap[d] !== undefined) {
                 trendMap[d] += 1; // Count the number of partes per day
             }

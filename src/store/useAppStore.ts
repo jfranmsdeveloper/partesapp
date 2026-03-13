@@ -258,7 +258,20 @@ export const useAppStore = create<AppState>((set, get) => ({
                     title: p.description || 'Sin título',
                     type: p.type as any,
                     status: p.status as any,
-                    createdAt: p.start_date || p.created_at || new Date().toISOString(),
+                    createdAt: (() => {
+                        const raw = p.start_date || p.created_at || new Date().toISOString();
+                        // Try to normalize non-standard formats like "DD/MM/YYYY HH:MM:SS"
+                        if (raw.includes('/') && !raw.includes('T')) {
+                            const [datePart, timePart] = raw.split(' ');
+                            const [d, m, y] = datePart.split('/');
+                            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${timePart || '09:00:00'}`;
+                        }
+                        // Handle "YYYY-MM-DD HH:MM:SS" (MySQL style)
+                        if (raw.includes('-') && !raw.includes('T')) {
+                            return raw.replace(' ', 'T');
+                        }
+                        return raw;
+                    })(),
                     createdBy: p.created_by || 'Sistema',
                     userId: p.user_id || '',
                     clientId: p.client_id,
