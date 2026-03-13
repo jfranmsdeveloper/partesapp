@@ -97,12 +97,33 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-3 ml-1">Selecciona el tipo</label>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {(Object.keys(ACTUACION_CONFIG) as ActuacionType[]).map((actionType) => {
                             const isSelected = type === actionType;
                             const config = ACTUACION_CONFIG[actionType];
                             const Icon = config.icon;
+                            const theme = config.themeColor;
                             
+                            // Map theme color to specific glass classes
+                            const glassStyles: Record<string, string> = {
+                                blue: isSelected ? 'bg-blue-500/10 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]' : 'hover:border-blue-300/50 hover:bg-blue-50/50',
+                                green: isSelected ? 'bg-green-500/10 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'hover:border-green-300/50 hover:bg-green-50/50',
+                                amber: isSelected ? 'bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'hover:border-amber-300/50 hover:bg-amber-50/50',
+                                indigo: isSelected ? 'bg-indigo-500/10 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'hover:border-indigo-300/50 hover:bg-indigo-50/50',
+                                pink: isSelected ? 'bg-pink-500/10 border-pink-500/50 shadow-[0_0_15px_rgba(236,72,153,0.3)]' : 'hover:border-pink-300/50 hover:bg-pink-50/50',
+                                cyan: isSelected ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'hover:border-cyan-300/50 hover:bg-cyan-50/50',
+                                gray: isSelected ? 'bg-gray-500/10 border-gray-500/50 shadow-[0_0_15px_rgba(107,114,128,0.3)]' : 'hover:border-gray-300/50 hover:bg-gray-50/50',
+                                rose: isSelected ? 'bg-rose-500/10 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'hover:border-rose-300/50 hover:bg-rose-50/50',
+                                sky: isSelected ? 'bg-sky-500/10 border-sky-500/50 shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'hover:border-sky-300/50 hover:bg-sky-50/50',
+                                slate: isSelected ? 'bg-slate-500/10 border-slate-500/50 shadow-[0_0_15px_rgba(100,116,139,0.3)]' : 'hover:border-slate-300/50 hover:bg-slate-50/50',
+                                red: isSelected ? 'bg-red-500/10 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'hover:border-red-300/50 hover:bg-red-50/50',
+                                orange: isSelected ? 'bg-orange-500/10 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]' : 'hover:border-orange-300/50 hover:bg-orange-50/50',
+                                teal: isSelected ? 'bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'hover:border-teal-300/50 hover:bg-teal-50/50',
+                            };
+
+                            const textColor = `text-${theme}-600`;
+                            const activeBg = `bg-${theme}-500`;
+
                             return (
                                 <button
                                     key={actionType}
@@ -114,24 +135,37 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                         }
                                     }}
                                     className={clsx(
-                                        "flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 group",
-                                        isSelected 
-                                            ? `${config.color.split(' ')[0].replace('text-', 'bg-').replace('-600', '-50')} ${config.color.split(' ')[0].replace('text-', 'border-').replace('-600', '-200')} shadow-md scale-[1.02]` 
-                                            : "bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm"
+                                        "group relative flex flex-col items-center justify-center p-5 rounded-[2rem] border-2 transition-all duration-500 backdrop-blur-md overflow-hidden h-32",
+                                        glassStyles[theme] || 'border-slate-100 bg-white/40',
+                                        isSelected ? "scale-[1.05] z-10" : "bg-white/40 border-white/40 hover:scale-[1.02] grayscale-[0.8] hover:grayscale-0 shadow-sm"
                                     )}
                                 >
+                                    {/* Liquid Background Pulse */}
+                                    {isSelected && (
+                                        <div className={clsx(
+                                            "absolute inset-0 opacity-20 animate-pulse",
+                                            activeBg
+                                        )} />
+                                    )}
+
                                     <div className={clsx(
-                                        "p-3 rounded-xl transition-all duration-300",
-                                        isSelected ? "bg-white shadow-sm" : "bg-slate-50 group-hover:bg-white"
+                                        "p-3.5 rounded-2xl transition-all duration-500 mb-2 relative",
+                                        isSelected ? "bg-white shadow-lg ring-1 ring-white/50" : "bg-white/50 group-hover:bg-white"
                                     )}>
-                                        <Icon className={clsx("w-6 h-6", isSelected ? config.color : "text-slate-400 group-hover:text-slate-600")} />
+                                        <Icon className={clsx("w-6 h-6", isSelected ? textColor : "text-slate-400 group-hover:scale-110 transition-transform")} />
                                     </div>
+                                    
                                     <span className={clsx(
-                                        "text-[10px] font-black uppercase tracking-widest text-center leading-tight",
-                                        isSelected ? config.color : "text-slate-500"
+                                        "text-[10px] font-black uppercase tracking-[0.1em] text-center leading-tight relative",
+                                        isSelected ? textColor : "text-slate-500"
                                     )}>
                                         {config.label}
                                     </span>
+
+                                    {/* Selection dot */}
+                                    {isSelected && (
+                                        <div className={clsx("absolute top-3 right-3 w-2 h-2 rounded-full", activeBg)} />
+                                    )}
                                 </button>
                             );
                         })}

@@ -64,7 +64,7 @@ const ActuacionItem = ({ actuacion, users, onEdit, onDelete, readOnly, isInitial
                 className="flex items-center gap-4 p-4 md:p-5 cursor-pointer bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 transition-colors select-none"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <div className={`p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm ${config.color}`}>
+                <div className={`p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-${config.themeColor}-600`}>
                     <Icon className="w-6 h-6" />
                 </div>
                 
