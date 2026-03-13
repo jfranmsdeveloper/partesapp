@@ -2,7 +2,9 @@ import "@blocknote/core/fonts/inter.css";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import { useCreateBlockNote } from "@blocknote/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { BlockNoteSchema, defaultBlockSpecs, createCodeBlockSpec } from "@blocknote/core";
+import { codeBlockOptions } from "@blocknote/code-block";
 
 interface NotionEditorProps {
   initialContent?: string;
@@ -15,9 +17,24 @@ export const NotionEditor = ({
   onChange,
   placeholder,
 }: NotionEditorProps) => {
-  // Initialize the editor
+  // 1. Define custom schema to include advanced CodeBlock options
+  // This enables syntax highlighting and more languages (SQL, JSON, etc.)
+  const schema = useMemo(() => {
+    return BlockNoteSchema.create({
+      blockSpecs: {
+        ...defaultBlockSpecs,
+        codeBlock: createCodeBlockSpec({
+          ...codeBlockOptions,
+          // We can override default settings here if needed
+        }),
+      },
+    });
+  }, []);
+
+  // 2. Initialize the editor with the custom schema
   const editor = useCreateBlockNote({
-    initialContent: undefined, // Content will be set via HTML conversion if needed
+    schema,
+    initialContent: undefined,
   });
 
   const [isReady, setIsReady] = useState(false);
