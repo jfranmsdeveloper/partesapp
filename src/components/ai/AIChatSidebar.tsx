@@ -3,6 +3,7 @@ import { Brain, X, Send, Sparkles, Bot, User as UserIcon, MessageSquareQuote } f
 import { clsx } from 'clsx';
 import { aiService, useAIStore } from '../../services/aiService';
 import { useUserStore } from '../../hooks/useUserStore';
+import { useAppStore } from '../../store/useAppStore';
 import { useLocation } from 'react-router-dom';
 
 interface Message {
@@ -23,7 +24,7 @@ export const AIChatSidebar = ({ isOpen, onClose }: AIChatSidebarProps) => {
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const { isAvailable } = useAIStore();
-    const { partes, users } = useUserStore();
+    const { partes } = useUserStore();
     const location = useLocation();
 
     useEffect(() => {
@@ -36,18 +37,19 @@ export const AIChatSidebar = ({ isOpen, onClose }: AIChatSidebarProps) => {
         const path = location.pathname;
         let context = `El usuario está actualmente en la página: ${path}. `;
 
+        // Add Global Snapshot (RAG)
+        const { clients } = useAppStore.getState(); // Need to import or use props
+        const snapshot = aiService.getAppSnapshot(partes, clients);
+        context += `Resumen global de la app: ${snapshot}. `;
+
         if (path.includes('/parte/')) {
             const id = path.split('/').pop();
             const parte = partes.find(p => p.id === parseInt(id || ''));
             if (parte) {
-                context += `Está viendo el Parte de Trabajo #${parte.id}: "${parte.title}". `;
-                context += `Tiene ${parte.actuaciones.length} actuaciones con un total de ${parte.totalTime} minutos. `;
+                context += `Específicamente, está viendo el Parte #${parte.id} con actuaciones: ${JSON.stringify(parte.actuaciones)}. `;
             }
-        } else if (path === '/management') {
-            context += `Está en la vista de Gestión. Hay un total de ${partes.length} partes registrados. `;
         }
         
-        context += `Hay ${users.length} usuarios en el sistema. `;
         return context;
     };
 

@@ -1,29 +1,44 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type AIEngine = 'ollama' | 'webllm';
+
 interface AIState {
+    engine: AIEngine;
     endpoint: string;
     model: string;
     isAvailable: boolean;
+    loadProgress: number; // For WebLLM loading status
+    isLoaded: boolean;
+    setEngine: (engine: AIEngine) => void;
     setEndpoint: (endpoint: string) => void;
     setModel: (model: string) => void;
     checkAvailability: () => Promise<boolean>;
+    setLoadProgress: (progress: number) => void;
+    setIsLoaded: (isLoaded: boolean) => void;
 }
 
 export const useAIStore = create<AIState>()(
     persist(
         (set, get) => ({
+            engine: 'ollama',
             endpoint: 'http://localhost:11434/api/generate',
             model: 'llama3:latest',
             isAvailable: false,
+            loadProgress: 0,
+            isLoaded: false,
 
+            setEngine: (engine: AIEngine) => set({ engine, isAvailable: engine === 'webllm' ? get().isLoaded : get().isAvailable }),
             setEndpoint: (endpoint: string) => set({ endpoint }),
             setModel: (model: string) => set({ model }),
+            setLoadProgress: (loadProgress: number) => set({ loadProgress }),
+            setIsLoaded: (isLoaded: boolean) => set({ isLoaded, isAvailable: isLoaded || get().engine === 'ollama' }),
 
             checkAvailability: async () => {
-                const { endpoint } = get();
+                const { engine, endpoint, isLoaded } = get();
+                if (engine === 'webllm') return isLoaded;
+
                 try {
-                    // Simple ping to see if Ollama or similar is responsive
                     const response = await fetch(endpoint.replace('/generate', '/tags'), {
                         method: 'GET',
                     });
@@ -38,31 +53,73 @@ export const useAIStore = create<AIState>()(
         }),
         {
             name: 'ai-storage',
+            partialize: (state) => ({ 
+                engine: state.engine, 
+                endpoint: state.endpoint, 
+                model: state.model 
+            }),
         }
     )
 );
 
+import * as webLLM from "@mlc-ai/web-llm";
+
+let engineInstance: webLLM.MLCEngine | null = null;
+
 export const aiService = {
+    async initWebLLM(): Promise<void> {
+        const { model, setLoadProgress, setIsLoaded } = useAIStore.getState();
+        if (engineInstance) return;
+
+        try {
+            engineInstance = new webLLM.MLCEngine();
+            engineInstance.setInitProgressCallback((report) => {
+                setLoadProgress(Math.round(report.progress * 100));
+            });
+
+            // Use a lightweight model for "simple computers" as requested
+            // TinyLlama is great for this, or Llama-3-8B if GPU allows
+            await engineInstance.reload(model || "Llama-3-8B-Instruct-v0.1-q4f32_1-MLC");
+            setIsLoaded(true);
+        } catch (error) {
+            console.error("WebLLM Init Error:", error);
+            setIsLoaded(false);
+            engineInstance = null;
+        }
+    },
+
     async generate(prompt: string, context?: string): Promise<string> {
-        const { endpoint, model } = useAIStore.getState();
+        const { engine, endpoint, model } = useAIStore.getState();
+        const fullPrompt = context ? `Contexto de la aplicación: ${context}\n\nPregunta/Tarea: ${prompt}` : prompt;
         
+        if (engine === 'webllm') {
+            if (!engineInstance) await this.initWebLLM();
+            if (!engineInstance) throw new Error("Motor nativo no inicializado");
+            
+            const messages: webLLM.ChatCompletionMessageParam[] = [
+                { role: "system", content: "Eres un asistente inteligente para una aplicación de gestión de partes de trabajo. Responde de forma concisa y profesional en Español." },
+                { role: "user", content: fullPrompt }
+            ];
+
+            const reply = await engineInstance.chat.completions.create({
+                messages,
+            });
+            return reply.choices[0].message.content || "";
+        }
+
+        // Ollama Implementation
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: model,
-                    prompt: context ? `Context: ${context}\n\nTask: ${prompt}` : prompt,
+                    prompt: fullPrompt,
                     stream: false,
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error('AI service responded with an error');
-            }
-
+            if (!response.ok) throw new Error('Ollama connection failed');
             const data = await response.json();
             return data.response || '';
         } catch (error) {
@@ -71,29 +128,36 @@ export const aiService = {
         }
     },
 
+    getAppSnapshot(partes: any[], clients: any[]): string {
+        // Build a super concise view of the app state for the AI
+        const stats = {
+            totalPartes: partes.length,
+            open: partes.filter(p => p.status === 'ABIERTO').length,
+            closed: partes.filter(p => p.status === 'CERRADO').length,
+            topClients: clients.slice(0, 3).map(c => c.name).join(', ')
+        };
+
+        const activePartes = partes.slice(0, 5).map(p => `#${p.id} ${p.title} (${p.status})`).join('; ');
+        
+        return `Resumen APP: ${stats.totalPartes} partes (${stats.open} abiertos, ${stats.closed} cerrados). ` +
+               `Clientes principales: ${stats.topClients}. ` +
+               `Partes recientes: ${activePartes}.`;
+    },
+
     async summarizePartes(partesText: string): Promise<string> {
-        const prompt = `Resume de forma profesional y concisa las siguientes actuaciones de trabajo. Enfócate en los logros y el estado actual. No uses más de 3 párrafos. Idioma: Español.`;
+        const prompt = `Resume estas actuaciones de trabajo de forma profesional. Máximo 3 párrafos.`;
         return this.generate(prompt, partesText);
     },
 
     async parseVoiceCommand(transcript: string): Promise<{ type?: string, duration?: number, notes?: string, user?: string }> {
-        const prompt = `Analiza el siguiente comando de voz y extrae la información estructurada para una actuación de trabajo. 
-        Tipos válidos: LLAMADA, REUNIÓN, INVESTIGACIÓN, DESARROLLO, DOCUMENTACIÓN, SOPORTE, OTRO.
-        
-        Comando: "${transcript}"
-        
-        Responde SOLO con un objeto JSON válido con estas claves: type, duration (en minutos, solo número), notes, user. Si no encuentras algo, omítelo.`;
+        const prompt = `Analiza este comando de voz y extrae JSON con claves: type (LLAMADA, REUNIÓN, INVESTIGACIÓN, DESARROLLO, DOCUMENTACIÓN, SOPORTE), duration (número), notes, user.
+        Comando: "${transcript}"`;
         
         const response = await this.generate(prompt);
         try {
-            // Find JSON in response if AI wrap it in markdown
             const jsonMatch = response.match(/\{.*\}/s);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
-            return JSON.parse(response);
+            return jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(response);
         } catch (e) {
-            console.error('Failed to parse AI command response:', response);
             return {};
         }
     }
