@@ -74,5 +74,27 @@ export const aiService = {
     async summarizePartes(partesText: string): Promise<string> {
         const prompt = `Resume de forma profesional y concisa las siguientes actuaciones de trabajo. Enfócate en los logros y el estado actual. No uses más de 3 párrafos. Idioma: Español.`;
         return this.generate(prompt, partesText);
+    },
+
+    async parseVoiceCommand(transcript: string): Promise<{ type?: string, duration?: number, notes?: string, user?: string }> {
+        const prompt = `Analiza el siguiente comando de voz y extrae la información estructurada para una actuación de trabajo. 
+        Tipos válidos: LLAMADA, REUNIÓN, INVESTIGACIÓN, DESARROLLO, DOCUMENTACIÓN, SOPORTE, OTRO.
+        
+        Comando: "${transcript}"
+        
+        Responde SOLO con un objeto JSON válido con estas claves: type, duration (en minutos, solo número), notes, user. Si no encuentras algo, omítelo.`;
+        
+        const response = await this.generate(prompt);
+        try {
+            // Find JSON in response if AI wrap it in markdown
+            const jsonMatch = response.match(/\{.*\}/s);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+            return JSON.parse(response);
+        } catch (e) {
+            console.error('Failed to parse AI command response:', response);
+            return {};
+        }
     }
 };

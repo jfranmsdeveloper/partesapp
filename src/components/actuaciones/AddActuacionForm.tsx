@@ -6,10 +6,11 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
-import { X, Mic, MicOff, FileText, Plus } from 'lucide-react';
-import { toLocalISOString } from '../../utils/dateUtils';
 import { NotionEditor } from '../ui/NotionEditor';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
+import { aiService, useAIStore } from '../../services/aiService';
+import { Wand2, Loader2, Mic, MicOff, FileText, Plus, X } from 'lucide-react';
+import { toLocalISOString } from '../../utils/dateUtils';
 
 interface AddActuacionFormProps {
     onAdd: (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] }) => void;
@@ -27,6 +28,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     const [priority, setPriority] = useState<'BAJA' | 'MEDIA' | 'ALTA'>(initialData?.priority || 'MEDIA');
     const [tagInput, setTagInput] = useState(initialData?.tags?.join(', ') || '');
     const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
+    const [isProcessingCommand, setIsProcessingCommand] = useState(false);
+    const { isAvailable: isAIAvailable } = useAIStore();
 
     const [customTimestamp, setCustomTimestamp] = useState(() => {
         if (initialData?.timestamp) return toLocalISOString(new Date(initialData.timestamp));
@@ -38,6 +41,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
     useEffect(() => {
         if (transcript) {
+            // Only update notes if we are NOT in command mode (or if we want to append anyway)
+            // But if we just finished a command, we might want to process it.
             setNotes(prev => {
                 const cleanTranscript = transcript.trim();
                 if (!cleanTranscript) return prev;
@@ -49,6 +54,30 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             resetTranscript();
         }
     }, [transcript, resetTranscript]);
+
+    const handleProcessVoiceCommand = async () => {
+        if (!transcript.trim()) return;
+        
+        setIsProcessingCommand(true);
+        try {
+            const command = await aiService.parseVoiceCommand(transcript);
+            
+            if (command.type) setType(command.type as ActuacionType);
+            if (command.duration) setDuration(command.duration.toString());
+            if (command.notes) {
+                setNotes(`<p>${command.notes}</p>`); // Replace for now if it's a structural command
+            }
+            if (command.user) setUser(command.user);
+            
+            resetTranscript();
+            alert('✨ Comando procesado e aplicado al formulario.');
+        } catch (error) {
+            console.error('Error processing voice command:', error);
+            alert('❌ No he podido entender el comando correctamente.');
+        } finally {
+            setIsProcessingCommand(false);
+        }
+    };
 
     useEffect(() => {
         if (initialData) {
@@ -297,6 +326,19 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                             >
                                 {isListening ? <MicOff className="w-3.5 h-3.5 mr-2" /> : <Mic className="w-3.5 h-3.5 mr-2 text-blue-500" />}
                                 {isListening ? "Detener" : "Dictar"}
+                            </Button>
+                        )}
+                        {hasRecognitionSupport && isAIAvailable && (
+                             <Button
+                                type="button"
+                                onClick={handleProcessVoiceCommand}
+                                variant="outline"
+                                size="sm"
+                                disabled={!transcript || isProcessingCommand}
+                                className="rounded-full h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                            >
+                                {isProcessingCommand ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 mr-2" />}
+                                {isProcessingCommand ? "Procesando..." : "Comando IA"}
                             </Button>
                         )}
                     </div>
