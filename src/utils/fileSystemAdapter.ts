@@ -149,6 +149,7 @@ class FileSystemAdapter {
     private activeSessionUser: any = null;
     /** The username inferred from the last session file found (used to speed up reconnect) */
     private pendingUsername: string | null = null;
+    private lastLoadTime: number = 0;
 
     // -----------------------------------------------------------------------
     // init — restore or acquire the root folder handle
@@ -312,12 +313,18 @@ class FileSystemAdapter {
     // Database load / save
     // -----------------------------------------------------------------------
 
-    private async loadDatabase() {
+    private async loadDatabase(force = false) {
         if (!this.handle) return;
+        
+        // Simple throttle: don't reload if we just loaded in the last 500ms (unless forced)
+        const now = Date.now();
+        if (!force && now - this.lastLoadTime < 500) return;
+
         try {
             const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
             const file = await fileHandle.getFile();
             const text = await file.text();
+            this.lastLoadTime = Date.now();
 
             let loadedState: DBState;
             if (text && text.trim().startsWith('{')) {
@@ -404,8 +411,8 @@ class FileSystemAdapter {
         return count;
     }
 
-    private async saveDatabase() {
-        if (!this.handle) return;
+    private async saveDatabase(): Promise<boolean> {
+        if (!this.handle) return false;
         try {
             console.log('FSA: Guardando base de datos...');
             const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
@@ -413,8 +420,10 @@ class FileSystemAdapter {
             await writable.write(JSON.stringify(this.state, null, 2));
             await writable.close();
             console.log('FSA: Base de datos guardada con éxito.');
+            return true;
         } catch (e) {
             console.error('Error saving DB:', e);
+            return false;
         }
     }
 
@@ -502,6 +511,11 @@ class FileSystemAdapter {
                 return { data: null, error: { message: 'Carpeta no inicializada. Por favor, inicia sesión primero.' } };
             }
 
+            if (pendingAction) {
+                // Ensure we have the latest data before any write operation (Read-Modify-Write)
+                await this.loadDatabase(true);
+            }
+
             let collection = this.state[table] || [];
 
             if (pendingAction) {
@@ -519,7 +533,8 @@ class FileSystemAdapter {
                             }
 
                             collection[index] = { ...collection[index], ...pendingAction.body };
-                            await this.saveDatabase();
+                            const ok = await this.saveDatabase();
+                            if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo. Verifica permisos.' } };
                         }
                     } else if (pendingAction.column && pendingAction.val) {
                         let updated = false;
@@ -529,7 +544,10 @@ class FileSystemAdapter {
                                 updated = true;
                             }
                         }
-                        if (updated) await this.saveDatabase();
+                        if (updated) {
+                            const ok = await this.saveDatabase();
+                            if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
+                        }
                     }
                     return { data: collection, error: null };
 
@@ -539,7 +557,8 @@ class FileSystemAdapter {
                     } else if (pendingAction.column && pendingAction.val) {
                         this.state[table] = collection.filter((item: any) => item[pendingAction.column] != pendingAction.val);
                     }
-                    await this.saveDatabase();
+                    const ok = await this.saveDatabase();
+                    if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
                     return { data: null, error: null };
 
                 } else if (pendingAction.type === 'insert') {
@@ -564,7 +583,8 @@ class FileSystemAdapter {
                     }
 
                     this.state[table].push(newItem);
-                    await this.saveDatabase();
+                    const ok = await this.saveDatabase();
+                    if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
                     return { data: [newItem], error: null };
                 }
             }
@@ -643,18 +663,23 @@ class FileSystemAdapter {
             // (database might not be loaded yet if folder wasn't selected before)
             const defaultUser = DEFAULT_DB.users.find(u => u.email === email && u.password === password);
             if (!defaultUser) {
-                // Try in loaded state if already initialised
-                if (this.isInitialized) {
-                    const user = this.state.users.find((u: any) => u.email === email && u.password === password);
-                    if (!user) {
-                        return { data: { user: null }, error: { message: 'Credenciales incorrectas' } };
+                // Not a predefined user. We MUST have the folder to check the DB.
+                if (!this.isInitialized) {
+                    console.log('FSA: Usuario no es predefinido, solicitando carpeta...');
+                    const ready = await this.init(true);
+                    if (!ready) {
+                        return { data: { user: null }, error: { message: 'Inicia sesión o selecciona la carpeta donde están tus datos.' } };
                     }
-                } else {
+                }
+                
+                // Now check in the (newly) loaded state
+                const user = this.state.users.find((u: any) => u.email === email && u.password === password);
+                if (!user) {
                     return { data: { user: null }, error: { message: 'Credenciales incorrectas' } };
                 }
             }
 
-            // Step 2: Make sure the root folder is accessible (prompt if first time)
+            // Step 2: Ensure folder is accessible for predefined users too
             if (!this.isInitialized) {
                 const ready = await this.init(true);
                 if (!ready) {

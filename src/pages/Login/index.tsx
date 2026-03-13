@@ -146,13 +146,29 @@ export default function Login() {
                         <Button
                             type="submit"
                             disabled={isLoggingIn}
-                            className="w-full py-3 mt-6 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full py-3 mt-4 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none transform hover:-translate-y-0.5 transition-all duration-200 text-lg font-medium rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {isLoggingIn ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                         </Button>
 
-                        <p className="text-center text-xs text-slate-400 pt-1">
-                            La primera vez se te pedirá elegir una carpeta donde guardar tus datos.
+                        {!hasPendingHandle && !(supabase as any).isInitialized && (
+                            <div className="pt-4 border-t border-slate-100 mt-4 text-center">
+                                <p className="text-[10px] text-slate-400 mb-3 uppercase tracking-wider font-bold">O vincula tu carpeta primero</p>
+                                <button
+                                    type="button"
+                                    onClick={handleReconnect}
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-all text-sm font-semibold bg-slate-50/50"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                    </svg>
+                                    Conectar Carpeta de Datos
+                                </button>
+                            </div>
+                        )}
+
+                        <p className="text-center text-[10px] text-slate-400 pt-2 px-6 leading-relaxed">
+                            Al iniciar, se te pedirá elegir la carpeta donde guardas tus partes de trabajo.
                         </p>
                     </form>
                 )}
