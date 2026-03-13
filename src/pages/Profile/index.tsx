@@ -3,7 +3,10 @@ import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
-import { User, Lock, Save, Upload, Plus, Trash2, Edit2, FileText } from 'lucide-react';
+import { User, Lock, Save, Upload, Plus, Trash2, Edit2, FileText, Brain, Globe, Bot, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useAIStore } from '../../services/aiService';
+import { clsx } from 'clsx';
+import type { Snippet } from '../../types';
 
 export default function Profile() {
     const { currentUser, updateUserProfile, changePassword, uploadAvatar, snippets, addSnippet, updateSnippet, deleteSnippet } = useAppStore();
@@ -24,6 +27,12 @@ export default function Profile() {
     const [editingSnippetId, setEditingSnippetId] = useState<string | null>(null);
     const [snipTitle, setSnipTitle] = useState('');
     const [snipContent, setSnipContent] = useState('');
+
+    // AI Settings State
+    const { endpoint, model, setEndpoint, setModel, checkAvailability, isAvailable } = useAIStore();
+    const [tempEndpoint, setTempEndpoint] = useState(endpoint);
+    const [tempModel, setTempModel] = useState(model);
+    const [isCheckingAI, setIsCheckingAI] = useState(false);
 
     useEffect(() => {
         if (currentUser) {
@@ -89,7 +98,7 @@ export default function Profile() {
         setSnipContent('');
     };
 
-    const startEditSnippet = (snippet: any) => {
+    const startEditSnippet = (snippet: Snippet) => {
         setEditingSnippetId(snippet.id);
         setSnipTitle(snippet.title);
         setSnipContent(snippet.content);
@@ -225,6 +234,90 @@ export default function Profile() {
                 </form>
             </Card>
 
+            {/* AI Configuration Card */}
+            <Card>
+                <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-2">
+                    <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <Brain className="w-5 h-5 text-blue-500" />
+                        Cerebro IA Local (Ollama)
+                    </h2>
+                    <div className={clsx(
+                        "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500",
+                        isAvailable ? "bg-green-100 text-green-700 shadow-[0_0_10px_rgba(34,197,94,0.2)]" : "bg-red-100 text-red-700"
+                    )}>
+                        {isAvailable ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                        {isAvailable ? 'Conectado' : 'Desconectado'}
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-500/10 mb-6">
+                        <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
+                            <Globe className="w-3 h-3 inline mr-1 mb-0.5" />
+                            Para usar la IA, asegúrate de tener <a href="https://ollama.com" target="_blank" className="underline font-bold" rel="noreferrer">Ollama</a> instalado y ejecutándose localmente. Tus datos nunca se envían a la nube.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-1">
+                                <Globe className="w-3 h-3" />
+                                Endpoint API
+                            </label>
+                            <Input
+                                value={tempEndpoint}
+                                onChange={(e) => setTempEndpoint(e.target.value)}
+                                placeholder="http://localhost:11434/api/generate"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-1">
+                                <Bot className="w-3 h-3" />
+                                Modelo (Tag)
+                            </label>
+                            <Input
+                                value={tempModel}
+                                onChange={(e) => setTempModel(e.target.value)}
+                                placeholder="llama3:latest"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-4">
+                        <p className="text-[10px] text-slate-400 font-bold max-w-[200px]">
+                            Se recomienda el modelo <code className="bg-slate-100 px-1 rounded">llama3</code> o <code className="bg-slate-100 px-1 rounded">mistral</code>.
+                        </p>
+                        <div className="flex gap-3">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={async () => {
+                                    setIsCheckingAI(true);
+                                    setEndpoint(tempEndpoint);
+                                    setModel(tempModel);
+                                    await checkAvailability();
+                                    setIsCheckingAI(false);
+                                }}
+                                disabled={isCheckingAI}
+                            >
+                                {isCheckingAI ? 'Comprobando...' : 'Probar Conexión'}
+                            </Button>
+                            <Button 
+                                size="sm"
+                                onClick={() => {
+                                    setEndpoint(tempEndpoint);
+                                    setModel(tempModel);
+                                    setSuccessMsg('Configuración de IA guardada');
+                                    setTimeout(() => setSuccessMsg(''), 3000);
+                                }}
+                            >
+                                Guardar Configuración
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+
             {/* Snippets Management Card */}
             <Card>
                 <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-2">
@@ -254,7 +347,7 @@ export default function Profile() {
                             <textarea
                                 value={snipContent}
                                 onChange={(e) => setSnipContent(e.target.value)}
-                                className="w-full min-h-[150px] p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800 text-sm font-mono"
+                                className="w-full min-h-[150px] p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800 text-sm font-mono transition-all"
                                 placeholder="Escribe el contenido de la plantilla aquí..."
                                 required
                             />
