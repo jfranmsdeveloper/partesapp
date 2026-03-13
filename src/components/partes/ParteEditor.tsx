@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useUserStore } from '../../hooks/useUserStore';
 import { supabase } from '../../utils/supabase';
@@ -10,7 +10,7 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, FileText, Eye, Printer, Copy, Check } from 'lucide-react';
+import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, FileText, Eye, Printer, Copy, Check, Files } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
@@ -67,6 +67,9 @@ export const ParteEditor = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState(''); // New state for progress text
 
+    const singleInputRef = useRef<HTMLInputElement>(null);
+    const bulkInputRef = useRef<HTMLInputElement>(null);
+
     const handleCreateParte = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title) return;
@@ -102,57 +105,13 @@ export const ParteEditor = () => {
         navigate('/management');
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (files.length === 0) return;
+    const handleSingleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
         setIsUploading(true);
+        setUploadStatus('Iniciando...');
         try {
-            // Case 1: Multiple files - Automatic Batch Import
-            if (files.length > 1) {
-                let processed = 0;
-                for (const file of files) {
-                    processed++;
-                    setUploadStatus(`Procesando ${processed} de ${files.length}: ${file.name}`);
-                    
-                    const data = await parsePartePDF(file);
-                    
-                    // Create client if needed
-                    let clientId = '';
-                    if (data.createdBy) {
-                        clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || '';
-                    }
-
-                    // Format date (mirror logic from handleCreateParte)
-                    let formattedDate = toLocalISOString(new Date()).replace('T', ' ') + ':00';
-                    if (data.date) {
-                        const [d, m, y] = data.date.split(/[-/]/);
-                        const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-                        const timeStr = data.time || '09:00';
-                        const dt = `${dateStr}T${timeStr}`;
-                        formattedDate = dt.replace('T', ' ') + (dt.includes(':') && dt.split(':').length === 2 ? ':00' : '');
-                    }
-
-                    // Add the parte directly
-                    await addParte({
-                        title: data.title || file.name,
-                        status: 'ABIERTO',
-                        createdBy: currentUser?.user_metadata?.full_name || currentUser?.name || 'Sistema',
-                        id: data.id ? parseInt(data.id) : undefined,
-                        createdAt: formattedDate,
-                        pdfFile: data.pdfFile,
-                        clientId: clientId || undefined
-                    });
-                }
-                
-                alert(`✅ Se han importado ${files.length} partes correctamente.`);
-                navigate('/management');
-                return;
-            }
-
-            // Case 2: Single file - Existing Autocomplete Behavior
-            const file = files[0];
-            setUploadStatus('Iniciando...');
             const data = await parsePartePDF(file, (status) => setUploadStatus(status));
 
             setUploadedPdf(data.pdfFile); // Save base64
@@ -160,7 +119,7 @@ export const ParteEditor = () => {
             if (data.title) setTitle(data.title);
             if (data.id) setCustomId(data.id);
 
-            // The name from 'Emitido por el usuario' becomes the SOLICITADO POR (client),
+            // The name from 'Emitido por el usuario' becomes the SOLICITADO POR (client)
             if (data.createdBy) {
                 setUploadStatus('Registrando solicitante...');
                 const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
@@ -173,12 +132,7 @@ export const ParteEditor = () => {
             if (data.date) {
                 const [d, m, y] = data.date.split(/[-/]/);
                 const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-
-                let timeStr = '09:00'; // default
-                if (data.time) {
-                    timeStr = data.time;
-                }
-
+                let timeStr = data.time || '09:00';
                 setCustomDate(`${dateStr}T${timeStr}`);
             }
 
@@ -189,7 +143,59 @@ export const ParteEditor = () => {
         } finally {
             setIsUploading(false);
             setUploadStatus('');
-            // Reset input
+            e.target.value = '';
+        }
+    };
+
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setIsUploading(true);
+        try {
+            let processed = 0;
+            for (const file of files) {
+                processed++;
+                setUploadStatus(`Procesando ${processed} de ${files.length}: ${file.name}`);
+
+                const data = await parsePartePDF(file);
+
+                // Create client if needed
+                let clientId = '';
+                if (data.createdBy) {
+                    clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || '';
+                }
+
+                // Format date
+                let formattedDate = toLocalISOString(new Date()).replace('T', ' ') + ':00';
+                if (data.date) {
+                    const [d, m, y] = data.date.split(/[-/]/);
+                    const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    const timeStr = data.time || '09:00';
+                    const dt = `${dateStr}T${timeStr}`;
+                    formattedDate = dt.replace('T', ' ') + (dt.includes(':') && dt.split(':').length === 2 ? ':00' : '');
+                }
+
+                // Add the parte directly
+                await addParte({
+                    title: data.title || file.name,
+                    status: 'ABIERTO',
+                    createdBy: currentUser?.user_metadata?.full_name || currentUser?.name || 'Sistema',
+                    id: data.id ? parseInt(data.id) : undefined,
+                    createdAt: formattedDate,
+                    pdfFile: data.pdfFile,
+                    clientId: clientId || undefined
+                });
+            }
+
+            alert(`✅ Se han importado ${files.length} partes correctamente.`);
+            navigate('/management');
+        } catch (error) {
+            console.error(error);
+            alert('❌ Error en el proceso masivo.');
+        } finally {
+            setIsUploading(false);
+            setUploadStatus('');
             e.target.value = '';
         }
     };
@@ -562,36 +568,62 @@ export const ParteEditor = () => {
                         <h2 className="text-lg font-semibold mb-4">Datos Generales</h2>
 
                         {isNew && (
-                            <div className={clsx("mb-6 p-4 border-2 border-dashed rounded-xl transition-colors relative group",
-                                uploadedPdf ? "border-green-300 bg-green-50" : "border-blue-200 bg-blue-50/50 hover:bg-blue-50")}>
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    multiple
-                                    onChange={handleFileUpload}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                    disabled={isUploading}
-                                />
-                                <div className="flex flex-col items-center justify-center text-center gap-2">
-                                    <div className={clsx("p-3 rounded-full shadow-sm transition-transform group-hover:scale-110", uploadedPdf ? "bg-green-100 text-green-600" : "bg-white text-blue-500")}>
-                                        {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> :
-                                            uploadedPdf ? <FileText className="w-6 h-6" /> : <FileUp className="w-6 h-6" />}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                                {/* Option 1: Individual */}
+                                <div 
+                                    onClick={() => !isUploading && singleInputRef.current?.click()}
+                                    className={clsx("p-6 border-2 border-dashed rounded-xl transition-all cursor-pointer group flex flex-col items-center text-center gap-3",
+                                        uploadedPdf ? "border-green-300 bg-green-50/50" : "border-slate-200 hover:border-blue-400 hover:bg-blue-50/30",
+                                        isUploading && "opacity-50 cursor-not-allowed")}
+                                >
+                                    <input
+                                        type="file"
+                                        ref={singleInputRef}
+                                        accept=".pdf"
+                                        onChange={handleSingleUpload}
+                                        className="hidden"
+                                    />
+                                    <div className={clsx("p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform", 
+                                        uploadedPdf ? "bg-green-100 text-green-600" : "bg-white text-blue-500 border border-slate-100")}>
+                                        <FileText className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <p className={clsx("font-medium", uploadedPdf ? "text-green-900" : "text-blue-900")}>
-                                            {isUploading ? uploadStatus :
-                                                uploadedPdf ? 'PDF Cargado y Procesado' : 'Subir PDF para Autocompletar'}
-                                        </p>
-                                        {!isUploading && !uploadedPdf && (
-                                            <p className="text-xs text-blue-600/70 mt-1">
-                                                Lee Nº Parte, Fecha, Descripción (Escaneados con OCR).
-                                            </p>
-                                        )}
-                                        {uploadedPdf && (
-                                            <p className="text-xs text-green-700 mt-1">El archivo se guardará con el parte.</p>
-                                        )}
+                                        <p className="font-bold text-slate-800">Importar PDF Individual</p>
+                                        <p className="text-xs text-slate-500 mt-1">Extrae datos para que los revises y completes el formulario.</p>
                                     </div>
                                 </div>
+
+                                {/* Option 2: Bulk */}
+                                <div 
+                                    onClick={() => !isUploading && bulkInputRef.current?.click()}
+                                    className={clsx("p-6 border-2 border-dashed rounded-xl transition-all cursor-pointer group flex flex-col items-center text-center gap-3",
+                                        "border-slate-200 hover:border-orange-400 hover:bg-orange-50/30",
+                                        isUploading && "opacity-50 cursor-not-allowed")}
+                                >
+                                    <input
+                                        type="file"
+                                        ref={bulkInputRef}
+                                        accept=".pdf"
+                                        multiple
+                                        onChange={handleBulkUpload}
+                                        className="hidden"
+                                    />
+                                    <div className="p-3 rounded-full shadow-sm bg-white text-orange-500 border border-slate-100 group-hover:scale-110 transition-transform">
+                                        <Files className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800">Carga Masiva (Varios)</p>
+                                        <p className="text-xs text-slate-500 mt-1">Procesa varios PDFs y los guarda automáticamente.</p>
+                                    </div>
+                                </div>
+
+                                {/* Global Status Overlay if uploading */}
+                                {isUploading && (
+                                    <div className="md:col-span-2 p-4 bg-blue-600 rounded-xl flex items-center justify-center gap-3 text-white shadow-lg animate-pulse">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span className="font-medium">{uploadStatus}</span>
+                                    </div>
+                                )}
                             </div>
                         )}
 
