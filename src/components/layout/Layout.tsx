@@ -4,11 +4,18 @@ import { Sidebar } from './Sidebar';
 import { Menu, Brain } from 'lucide-react';
 import { CommandPalette } from '../ui/CommandPalette';
 import { AIChatSidebar } from '../ai/AIChatSidebar';
+import { useAIStore } from '../../services/aiService';
 
 export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
+
+    // Auto-check AI availability on mount
+    const { checkAvailability } = useAIStore();
+    useEffect(() => {
+        checkAvailability();
+    }, [checkAvailability]);
 
     // Global shortcut for Command Palette
     useEffect(() => {
