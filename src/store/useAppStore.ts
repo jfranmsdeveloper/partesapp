@@ -30,6 +30,7 @@ interface AppState {
     updateParteStatus: (id: number, status: ParteStatus) => Promise<void>;
     updateParte: (id: number, data: Partial<Parte>) => Promise<void>;
     deleteParte: (id: number) => Promise<void>;
+    deletePartes: (ids: number[]) => Promise<void>;
 
     addActuacion: (parteId: number, actuacion: Omit<Actuacion, 'id' | 'parteId'>) => Promise<void>;
     updateActuacion: (parteId: number, actuacionId: string, data: Partial<Actuacion>) => Promise<void>;
@@ -361,6 +362,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         await supabase.from('actuaciones').delete().eq('parte_id', id);
         // Then delete the parte
         await supabase.from('partes').delete().eq('id', id);
+        await get().fetchData();
+    },
+    deletePartes: async (ids) => {
+        if (ids.length === 0) return;
+        // Delete all actuaciones for these partes
+        await supabase.from('actuaciones').delete().in('parte_id', ids);
+        // Delete the partes
+        await supabase.from('partes').delete().in('id', ids);
         await get().fetchData();
     },
 

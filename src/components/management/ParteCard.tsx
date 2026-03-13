@@ -2,44 +2,62 @@ import { useNavigate } from 'react-router-dom';
 import type { Parte } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { Badge } from '../ui/Badge';
-import { Clock, List } from 'lucide-react';
+import { Clock, List, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { clsx } from 'clsx';
 
 interface ParteCardProps {
     parte: Parte;
+    isSelectionMode?: boolean;
+    isSelected?: boolean;
+    onSelect?: (id: number) => void;
 }
 
-export const ParteCard = ({ parte }: ParteCardProps) => {
+export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: ParteCardProps) => {
     const navigate = useNavigate();
     const { users } = useAppStore();
 
-    // Logic to determine which user to display (Issuer vs Owner)
-    // 1. "Emitido por" (parte.createdBy) takes precedence as requested.
+    // Logic to determine which user to display
     const issuerName = parte.createdBy;
-
-    // 2. Try to find the user profile matching the issuer name (to get avatar)
     const issuerUser = users.find(u => (u.user_metadata?.full_name || u.name || u.email) === issuerName);
-
-    // 3. Fallback: The owner of the record (userId)
     const ownerUser = users.find(u => u.id === parte.userId || u.email === parte.userId);
-
-    // Final Display Values
     const displayName = issuerName || ownerUser?.user_metadata?.full_name || ownerUser?.name || 'Desconocido';
-
-    // Use issuer's avatar if found, otherwise owner's avatar (only if no specific issuer name was manually set distinct from owner)
-    // Actually, if issuerName is set, we want to show THAT person (or their initial). 
-    // If issuerUser is found, use their avatar. If not, use undefined (will show Initial).
-    // If issuerName is NOT set, use owner's avatar.
     const avatarUrl = issuerName ? issuerUser?.avatar_url : ownerUser?.avatar_url;
+
+    const handleCardClick = (e: React.MouseEvent) => {
+        if (isSelectionMode && onSelect) {
+            e.stopPropagation();
+            onSelect(parte.id);
+        } else {
+            navigate(`/parte/${parte.id}`);
+        }
+    };
 
     return (
         <div
-            onClick={() => navigate(`/parte/${parte.id}`)}
-            className="p-5 rounded-[2rem] bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border shadow-sm transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700/50 group relative overflow-hidden"
+            onClick={handleCardClick}
+            className={clsx(
+                "p-5 rounded-[2rem] bg-white dark:bg-dark-card border shadow-sm transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md group relative overflow-hidden",
+                isSelected ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-200 dark:border-dark-border dark:hover:border-slate-700/50"
+            )}
         >
+            {/* Selection Checkbox Overlay */}
+            {isSelectionMode && (
+                <div 
+                    className="absolute top-4 left-4 z-20"
+                    onClick={(e) => { e.stopPropagation(); onSelect?.(parte.id); }}
+                >
+                    <div className={clsx(
+                        "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+                        isSelected ? "bg-orange-500 border-orange-500 text-white" : "bg-white/80 border-slate-300"
+                    )}>
+                        {isSelected && <Check className="w-4 h-4" />}
+                    </div>
+                </div>
+            )}
 
-            <div className="flex justify-between items-start mb-2 relative z-10">
+            <div className={clsx("flex justify-between items-start mb-2 relative z-10", isSelectionMode && "pl-8")}>
                 <span className="text-xs font-mono text-slate-400 dark:text-slate-500">#{parte.id}</span>
                 <Badge
                     variant={

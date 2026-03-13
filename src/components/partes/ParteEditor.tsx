@@ -220,13 +220,13 @@ export const ParteEditor = () => {
         setShowAddActuacion(false);
     };
 
-    const handleDeleteParte = () => {
+    const handleDeleteParte = async () => {
         if (window.confirm('¿Estás seguro de que quieres eliminar este parte y todas sus actuaciones? Esta acción no se puede deshacer.')) {
             if (currentParte) {
                 // Delete logic would need add deleteParte to destructuring above first
                 // Assuming deleteParte is available in store and destructured
                 // Note: I need to update destructuring in next step if not already done
-                deleteParte(currentParte.id);
+                await deleteParte(currentParte.id);
                 navigate('/management');
             }
         }

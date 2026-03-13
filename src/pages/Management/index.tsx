@@ -8,11 +8,16 @@ import type { FilterState } from '../../components/management/ManagementFilters'
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
+import { Square, CheckSquare, Trash2, X } from 'lucide-react';
 
 export default function Management() {
-    const { partes, fixLegacyAuthorship, currentUser } = useUserStore();
+    const { partes, fixLegacyAuthorship, currentUser, deletePartes } = useUserStore();
     const [view, setView] = useState<'list' | 'kanban' | 'calendar'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+
+    // Selection State
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
     const [filters, setFilters] = useState<FilterState>({
         globalSearch: '',
@@ -26,7 +31,6 @@ export default function Management() {
 
     const filteredPartes = useMemo(() => {
         return partes.filter((p: Parte) => {
-            // Global Search (Title or Creator)
             if (filters.globalSearch) {
                 const searchLower = filters.globalSearch.toLowerCase();
                 const matchesGlobal =
@@ -35,20 +39,10 @@ export default function Management() {
                     p.id.toString().includes(searchLower);
                 if (!matchesGlobal) return false;
             }
-
-            // ID Filter
             if (filters.parteId && !p.id.toString().includes(filters.parteId)) return false;
-
-            // Status Filter
             if (filters.status && p.status !== filters.status) return false;
-
-            // Creator Filter
-            if (filters.creator && !p.createdBy.includes(filters.creator)) return false; // Includes for name variations
-
-            // Client/Attended User Filter
+            if (filters.creator && !p.createdBy.includes(filters.creator)) return false;
             if (filters.clientId && p.clientId !== filters.clientId) return false;
-
-            // Date Range Filter
             if (filters.startDate) {
                 const pDate = new Date(p.createdAt).getTime();
                 const fDate = new Date(filters.startDate).setHours(0, 0, 0, 0);
@@ -59,7 +53,6 @@ export default function Management() {
                 const fDate = new Date(filters.endDate).setHours(23, 59, 59, 999);
                 if (pDate > fDate) return false;
             }
-
             return true;
         });
     }, [partes, filters]);
@@ -80,18 +73,31 @@ export default function Management() {
         });
     };
 
-    // Auto-check for legacy data (Usuario Actual) and prompt to fix
+    // Selection Handlers
+    const toggleSelection = (id: number) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleBatchDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (window.confirm(`¿Estás seguro de que quieres eliminar los ${selectedIds.length} partes seleccionados? Esta acción es irreversible.`)) {
+            await deletePartes(selectedIds);
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+            alert('✅ Partes eliminados correctamente');
+        }
+    };
+
+    // Auto-check for legacy data
     useEffect(() => {
         if (!currentUser || partes.length === 0) return;
-
         const checkAndFix = async () => {
             const correctName = currentUser.user_metadata?.full_name || currentUser.name || currentUser.email;
             if (!correctName) return;
-
             const partesToFix = partes.filter(p => p.createdBy === 'Usuario Actual');
-
             if (partesToFix.length > 0) {
-                // Use a slight delay to ensure UI is ready
                 setTimeout(async () => {
                     if (confirm(`⚠️ DETECTADOS PARTES ANTIGUOS SIN NOMBRE DE AUTOR\n\nHemos encontrado ${partesToFix.length} partes asignados a "Usuario Actual".\n\n¿Quieres actualizarlos automáticamente a tu nombre: "${correctName}"?`)) {
                         await fixLegacyAuthorship(correctName);
@@ -100,18 +106,29 @@ export default function Management() {
                 }, 1000);
             }
         };
-
         checkAndFix();
-    }, [partes.length, currentUser]); // Run once when data loads
+    }, [partes.length, currentUser]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                     Gestión de Partes
                 </h1>
                 <div className="flex gap-2">
-                    {/* Button removed as per user request to use Sidebar only */}
+                    {view === 'list' && (
+                        <Button 
+                            variant={isSelectionMode ? "primary" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                                setIsSelectionMode(!isSelectionMode);
+                                if (isSelectionMode) setSelectedIds([]);
+                            }}
+                        >
+                            {isSelectionMode ? <CheckSquare className="w-4 h-4 mr-2" /> : <Square className="w-4 h-4 mr-2" />}
+                            {isSelectionMode ? 'Cancelar Selección' : 'Seleccionar varios'}
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -128,17 +145,19 @@ export default function Management() {
                 {view === 'list' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
                         {filteredPartes.map(parte => (
-                            <ParteCard key={parte.id} parte={parte} />
+                            <ParteCard 
+                                key={parte.id} 
+                                parte={parte} 
+                                isSelectionMode={isSelectionMode}
+                                isSelected={selectedIds.includes(parte.id)}
+                                onSelect={toggleSelection}
+                            />
                         ))}
                         {filteredPartes.length === 0 && (
                             <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                                 <p className="text-lg font-medium">No se encontraron partes</p>
                                 <p className="text-sm">Prueba a ajustar los filtros de búsqueda</p>
-                                <Button
-                                    variant="ghost"
-                                    className="mt-4 text-orange-600"
-                                    onClick={handleClearFilters}
-                                >
+                                <Button variant="ghost" className="mt-4 text-orange-600" onClick={handleClearFilters}>
                                     Limpiar filtros
                                 </Button>
                             </div>
@@ -150,6 +169,41 @@ export default function Management() {
                     <CalendarView partes={filteredPartes} />
                 )}
             </div>
+
+            {/* Bulk Actions Floating Bar */}
+            {isSelectionMode && selectedIds.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-slate-900 text-white rounded-2xl shadow-2xl px-6 py-4 flex items-center gap-6 border border-slate-800">
+                        <div className="flex items-center gap-2 border-r border-slate-700 pr-6">
+                            <span className="bg-orange-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                                {selectedIds.length}
+                            </span>
+                            <span className="text-sm font-medium">seleccionados</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <Button 
+                                variant="danger" 
+                                size="sm" 
+                                className="bg-red-500 hover:bg-red-600 border-0"
+                                onClick={handleBatchDelete}
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Eliminar
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-slate-400 hover:text-white"
+                                onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }}
+                            >
+                                <X className="w-4 h-4 mr-2" />
+                                Cancelar
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <AddClientModal
                 isOpen={isClientModalOpen}
