@@ -1,4 +1,4 @@
-import { Search, Plus, Calendar, Filter, X } from 'lucide-react';
+import { Search, Plus, Calendar, Filter, X, Clock, Users, BarChart3, List, Layout } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useAppStore } from '../../store/useAppStore';
@@ -19,8 +19,8 @@ interface ManagementFiltersProps {
     filters: FilterState;
     onFilterChange: (key: keyof FilterState, value: string) => void;
     onClearFilters: () => void;
-    view: 'list' | 'kanban' | 'calendar';
-    onViewChange: (val: 'list' | 'kanban' | 'calendar') => void;
+    view: 'list' | 'kanban' | 'timeline' | 'clients' | 'workload';
+    onViewChange: (val: 'list' | 'kanban' | 'timeline' | 'clients' | 'workload') => void;
     onAddClient: () => void;
 }
 
@@ -71,30 +71,53 @@ export const ManagementFilters = ({
                     <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                         <button
                             onClick={() => onViewChange('list')}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'list'
-                                ? 'bg-white dark:bg-slate-700 text-slate-900 shadow-sm'
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'list'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-900'
                                 }`}
                         >
+                            <List className="w-3 h-3" />
                             Lista
                         </button>
                         <button
                             onClick={() => onViewChange('kanban')}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'kanban'
-                                ? 'bg-white dark:bg-slate-700 text-slate-900 shadow-sm'
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'kanban'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-900'
                                 }`}
                         >
+                            <Layout className="w-3 h-3" />
                             Kanban
                         </button>
                         <button
-                            onClick={() => onViewChange('calendar')}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${view === 'calendar'
-                                ? 'bg-white dark:bg-slate-700 text-slate-900 shadow-sm'
+                            onClick={() => onViewChange('timeline')}
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'timeline'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-900'
                                 }`}
                         >
-                            Calendario
+                            <Clock className="w-3 h-3" />
+                            Timeline
+                        </button>
+                        <button
+                            onClick={() => onViewChange('clients')}
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'clients'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900'
+                                }`}
+                        >
+                            <Users className="w-3 h-3" />
+                            Clientes
+                        </button>
+                        <button
+                            onClick={() => onViewChange('workload')}
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'workload'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900'
+                                }`}
+                        >
+                            <BarChart3 className="w-3 h-3" />
+                            Cargas
                         </button>
                     </div>
                 </div>

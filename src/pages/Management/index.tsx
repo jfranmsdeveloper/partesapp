@@ -2,7 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useUserStore } from '../../hooks/useUserStore';
 import { ParteCard } from '../../components/management/ParteCard';
 import { KanbanBoard } from '../../components/management/KanbanBoard';
-import { CalendarView } from '../../components/management/CalendarView';
+import { TimelineView } from '../../components/management/TimelineView';
+import { ClientsView } from '../../components/management/ClientsView';
+import { WorkloadView } from '../../components/management/WorkloadView';
 import { ManagementFilters } from '../../components/management/ManagementFilters';
 import type { FilterState } from '../../components/management/ManagementFilters';
 import { AddClientModal } from '../../components/management/AddClientModal';
@@ -12,7 +14,7 @@ import { Square, CheckSquare, Trash2, X } from 'lucide-react';
 
 export default function Management() {
     const { partes, fixLegacyAuthorship, currentUser, deletePartes } = useUserStore();
-    const [view, setView] = useState<'list' | 'kanban' | 'calendar'>('list');
+    const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
     // Selection State
@@ -165,8 +167,12 @@ export default function Management() {
                     </div>
                 ) : view === 'kanban' ? (
                     <KanbanBoard partes={filteredPartes} />
+                ) : view === 'timeline' ? (
+                    <TimelineView partes={filteredPartes} />
+                ) : view === 'clients' ? (
+                    <ClientsView onFilterChange={handleFilterChange} onViewChange={setView} />
                 ) : (
-                    <CalendarView partes={filteredPartes} />
+                    <WorkloadView partes={filteredPartes} />
                 )}
             </div>
 
