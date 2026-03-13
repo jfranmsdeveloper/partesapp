@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import type { ActuacionType } from '../../types';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
@@ -9,8 +9,7 @@ import { clsx } from 'clsx';
 import { X, Check, Mic, MicOff } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import { NotionEditor } from '../ui/NotionEditor';
 
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 
@@ -47,32 +46,19 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         if (transcript) {
             // Simple accumulation: add space if needed
             setNotes(prev => {
-                // Clean up transcript and append
                 const cleanTranscript = transcript.trim();
                 if (!cleanTranscript) return prev;
-                // Avoid empty p tags at start if it was empty
-                if (prev === '<p><br></p>' || prev === '') return cleanTranscript;
+                // If it's already HTML (from NotionEditor), we might need to be careful,
+                // but BlockNote handles HTML well enough if we just append text.
+                // However, for best results we wrap in a paragraph if it looks like HTML.
+                if (prev.includes('</p>')) {
+                  return prev.replace(/<\/p>$/, ` ${cleanTranscript}</p>`);
+                }
                 return prev + ' ' + cleanTranscript;
             });
             resetTranscript();
         }
     }, [transcript, resetTranscript]);
-
-    // Toolbar settings
-    const modules = {
-        toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            ['clean']
-        ],
-    };
-
-    const formats = [
-        'header',
-        'bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block',
-        'list'
-    ];
 
     // Sync state if initialData changes while component is mounted
     useEffect(() => {
@@ -103,7 +89,11 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
     const handleCancel = () => {
         onCancel();
-    }
+    };
+
+    const handleNotesChange = useCallback((html: string) => {
+      setNotes(html);
+    }, []);
 
     return (
         <div className="rounded-2xl border border-blue-100 bg-blue-50/30 p-6 shadow-sm mb-6 relative overflow-hidden transition-all duration-300">
@@ -257,18 +247,14 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         )}
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-blue-500 transition-all quill-modern group relative">
-                        <ReactQuill
-                            theme="snow"
-                            value={notes}
-                            onChange={setNotes}
-                            modules={modules}
-                            formats={formats}
-                            placeholder={isListening ? "Escuchando... habla ahora." : "Describe los detalles de la actuación..."}
-                            className="rounded-xl overflow-hidden"
+                    <div className="transition-all group relative">
+                        <NotionEditor
+                          initialContent={notes}
+                          onChange={handleNotesChange}
+                          placeholder={isListening ? "Escuchando... habla ahora." : "Describe los detalles de la actuación..."}
                         />
                         {isListening && (
-                            <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-ping pointer-events-none z-10" />
+                            <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-ping pointer-events-none z-20" />
                         )}
                     </div>
                     {isListening && <p className="text-xs text-slate-500 px-1 animate-pulse">Grabando... (El texto aparecerá al terminar la frase)</p>}
