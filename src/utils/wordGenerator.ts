@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, TextRun, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, TextRun, BorderStyle, type ISectionOptions } from 'docx';
 import { saveAs } from 'file-saver';
 import { type Parte, type ActuacionType, type User } from '../types';
 import { format } from 'date-fns';
@@ -68,7 +68,7 @@ export const generateWordReport = async (data: ReportData) => {
 
         return {
             users: totalUsersAttended,
-            abiertos: partes.filter(p => p.status === 'ABIERTO').length,
+            abiertos: totalUsersAttended,
             cerrados: cerrados,
             resueltas_directas: resueltasDirectas,
             act_traslados: trasladosCount,
@@ -80,7 +80,7 @@ export const generateWordReport = async (data: ReportData) => {
         };
     };
 
-    const sections = [];
+    const sections: ISectionOptions[] = [];
 
     // Table Style Constants
     const tableBorders = {
@@ -121,7 +121,7 @@ export const generateWordReport = async (data: ReportData) => {
         const userName = uData?.user_metadata?.full_name || uData?.name || uData?.email || "Usuario";
         const metrics: any = calculateMetrics(uPartes);
 
-        const userChildren = [
+        const userChildren: (Paragraph | Table)[] = [
             new Paragraph({
                 text: "Informe de Indicadores de Gestión",
                 heading: HeadingLevel.HEADING_1,
