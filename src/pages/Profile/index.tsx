@@ -37,6 +37,7 @@ export default function Profile() {
     const [tempModel, setTempModel] = useState(model);
     const [isCheckingAI, setIsCheckingAI] = useState(false);
     const [isInitializingNative, setIsInitializingNative] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
 
     useEffect(() => {
         if (currentUser) {
@@ -336,16 +337,27 @@ export default function Profile() {
                                                 <Button 
                                                     size="sm" 
                                                     onClick={async () => {
-                                                        setIsInitializingNative(true);
-                                                        const { aiService } = await import('../../services/aiService');
-                                                        await aiService.initWebLLM();
-                                                        setIsInitializingNative(false);
+                                                        try {
+                                                            setIsInitializingNative(true);
+                                                            setAiError(null);
+                                                            const { aiService } = await import('../../services/aiService');
+                                                            await aiService.initWebLLM();
+                                                            setIsInitializingNative(false);
+                                                        } catch (err: any) {
+                                                            setIsInitializingNative(false);
+                                                            setAiError(err.message || 'Error al cargar el modelo');
+                                                        }
                                                     }}
                                                     disabled={isInitializingNative}
                                                 >
                                                     {isInitializingNative ? 'Iniciando...' : 'Activar IA Nativa'}
                                                 </Button>
                                             </div>
+                                            {aiError && (
+                                                <p className="text-[10px] text-red-500 font-bold bg-red-50 p-2 rounded-lg border border-red-100">
+                                                    ⚠️ {aiError}
+                                                </p>
+                                            )}
                                             {isInitializingNative && (
                                                 <div className="h-1.5 w-full bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
                                                     <div 

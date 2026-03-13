@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type AIEngine = 'ollama' | 'webllm';
+export const DEFAULT_WEBLLM_MODEL = "Llama-3-8B-Instruct-v0.1-q4f32_1-MLC";
+export const LIGHT_WEBLLM_MODEL = "TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC";
 
 interface AIState {
     engine: AIEngine;
@@ -77,14 +79,16 @@ export const aiService = {
                 setLoadProgress(Math.round(report.progress * 100));
             });
 
-            // Use a lightweight model for "simple computers" as requested
-            // TinyLlama is great for this, or Llama-3-8B if GPU allows
-            await engineInstance.reload(model || "Llama-3-8B-Instruct-v0.1-q4f32_1-MLC");
+            // If the model string looks like an Ollama tag, use the default WebLLM model instead
+            const webModel = model && model.includes(':') ? DEFAULT_WEBLLM_MODEL : (model || DEFAULT_WEBLLM_MODEL);
+            
+            await engineInstance.reload(webModel);
             setIsLoaded(true);
         } catch (error) {
             console.error("WebLLM Init Error:", error);
             setIsLoaded(false);
             engineInstance = null;
+            throw error; // Rethrow to handle in UI
         }
     },
 
