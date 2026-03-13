@@ -303,6 +303,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (error) {
             console.error('Error adding parte:', error);
             set({ error: error.message });
+            alert(`Error al guardar el parte: ${error.message}`);
             return;
         }
         await get().fetchData();

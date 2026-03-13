@@ -363,14 +363,24 @@ class FileSystemAdapter {
 
             this.state = loadedState;
 
-            // Run migration for existing base64 data
+            // Run migrations
+            let migrationModified = false;
+            
+            // 1. Migrate base64 to files
             const migrationCount = await this.migrateBase64ToFiles();
             if (migrationCount > 0) {
                 console.log(`FSA: Migrados ${migrationCount} archivos base64 a archivos físicos.`);
-                modified = true;
+                migrationModified = true;
             }
 
-            if (modified) {
+            // 2. Migrate missing IDs for legacy data
+            const idMigrationCount = this.migrateMissingIds();
+            if (idMigrationCount > 0) {
+                console.log(`FSA: Migrados ${idMigrationCount} registros con IDs faltantes.`);
+                migrationModified = true;
+            }
+
+            if (modified || migrationModified) {
                 await this.saveDatabase();
             }
         } catch (e) {
@@ -407,6 +417,30 @@ class FileSystemAdapter {
                 if (path && path.startsWith('local://')) { user.avatar_url = path; count++; }
             }
         }
+
+        return count;
+    }
+
+    /**
+     * Ensures all existing records (partes, actuaciones, clients) have unique IDs.
+     */
+    private migrateMissingIds(): number {
+        let count = 0;
+        if (!this.state) return 0;
+
+        const generateId = (prefix: string) => crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+
+        this.state.partes.forEach(p => {
+            if (!p.id) { p.id = generateId('parte'); count++; }
+        });
+
+        this.state.actuaciones.forEach(a => {
+            if (!a.id) { a.id = generateId('act'); count++; }
+        });
+
+        this.state.clients.forEach(c => {
+            if (!c.id) { c.id = generateId('client'); count++; }
+        });
 
         return count;
     }
@@ -567,6 +601,12 @@ class FileSystemAdapter {
                     // Ensure ID generation if missing
                     if (!newItem.id) {
                         newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    }
+
+                    // PREVENT DUPLICATES: Check if ID already exists
+                    const exists = collection.some((item: any) => String(item.id) === String(newItem.id));
+                    if (exists) {
+                        return { data: null, error: { message: `Ya existe un registro con el ID ${newItem.id}.` } };
                     }
 
                     if (newItem.pdf_file && newItem.pdf_file.startsWith('data:')) {
