@@ -367,6 +367,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const { error } = await supabase
             .from('actuaciones')
             .insert({
+                id: crypto.randomUUID ? crypto.randomUUID() : `act-${Date.now()}`,
                 parte_id: parteId,
                 type: actuacion.type,
                 description: actuacion.notes,
@@ -380,11 +381,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     updateActuacion: async (_parteId, actuacionId, data) => {
         const payload: any = {};
-        if (data.notes) payload.description = data.notes;
-        if (data.duration) payload.duration = data.duration;
-        if (data.type) payload.type = data.type;
-        if (data.timestamp) payload.date = data.timestamp;
-        if (data.user) payload.user = data.user;
+        if (data.notes !== undefined) payload.description = data.notes;
+        if (data.duration !== undefined) payload.duration = data.duration;
+        if (data.type !== undefined) payload.type = data.type;
+        if (data.timestamp !== undefined) payload.date = data.timestamp;
+        if (data.user !== undefined) payload.user = data.user;
 
         await supabase.from('actuaciones').update(payload).eq('id', actuacionId);
         await get().fetchData();

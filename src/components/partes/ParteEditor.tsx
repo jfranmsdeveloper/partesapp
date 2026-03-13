@@ -152,11 +152,11 @@ export const ParteEditor = () => {
         }
     };
 
-    const handleAddOrUpdateActuacion = (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => {
+    const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => {
         if (!currentParte) return;
 
         if (editingActuacion) {
-            updateActuacion(currentParte.id, editingActuacion.id, actuacion);
+            await updateActuacion(currentParte.id, editingActuacion.id, actuacion);
             setEditingActuacion(null);
         } else {
             // Default timestamp if missing: Local time
@@ -164,7 +164,7 @@ export const ParteEditor = () => {
             const localIso = toLocalISOString(now);
             const formattedNow = localIso.replace('T', ' ') + (localIso.includes(':') && localIso.split(':').length === 2 ? ':00' : '');
 
-            addActuacion(currentParte.id, {
+            await addActuacion(currentParte.id, {
                 ...actuacion,
                 timestamp: actuacion.timestamp || formattedNow
             });
@@ -460,7 +460,11 @@ export const ParteEditor = () => {
                             <div className="mb-6">
                                 <ActuacionesList
                                     actuaciones={currentParte.actuaciones}
-                                    onDelete={(actuacionId) => deleteActuacion(currentParte.id, actuacionId)}
+                                    onDelete={async (actuacionId) => {
+                                        if (window.confirm('¿Estás seguro de que quieres eliminar esta actuación?')) {
+                                            await deleteActuacion(currentParte.id, actuacionId);
+                                        }
+                                    }}
                                     onEdit={handleEditClick}
                                 />
                             </div>

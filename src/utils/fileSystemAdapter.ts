@@ -545,6 +545,11 @@ class FileSystemAdapter {
                 } else if (pendingAction.type === 'insert') {
                     let newItem = { ...pendingAction.body };
 
+                    // Ensure ID generation if missing
+                    if (!newItem.id) {
+                        newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    }
+
                     if (newItem.pdf_file && newItem.pdf_file.startsWith('data:')) {
                         const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
                         newItem.pdf_file = await this.saveFile(newItem.pdf_file, userName, 'parte');
