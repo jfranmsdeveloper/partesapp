@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../utils/supabase';
-import type { Parte, Actuacion, ParteStatus, Client, User } from '../types';
+import type { Parte, Actuacion, ParteStatus, Client, User, Snippet } from '../types';
 
 interface AppState {
     // UI State
@@ -22,6 +22,7 @@ interface AppState {
     partes: Parte[];
     clients: Client[];
     users: User[];
+    snippets: Snippet[];
 
     // Data Actions
     fetchData: () => Promise<void>;
@@ -39,6 +40,10 @@ interface AppState {
     addClient: (client: Omit<Client, 'id' | 'userId'>) => Promise<string | null>; // Returns the new client ID
     updateClient: (id: string, data: Partial<Client>) => Promise<void>;
     deleteClient: (id: string) => Promise<void>;
+
+    addSnippet: (snippet: Omit<Snippet, 'id' | 'userId'>) => Promise<void>;
+    updateSnippet: (id: string, data: Partial<Snippet>) => Promise<void>;
+    deleteSnippet: (id: string) => Promise<void>;
 
     getParte: (id: number) => Parte | undefined;
     updateUserProfile: (email: string, data: Partial<User>) => Promise<void>;
@@ -71,6 +76,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     partes: [],
     clients: [],
     users: [],
+    snippets: [],
 
     checkSession: async () => {
         try {
@@ -215,6 +221,10 @@ export const useAppStore = create<AppState>((set, get) => ({
                 .select('*');
 
             if (actError) console.error('Error fetching actuaciones:', actError);
+            
+            // 3.5. Fetch Snippets
+            const { data: snippetsData } = await supabase.from('snippets').select('*');
+            set({ snippets: snippetsData || [] });
 
             // 4. Fetch Users (for avatars and roles)
             const { data: usersData } = await supabase.from('users').select('*');
@@ -556,6 +566,40 @@ export const useAppStore = create<AppState>((set, get) => ({
             console.error('Error in upsertClientFromPDF:', e);
             return null;
         }
+    },
+
+    addSnippet: async (snippetData) => {
+        const { currentUser } = get();
+        if (!currentUser) return;
+
+        const { error } = await supabase
+            .from('snippets')
+            .insert({
+                id: crypto.randomUUID ? crypto.randomUUID() : `snip-${Date.now()}`,
+                title: snippetData.title,
+                content: snippetData.content,
+                userId: currentUser.id
+            });
+
+        if (!error) await get().fetchData();
+    },
+
+    updateSnippet: async (id, data) => {
+        const { error } = await supabase
+            .from('snippets')
+            .update(data)
+            .eq('id', id);
+
+        if (!error) await get().fetchData();
+    },
+
+    deleteSnippet: async (id) => {
+        const { error } = await supabase
+            .from('snippets')
+            .delete()
+            .eq('id', id);
+
+        if (!error) await get().fetchData();
     }
 }));
 

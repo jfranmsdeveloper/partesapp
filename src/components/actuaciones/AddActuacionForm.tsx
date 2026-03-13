@@ -6,11 +6,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
-import { X, Check, Mic, MicOff } from 'lucide-react';
+import { X, Mic, MicOff, FileText, Plus } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
-
 import { NotionEditor } from '../ui/NotionEditor';
-
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 
 interface AddActuacionFormProps {
@@ -21,38 +19,28 @@ interface AddActuacionFormProps {
 }
 
 export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp }: AddActuacionFormProps) => {
-    const { users, currentUser } = useAppStore();
+    const { users, currentUser, snippets } = useAppStore();
 
     const [type, setType] = useState<ActuacionType | null>(initialData?.type || null);
     const [duration, setDuration] = useState<string>(initialData?.duration.toString() || '');
     const [notes, setNotes] = useState(initialData?.notes || '');
     const [priority, setPriority] = useState<'BAJA' | 'MEDIA' | 'ALTA'>(initialData?.priority || 'MEDIA');
     const [tagInput, setTagInput] = useState(initialData?.tags?.join(', ') || '');
-    // Default to current user as requested
     const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
 
-    // Initialize timestamp. This acts as the visual "Result" time.
     const [customTimestamp, setCustomTimestamp] = useState(() => {
         if (initialData?.timestamp) return toLocalISOString(new Date(initialData.timestamp));
         if (defaultTimestamp) return toLocalISOString(new Date(defaultTimestamp));
         return toLocalISOString(new Date());
     });
 
-
-
-    // Voice Dictation
     const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport } = useSpeechRecognition();
 
-    // Append transcript to notes when it changes
     useEffect(() => {
         if (transcript) {
-            // Simple accumulation: add space if needed
             setNotes(prev => {
                 const cleanTranscript = transcript.trim();
                 if (!cleanTranscript) return prev;
-                // If it's already HTML (from NotionEditor), we might need to be careful,
-                // but BlockNote handles HTML well enough if we just append text.
-                // However, for best results we wrap in a paragraph if it looks like HTML.
                 if (prev.includes('</p>')) {
                   return prev.replace(/<\/p>$/, ` ${cleanTranscript}</p>`);
                 }
@@ -62,7 +50,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         }
     }, [transcript, resetTranscript]);
 
-    // Sync state if initialData changes while component is mounted
     useEffect(() => {
         if (initialData) {
             setType(initialData.type);
@@ -88,13 +75,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             user,
             priority,
             tags: tagInput.split(',').map(t => t.trim()).filter(Boolean),
-            // Send local time string formatted for MySQL (YYYY-MM-DD HH:MM:SS)
             timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : '')
         });
-    };
-
-    const handleCancel = () => {
-        onCancel();
     };
 
     const handleNotesChange = useCallback((html: string) => {
@@ -107,7 +89,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 <h3 className="text-lg font-semibold text-slate-800">
                     {initialData ? 'Editar Actuación' : 'Registrar Nueva Actuación'}
                 </h3>
-                <button onClick={handleCancel} className="p-2 rounded-full hover:bg-white/50 text-slate-400 hover:text-slate-600 transition-colors">
+                <button onClick={onCancel} className="p-2 rounded-full hover:bg-white/50 text-slate-400 hover:text-slate-600 transition-colors">
                     <X className="w-5 h-5" />
                 </button>
             </div>
@@ -116,40 +98,70 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-3 ml-1">Selecciona el tipo</label>
                     <div className="flex flex-wrap gap-3">
-                        {(Object.keys(ACTUACION_CONFIG) as ActuacionType[]).map((t) => {
-                            const config = ACTUACION_CONFIG[t];
+                        {(Object.keys(ACTUACION_CONFIG) as ActuacionType[]).map((actionType) => {
+                            const isSelected = type === actionType;
+                            const config = ACTUACION_CONFIG[actionType];
                             const Icon = config.icon;
-                            const isSelected = type === t;
+                            
                             return (
                                 <button
-                                    key={t}
+                                    key={actionType}
                                     type="button"
                                     onClick={() => {
-                                        setType(t);
-                                        // Auto-fill intro text if notes are empty or just placeholder paragraphs
-                                        const cleanNotes = notes.replace(/<[^>]*>/g, '').trim();
-                                        if (!cleanNotes || cleanNotes === 'Describe los detalles de la actuación...') {
+                                        setType(actionType);
+                                        if (!notes || notes === '<p></p>') {
                                             setNotes(`<p><strong>${config.label}:</strong> </p>`);
                                         }
                                     }}
                                     className={clsx(
-                                        'relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 text-xs font-medium gap-2 w-24 h-24 group',
-                                        isSelected
-                                            ? 'border-blue-500 bg-white shadow-md shadow-blue-500/10 text-blue-700 ring-1 ring-blue-500 z-10'
-                                            : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-md text-slate-600'
+                                        "flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 group",
+                                        isSelected 
+                                            ? `${config.color.split(' ')[0].replace('text-', 'bg-').replace('-600', '-50')} ${config.color.split(' ')[0].replace('text-', 'border-').replace('-600', '-200')} shadow-md scale-[1.02]` 
+                                            : "bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm"
                                     )}
                                 >
-                                    {isSelected && (
-                                        <div className="absolute top-2 right-2 text-blue-500">
-                                            <Check className="w-3 h-3" />
-                                        </div>
-                                    )}
-                                    <Icon className={clsx("w-6 h-6 transition-transform group-hover:scale-110 duration-200", config.color)} />
-                                    <span className="text-center leading-tight line-clamp-2">{config.label}</span>
+                                    <div className={clsx(
+                                        "p-3 rounded-xl transition-all duration-300",
+                                        isSelected ? "bg-white shadow-sm" : "bg-slate-50 group-hover:bg-white"
+                                    )}>
+                                        <Icon className={clsx("w-6 h-6", isSelected ? config.color : "text-slate-400 group-hover:text-slate-600")} />
+                                    </div>
+                                    <span className={clsx(
+                                        "text-[10px] font-black uppercase tracking-widest text-center leading-tight",
+                                        isSelected ? config.color : "text-slate-500"
+                                    )}>
+                                        {config.label}
+                                    </span>
                                 </button>
                             );
                         })}
                     </div>
+
+                    {/* Snippets / Templates Section */}
+                    {snippets.length > 0 && (
+                        <div className="mt-8 pt-6 border-t border-slate-100">
+                            <div className="flex items-center gap-2 mb-4 text-slate-500">
+                                <FileText className="w-4 h-4" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Mis Plantillas</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {snippets.map(snippet => (
+                                    <button
+                                        key={snippet.id}
+                                        type="button"
+                                        onClick={() => {
+                                            const cleanContent = snippet.content.replace(/\n/g, '<br/>');
+                                            setNotes(prev => prev + (prev && prev !== '<p></p>' ? '<br/>' : '') + cleanContent);
+                                        }}
+                                        className="px-4 py-2 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 hover:border-orange-300 text-[11px] font-bold text-slate-600 hover:text-orange-700 transition-all shadow-sm flex items-center gap-2"
+                                    >
+                                        <Plus className="w-3 h-3 text-orange-500" />
+                                        {snippet.title}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -161,7 +173,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         required
                         min="1"
                         placeholder="0"
-                        className="bg-white dark:bg-slate-800"
                     />
 
                     <div className="flex gap-2">
@@ -171,11 +182,9 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 value={customTimestamp.split('T')[0]}
                                 onChange={(date) => {
                                     const time = customTimestamp.split('T')[1] || '00:00';
-                                    const newTs = `${date}T${time}`;
-                                    setCustomTimestamp(newTs);
+                                    setCustomTimestamp(`${date}T${time}`);
                                 }}
                                 required
-                                className="bg-white dark:bg-slate-800"
                             />
                         </div>
                         <div className="w-32">
@@ -185,28 +194,9 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 value={customTimestamp.split('T')[1]?.slice(0, 5) || '00:00'}
                                 onChange={(e) => {
                                     const date = customTimestamp.split('T')[0];
-                                    const newTs = `${date}T${e.target.value}`;
-                                    setCustomTimestamp(newTs);
-                                }}
-                                onBlur={(e) => {
-                                    let val = e.target.value.replace(/[^0-9]/g, '');
-                                    if (val.length === 3) val = '0' + val;
-
-                                    if (val.length === 4) {
-                                        const hours = parseInt(val.substring(0, 2));
-                                        const mins = parseInt(val.substring(2, 4));
-
-                                        if (hours >= 0 && hours < 24 && mins >= 0 && mins < 60) {
-                                            const formattedTime = `${val.substring(0, 2)}:${val.substring(2, 4)}`;
-                                            const date = customTimestamp.split('T')[0];
-                                            const newTs = `${date}T${formattedTime}`;
-
-                                            setCustomTimestamp(newTs);
-                                        }
-                                    }
+                                    setCustomTimestamp(`${date}T${e.target.value}`);
                                 }}
                                 required
-                                className="bg-white dark:bg-slate-800"
                                 placeholder="HH:MM"
                             />
                         </div>
@@ -214,28 +204,17 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
                     <div className="w-full">
                         <label className="mb-1.5 block text-sm font-medium text-slate-700">Realizado por</label>
-                        <div className="relative">
-                            <select
-                                value={user}
-                                onChange={(e) => setUser(e.target.value)}
-                                className="block w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                            >
-                                <option value="" disabled>Selecciona un usuario</option>
-                                {users.length > 0 ? (
-                                    users.map((u) => {
-                                        const name = u.user_metadata?.full_name || u.name || u.email;
-                                        return <option key={u.id} value={name}>{name}</option>
-                                    })
-                                ) : (
-                                    <option value="" disabled>Cargando usuarios...</option>
-                                )}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                                </svg>
-                            </div>
-                        </div>
+                        <select
+                            value={user}
+                            onChange={(e) => setUser(e.target.value)}
+                            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                        >
+                            <option value="" disabled>Selecciona un usuario</option>
+                            {users.map((u) => {
+                                const name = u.user_metadata?.full_name || u.name || u.email;
+                                return <option key={u.id} value={name}>{name}</option>
+                            })}
+                        </select>
                     </div>
 
                     <div>
@@ -247,11 +226,11 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     type="button"
                                     onClick={() => setPriority(p)}
                                     className={clsx(
-                                        "flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-all duration-200",
+                                        "flex-1 py-2 px-3 rounded-xl border text-[10px] font-black transition-all duration-200",
                                         priority === p
-                                            ? p === 'ALTA' ? "bg-red-50 border-red-200 text-red-600 shadow-sm ring-1 ring-red-500" :
-                                              p === 'MEDIA' ? "bg-orange-50 border-orange-200 text-orange-600 shadow-sm ring-1 ring-orange-500" :
-                                              "bg-blue-50 border-blue-200 text-blue-600 shadow-sm ring-1 ring-blue-500"
+                                            ? p === 'ALTA' ? "bg-red-50 border-red-200 text-red-600 ring-1 ring-red-500" :
+                                              p === 'MEDIA' ? "bg-orange-50 border-orange-200 text-orange-600 ring-1 ring-orange-500" :
+                                              "bg-blue-50 border-blue-200 text-blue-600 ring-1 ring-blue-500"
                                             : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                                     )}
                                 >
@@ -261,55 +240,43 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         </div>
                     </div>
 
-                    <div>
+                    <div className="md:col-span-2">
                         <Input
                             label="Etiquetas (separadas por coma)"
                             value={tagInput}
                             onChange={(e) => setTagInput(e.target.value)}
-                            placeholder="ej: bug, despliegue"
-                            className="bg-white dark:bg-slate-800"
+                            placeholder="ej: presupuesto, reparación, urgente"
                         />
                     </div>
                 </div>
 
-                <div className="space-y-1.5">
-                    <div className="flex justify-between items-end mb-1.5">
-                        <label className="text-sm font-medium text-slate-700 ml-1">Descripción de la Actuación</label>
-
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1">
+                        <label className="text-sm font-medium text-slate-700">Descripción detallada</label>
                         {hasRecognitionSupport && (
-                            <button
+                            <Button
                                 type="button"
                                 onClick={isListening ? stopListening : startListening}
-                                className={clsx(
-                                    "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all duration-300",
-                                    isListening
-                                        ? "bg-red-50 text-red-600 ring-1 ring-red-200 animate-pulse"
-                                        : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                )}
+                                variant={isListening ? 'danger' : 'outline'}
+                                size="sm"
+                                className={clsx("rounded-full h-8", isListening && "animate-pulse")}
                             >
-                                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                                {isListening ? "Detener Dictado" : "Dictar voz"}
-                            </button>
+                                {isListening ? <MicOff className="w-3.5 h-3.5 mr-2" /> : <Mic className="w-3.5 h-3.5 mr-2 text-blue-500" />}
+                                {isListening ? "Detener" : "Dictar"}
+                            </Button>
                         )}
                     </div>
-
-                    <div className="transition-all group relative">
-                        <NotionEditor
-                          initialContent={notes}
-                          onChange={handleNotesChange}
-                          placeholder={isListening ? "Escuchando... habla ahora." : "Describe los detalles de la actuación..."}
-                        />
-                        {isListening && (
-                            <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-ping pointer-events-none z-20" />
-                        )}
-                    </div>
-                    {isListening && <p className="text-xs text-slate-500 px-1 animate-pulse">Grabando... (El texto aparecerá al terminar la frase)</p>}
+                    <NotionEditor
+                        initialContent={notes}
+                        onChange={handleNotesChange}
+                        placeholder="Escribe aquí los detalles..."
+                    />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2">
-                    <Button type="button" variant="ghost" onClick={handleCancel}>Cancelar</Button>
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
                     <Button type="submit" disabled={!type || !duration} variant="primary">
-                        {initialData ? 'Actualizar Actuación' : 'Guardar Actuación'}
+                        {initialData ? 'Actualizar Actuación' : 'Añadir Actuación'}
                     </Button>
                 </div>
             </form>

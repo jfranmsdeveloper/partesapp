@@ -77,6 +77,7 @@ interface DBState {
     partes: any[];
     actuaciones: any[];
     clients: any[];
+    snippets: any[];
 }
 
 const dateIso = new Date().toISOString();
@@ -126,7 +127,8 @@ const DEFAULT_DB: DBState = {
     ],
     partes: [],
     actuaciones: [],
-    clients: []
+    clients: [],
+    snippets: []
 };
 
 // ---------------------------------------------------------------------------
@@ -334,6 +336,7 @@ class FileSystemAdapter {
                     if (!loadedState.partes) loadedState.partes = [];
                     if (!loadedState.actuaciones) loadedState.actuaciones = [];
                     if (!loadedState.clients) loadedState.clients = [];
+                    if (!loadedState.snippets) loadedState.snippets = [];
                 } catch (e) {
                     console.error('Malformed JSON in database.json, resetting to default.', e);
                     loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
@@ -440,6 +443,10 @@ class FileSystemAdapter {
 
         this.state.clients.forEach(c => {
             if (!c.id) { c.id = generateId('client'); count++; }
+        });
+        
+        this.state.snippets.forEach(s => {
+            if (!s.id) { s.id = generateId('snip'); count++; }
         });
 
         return count;

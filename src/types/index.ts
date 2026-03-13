@@ -73,3 +73,10 @@ export interface User {
     };
     created_at?: string;
 }
+
+export interface Snippet {
+    id: string;
+    title: string;
+    content: string;
+    userId: string;
+}

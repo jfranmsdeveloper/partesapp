@@ -1,10 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Menu } from 'lucide-react';
+import { CommandPalette } from '../ui/CommandPalette';
 
 export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+    // Global shortcut for Command Palette
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsCommandPaletteOpen(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     return (
         <div className="min-h-screen transition-colors duration-300 bg-[#F4F4F5] dark:bg-dark-bg">
@@ -21,6 +36,11 @@ export const Layout = () => {
             </div>
 
             <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+            <CommandPalette 
+                isOpen={isCommandPaletteOpen} 
+                onClose={() => setIsCommandPaletteOpen(false)} 
+            />
 
             <main className="md:pl-64 transition-all duration-300 ease-in-out">
                 {/* On mobile, remove huge padding to max-width to use full screen real estate */}
