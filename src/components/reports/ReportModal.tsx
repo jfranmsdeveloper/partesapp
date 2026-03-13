@@ -143,7 +143,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
-    const handleGenerate = async (format: 'word') => {
+    const handleGenerate = async () => {
         setIsGenerating(true);
         try {
             // Visualize loader
@@ -372,7 +372,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
 
                     <div className="flex gap-2">
                         <Button
-                            onClick={() => handleGenerate('word')}
+                            onClick={() => handleGenerate()}
                             disabled={isGenerating}
                             className="min-w-[150px] bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20"
                         >
