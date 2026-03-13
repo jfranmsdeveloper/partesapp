@@ -3,6 +3,7 @@ import type { Actuacion } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import { Trash2, Clock, Edit2, ChevronDown } from 'lucide-react';
+import { clsx } from 'clsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DOMPurify from 'dompurify';
@@ -69,10 +70,32 @@ const ActuacionItem = ({ actuacion, users, onEdit, onDelete, readOnly, isInitial
                 
                 <div className="flex-1 min-w-0 flex items-center justify-between">
                     <div>
-                        <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">{actuacion.type}</h4>
-                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-3">
-                            <span>{format(new Date(actuacion.timestamp), "d MMM HH:mm", { locale: es })}</span>
+                        <div className="flex items-center gap-3">
+                            <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">{actuacion.type}</h4>
+                            {actuacion.priority && (
+                                <span className={clsx(
+                                    "px-2 py-0.5 rounded text-[10px] font-black tracking-wider uppercase",
+                                    actuacion.priority === 'ALTA' ? "bg-red-500 text-white" :
+                                    actuacion.priority === 'MEDIA' ? "bg-orange-500 text-white" :
+                                    "bg-slate-400 text-white"
+                                )}>
+                                    {actuacion.priority}
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <span className="flex items-center gap-1.5">{format(new Date(actuacion.timestamp), "d MMM HH:mm", { locale: es })}</span>
                             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {actuacion.duration} min</span>
+                            
+                            {actuacion.tags && actuacion.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 ml-2">
+                                    {actuacion.tags.map(tag => (
+                                        <span key={tag} className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 text-[10px] font-medium border border-blue-100 dark:border-blue-800">
+                                            #{tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                     

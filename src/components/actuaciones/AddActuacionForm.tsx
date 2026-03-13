@@ -14,9 +14,9 @@ import { NotionEditor } from '../ui/NotionEditor';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 
 interface AddActuacionFormProps {
-    onAdd: (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => void;
+    onAdd: (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] }) => void;
     onCancel: () => void;
-    initialData?: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string };
+    initialData?: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] };
     defaultTimestamp?: string;
 }
 
@@ -26,6 +26,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     const [type, setType] = useState<ActuacionType | null>(initialData?.type || null);
     const [duration, setDuration] = useState<string>(initialData?.duration.toString() || '');
     const [notes, setNotes] = useState(initialData?.notes || '');
+    const [priority, setPriority] = useState<'BAJA' | 'MEDIA' | 'ALTA'>(initialData?.priority || 'MEDIA');
+    const [tagInput, setTagInput] = useState(initialData?.tags?.join(', ') || '');
     // Default to current user as requested
     const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
 
@@ -66,6 +68,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             setType(initialData.type);
             setDuration(initialData.duration.toString());
             setNotes(initialData.notes);
+            setPriority(initialData.priority || 'MEDIA');
+            setTagInput(initialData.tags?.join(', ') || '');
             setUser(initialData.user);
             if (initialData.timestamp) {
                 setCustomTimestamp(toLocalISOString(new Date(initialData.timestamp)));
@@ -82,6 +86,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             duration: parseInt(duration),
             notes,
             user,
+            priority,
+            tags: tagInput.split(',').map(t => t.trim()).filter(Boolean),
             // Send local time string formatted for MySQL (YYYY-MM-DD HH:MM:SS)
             timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : '')
         });
@@ -230,6 +236,39 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 </svg>
                             </div>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-3 ml-1">Prioridad</label>
+                        <div className="flex gap-2">
+                            {(['BAJA', 'MEDIA', 'ALTA'] as const).map((p) => (
+                                <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => setPriority(p)}
+                                    className={clsx(
+                                        "flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-all duration-200",
+                                        priority === p
+                                            ? p === 'ALTA' ? "bg-red-50 border-red-200 text-red-600 shadow-sm ring-1 ring-red-500" :
+                                              p === 'MEDIA' ? "bg-orange-50 border-orange-200 text-orange-600 shadow-sm ring-1 ring-orange-500" :
+                                              "bg-blue-50 border-blue-200 text-blue-600 shadow-sm ring-1 ring-blue-500"
+                                            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                    )}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <Input
+                            label="Etiquetas (separadas por coma)"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            placeholder="ej: bug, despliegue"
+                            className="bg-white dark:bg-slate-800"
+                        />
                     </div>
                 </div>
 

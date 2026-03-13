@@ -25,6 +25,8 @@ export interface Actuacion {
     duration: number; // minutes
     notes?: string;
     user: string;
+    tags?: string[];
+    priority?: 'BAJA' | 'MEDIA' | 'ALTA';
 }
 
 export interface Parte {
