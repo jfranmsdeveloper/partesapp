@@ -103,12 +103,56 @@ export const ParteEditor = () => {
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
         setIsUploading(true);
-        setUploadStatus('Iniciando...');
         try {
+            // Case 1: Multiple files - Automatic Batch Import
+            if (files.length > 1) {
+                let processed = 0;
+                for (const file of files) {
+                    processed++;
+                    setUploadStatus(`Procesando ${processed} de ${files.length}: ${file.name}`);
+                    
+                    const data = await parsePartePDF(file);
+                    
+                    // Create client if needed
+                    let clientId = '';
+                    if (data.createdBy) {
+                        clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || '';
+                    }
+
+                    // Format date (mirror logic from handleCreateParte)
+                    let formattedDate = toLocalISOString(new Date()).replace('T', ' ') + ':00';
+                    if (data.date) {
+                        const [d, m, y] = data.date.split(/[-/]/);
+                        const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                        const timeStr = data.time || '09:00';
+                        const dt = `${dateStr}T${timeStr}`;
+                        formattedDate = dt.replace('T', ' ') + (dt.includes(':') && dt.split(':').length === 2 ? ':00' : '');
+                    }
+
+                    // Add the parte directly
+                    await addParte({
+                        title: data.title || file.name,
+                        status: 'ABIERTO',
+                        createdBy: currentUser?.user_metadata?.full_name || currentUser?.name || 'Sistema',
+                        id: data.id ? parseInt(data.id) : undefined,
+                        createdAt: formattedDate,
+                        pdfFile: data.pdfFile,
+                        clientId: clientId || undefined
+                    });
+                }
+                
+                alert(`✅ Se han importado ${files.length} partes correctamente.`);
+                navigate('/management');
+                return;
+            }
+
+            // Case 2: Single file - Existing Autocomplete Behavior
+            const file = files[0];
+            setUploadStatus('Iniciando...');
             const data = await parsePartePDF(file, (status) => setUploadStatus(status));
 
             setUploadedPdf(data.pdfFile); // Save base64
@@ -117,7 +161,6 @@ export const ParteEditor = () => {
             if (data.id) setCustomId(data.id);
 
             // The name from 'Emitido por el usuario' becomes the SOLICITADO POR (client),
-            // NOT the 'Emitido por' (which is only for the 5 internal app users).
             if (data.createdBy) {
                 setUploadStatus('Registrando solicitante...');
                 const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
@@ -128,7 +171,6 @@ export const ParteEditor = () => {
 
             // Construct date time if available
             if (data.date) {
-                // Heuristic: Convert DD/MM/YYYY to YYYY-MM-DD for input
                 const [d, m, y] = data.date.split(/[-/]/);
                 const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
@@ -525,6 +567,7 @@ export const ParteEditor = () => {
                                 <input
                                     type="file"
                                     accept=".pdf"
+                                    multiple
                                     onChange={handleFileUpload}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                     disabled={isUploading}
