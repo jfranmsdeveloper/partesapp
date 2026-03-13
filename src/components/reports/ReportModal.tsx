@@ -1,14 +1,12 @@
 import { useState, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { generatePdfReport } from '../../utils/pdfGenerator';
 import { generateWordReport } from '../../utils/wordGenerator';
-import { generateExcelReport } from '../../utils/excelGenerator';
 import { StatusDistributionChart } from '../dashboard/StatusDistributionChart';
 import { ActivityTypeChart } from '../dashboard/ActivityTypeChart';
 import { TrendChart } from '../dashboard/TrendChart';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { X, Download, Loader2, FileSpreadsheet as ExcelIcon, FileText as WordIcon } from 'lucide-react';
+import { X, Download, Loader2, FileText as WordIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -145,7 +143,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
-    const handleGenerate = async (format: 'pdf' | 'word' | 'excel') => {
+    const handleGenerate = async (format: 'word') => {
         setIsGenerating(true);
         try {
             // Visualize loader
@@ -155,9 +153,8 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
             const reportData = {
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
-                // metrics: metrics, // Removed from interface
                 partes: filteredPartes,
-                users: users || [], // Pass users from store
+                users: users || [],
                 bolsaHoras: {
                     nominas: bolsaNominas,
                     covid: bolsaCovid
@@ -165,13 +162,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
             };
 
             // Generate
-            if (format === 'word') {
-                await generateWordReport(reportData);
-            } else if (format === 'excel') {
-                await generateExcelReport(reportData);
-            } else {
-                await generatePdfReport(reportData);
-            }
+            await generateWordReport(reportData);
 
             onClose();
         } catch (error) {
@@ -197,7 +188,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
                         </div>
                         <div>
                             <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 mt-[-2px]">Generar Informe</h2>
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Exportar datos a PDF, Word o Excel</p>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Exportar datos a formato Word (.docx)</p>
                         </div>
                     </div>
                     <button
@@ -381,28 +372,12 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
 
                     <div className="flex gap-2">
                         <Button
-                            onClick={() => handleGenerate('pdf')}
-                            disabled={isGenerating}
-                            className="min-w-[100px] bg-red-600 hover:bg-red-700 text-white border-0 shadow-lg shadow-red-500/20"
-                        >
-                            {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                            PDF
-                        </Button>
-                        <Button
                             onClick={() => handleGenerate('word')}
                             disabled={isGenerating}
-                            className="min-w-[100px] bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20"
+                            className="min-w-[150px] bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20"
                         >
                             {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <WordIcon className="w-4 h-4 mr-2" />}
-                            Word
-                        </Button>
-                        <Button
-                            onClick={() => handleGenerate('excel')}
-                            disabled={isGenerating}
-                            className="min-w-[100px] bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-500/20"
-                        >
-                            {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ExcelIcon className="w-4 h-4 mr-2" />}
-                            Excel
+                            Descargar Word (.docx)
                         </Button>
                     </div>
                 </div>

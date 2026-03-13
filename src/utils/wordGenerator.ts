@@ -1,8 +1,9 @@
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, TextRun } from 'docx';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, TextRun, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
 import { type Parte, type ActuacionType, type User } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { ACTUACION_CONFIG } from './actuacionConfig';
 
 interface ReportData {
     startDate: Date;
@@ -14,8 +15,6 @@ interface ReportData {
         covid?: string;
     };
 }
-
-const ORANGE_HEX = "FCD5B4";
 
 const formatLabel = (type: ActuacionType) => {
     if (type === 'Incidencias') return 'Incidencia';
@@ -37,13 +36,16 @@ const MAIN_INDICATORS = [
     { label: "- Número total de correos remitidos", key: 'act_correo_enviado' },
 ];
 
-import { ACTUACION_CONFIG } from './actuacionConfig';
-
 const OTHER_INDICATORS = Object.keys(ACTUACION_CONFIG).filter(type =>
     !['Llamada Realizada', 'Llamada Recibida', 'Correo Enviado', 'Correo Recibido', 'Traslado'].includes(type)
 ) as ActuacionType[];
 
 const MATRIX_ROWS = Object.keys(ACTUACION_CONFIG).sort() as ActuacionType[];
+
+const COLOR_HEADER = "F4B084"; // Salmón
+const COLOR_ROW = "E2EFDA";    // Verde claro
+const COLOR_BORDER = "CCCCCC"; // Gris
+const DEFAULT_FONT = "Arial";
 
 export const generateWordReport = async (data: ReportData) => {
     // helpers
@@ -55,7 +57,6 @@ export const generateWordReport = async (data: ReportData) => {
     });
     const userIds = Object.keys(partesByUser);
 
-    // --- METRICS CALC ---
     const calculateMetrics = (partes: Parte[]) => {
         const acts = partes.flatMap(p => p.actuaciones);
         const countType = (t: ActuacionType) => acts.filter(a => a.type === t).length;
@@ -63,8 +64,6 @@ export const generateWordReport = async (data: ReportData) => {
         const trasladosCount = countType('Traslado');
         const cerrados = partes.filter(p => p.status === 'CERRADO').length;
         const resueltasDirectas = Math.max(0, cerrados - trasladosCount);
-        // Count all partes with clientId (allowing duplicates)
-        // Si un cliente tiene 5 partes, cuenta como 5 usuarios atendidos
         const totalUsersAttended = partes.filter(p => p.clientId).length;
 
         return {
@@ -81,150 +80,176 @@ export const generateWordReport = async (data: ReportData) => {
         };
     };
 
-    // --- DOC SECTIONS ---
     const sections = [];
 
-    // 1. MATRIX SECTION
-    if (userIds.length > 0) {
-        const userCols = userIds.map(uid => {
-            const u = data.users.find(usr => usr.id === uid);
-            let name = u?.user_metadata?.full_name || u?.name || u?.email || "Desc.";
-            const parts = name.split(' ');
-            if (parts.length > 1) name = `${parts[0]} ${parts[1]}`;
-            return { name, uid };
-        });
+    // Table Style Constants
+    const tableBorders = {
+        top: { style: BorderStyle.SINGLE, size: 1, color: COLOR_BORDER },
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: COLOR_BORDER },
+        left: { style: BorderStyle.SINGLE, size: 1, color: COLOR_BORDER },
+        right: { style: BorderStyle.SINGLE, size: 1, color: COLOR_BORDER },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: COLOR_BORDER },
+        insideVertical: { style: BorderStyle.SINGLE, size: 1, color: COLOR_BORDER },
+    };
 
-        const headerRow = new TableRow({
+    // Helper to create a cell with consistent formatting
+    const createCell = (text: string, options: { bold?: boolean, shading?: string, alignment?: (typeof AlignmentType)[keyof typeof AlignmentType], indent?: number } = {}) => {
+        return new TableCell({
             children: [
-                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Indicadores Por Técnico", bold: true })] })], shading: { fill: ORANGE_HEX } }),
-                ...userCols.map(u => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: u.name, bold: true })] })], shading: { fill: ORANGE_HEX } }))
-            ]
-        });
-
-        const bodyRows = MATRIX_ROWS.map(type => {
-            return new TableRow({
-                children: [
-                    new TableCell({ children: [new Paragraph({ text: ` - ${formatLabel(type)}` })] }),
-                    ...userCols.map(u => {
-                        const uPartes = partesByUser[u.uid] || [];
-                        const count = uPartes.flatMap(p => p.actuaciones).filter(a => a.type === type).length;
-                        return new TableCell({ children: [new Paragraph({ text: count > 0 ? count.toString() : "", alignment: AlignmentType.CENTER })] });
-                    })
-                ]
-            });
-        });
-
-        // Add Bolsa de Horas Table Rows if data exists
-        let bolsaTable = null;
-        if (data.bolsaHoras && (data.bolsaHoras.nominas || data.bolsaHoras.covid)) {
-            const bolsaRows = [];
-            if (data.bolsaHoras.nominas) {
-                bolsaRows.push(new TableRow({
+                new Paragraph({
                     children: [
-                        new TableCell({ children: [new Paragraph({ text: "- Actualización Nóminas" })] }),
-                        new TableCell({ children: [new Paragraph({ text: data.bolsaHoras.nominas, alignment: AlignmentType.CENTER })] })
-                    ]
-                }));
-            }
-            if (data.bolsaHoras.covid) {
-                bolsaRows.push(new TableRow({
-                    children: [
-                        new TableCell({ children: [new Paragraph({ text: "- COVID" })] }),
-                        new TableCell({ children: [new Paragraph({ text: data.bolsaHoras.covid, alignment: AlignmentType.CENTER })] })
-                    ]
-                }));
-            }
-
-            if (bolsaRows.length > 0) {
-                bolsaTable = new Table({
-                    width: { size: 50, type: WidthType.PERCENTAGE }, // Smaller width
-                    rows: [
-                        new TableRow({
-                            children: [
-                                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Bolsa de hora", bold: true })] })], shading: { fill: ORANGE_HEX } }),
-                                new TableCell({ children: [new Paragraph({ text: "" })], shading: { fill: ORANGE_HEX } })
-                            ]
-                        }),
-                        ...bolsaRows
-                    ]
-                });
-            }
-        }
-
-        const matrixChildren = [
-            new Paragraph({ text: "INDICADORES APLICACIONES", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
-            new Paragraph({ text: format(data.startDate, 'MMMM yyyy', { locale: es }).toUpperCase(), heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { after: 400 } }),
-            new Paragraph({ children: [new TextRun({ text: "Resumen Global (Matriz)", bold: true })], spacing: { after: 200 } }),
-            new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
-                rows: [headerRow, ...bodyRows]
-            })
-        ];
-
-        if (bolsaTable) {
-            matrixChildren.push(new Paragraph({ text: "", spacing: { after: 300 } })); // Spacer
-            matrixChildren.push(bolsaTable);
-        }
-
-        sections.push({
-            properties: {},
-            children: matrixChildren
+                        new TextRun({
+                            text: text,
+                            bold: options.bold,
+                            size: 20, // 10pt in half-points
+                            font: DEFAULT_FONT
+                        })
+                    ],
+                    alignment: options.alignment || AlignmentType.LEFT,
+                    indent: options.indent ? { left: options.indent * 567 } : undefined, // 0.5cm approx (1cm = 567 twips)
+                })
+            ],
+            shading: options.shading ? { fill: options.shading } : undefined,
+            verticalAlign: "center"
         });
-    }
+    };
 
-    // 2. INDIVIDUAL SECTIONS
-    userIds.forEach(userId => {
+    // Iterate through users (or global if scope was 'all')
+    userIds.forEach((userId, sectionIdx) => {
         const uPartes = partesByUser[userId];
         const uData = data.users.find(u => u.id === userId);
         const userName = uData?.user_metadata?.full_name || uData?.name || uData?.email || "Usuario";
         const metrics: any = calculateMetrics(uPartes);
 
+        const userChildren = [
+            new Paragraph({
+                text: "Informe de Indicadores de Gestión",
+                heading: HeadingLevel.HEADING_1,
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 }
+            }),
+            new Paragraph({
+                text: `${format(data.startDate, 'MMMM yyyy', { locale: es }).toUpperCase()} - ${userName}`,
+                heading: HeadingLevel.HEADING_2,
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 400 }
+            })
+        ];
+
+        // 1. INDICADORES PRINCIPALES
+        userChildren.push(new Paragraph({
+            children: [new TextRun({ text: "1. Indicadores Principales", bold: true, font: DEFAULT_FONT })],
+            spacing: { before: 200, after: 200 }
+        }));
+
         const t1Rows = MAIN_INDICATORS.map((ind, idx) => {
             const isHeader = idx < 3;
-            const fill = isHeader ? ORANGE_HEX : undefined;
+            const isSubRow = ind.label.startsWith('-');
             return new TableRow({
                 children: [
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: ind.label, bold: isHeader })] })], shading: fill ? { fill } : undefined }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: metrics[ind.key].toString(), bold: true })], alignment: AlignmentType.CENTER })], shading: fill ? { fill } : undefined, width: { size: 15, type: WidthType.PERCENTAGE } })
+                    createCell(ind.label, { 
+                        bold: isHeader, 
+                        shading: isHeader ? COLOR_HEADER : (isSubRow ? undefined : COLOR_ROW),
+                        indent: isSubRow ? 0.5 : 0
+                    }),
+                    createCell(metrics[ind.key].toString(), { 
+                        bold: true, 
+                        shading: isHeader ? COLOR_HEADER : (isSubRow ? undefined : COLOR_ROW),
+                        alignment: AlignmentType.CENTER 
+                    })
                 ]
             });
         });
 
-        const otherSum = OTHER_INDICATORS.reduce((acc, t) => acc + (metrics[t] || 0), 0);
-        const t2Header = new TableRow({
-            children: [
-                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Número total de otros indicadores", bold: true })] })], shading: { fill: ORANGE_HEX } }),
-                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: otherSum.toString(), bold: true })], alignment: AlignmentType.CENTER })], shading: { fill: ORANGE_HEX }, width: { size: 15, type: WidthType.PERCENTAGE } })
-            ]
-        });
-
-        const t2Body = OTHER_INDICATORS.map(t => new TableRow({
-            children: [
-                new TableCell({ children: [new Paragraph({ text: ` - ${formatLabel(t)}` })] }),
-                new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (metrics[t] || 0).toString(), bold: true })], alignment: AlignmentType.CENTER })] })
-            ]
+        userChildren.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: tableBorders,
+            rows: t1Rows
         }));
 
+        // 2. OTROS INDICADORES
+        const otherSum = OTHER_INDICATORS.reduce((acc, t) => acc + (metrics[t] || 0), 0);
+        userChildren.push(new Paragraph({
+            children: [new TextRun({ text: "2. Otros Indicadores de Gestión", bold: true, font: DEFAULT_FONT })],
+            spacing: { before: 400, after: 200 }
+        }));
+
+        const t2Rows = [
+            new TableRow({
+                children: [
+                    createCell("Total otros indicadores", { bold: true, shading: COLOR_HEADER }),
+                    createCell(otherSum.toString(), { bold: true, shading: COLOR_HEADER, alignment: AlignmentType.CENTER })
+                ]
+            }),
+            ...OTHER_INDICATORS.map(t => new TableRow({
+                children: [
+                    createCell(`- ${formatLabel(t)}`, { indent: 0.5 }),
+                    createCell((metrics[t] || 0).toString(), { alignment: AlignmentType.CENTER })
+                ]
+            }))
+        ];
+
+        userChildren.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: tableBorders,
+            rows: t2Rows
+        }));
+
+        // 3. MATRIX (Only on first page or dedicated section)
+        if (sectionIdx === 0 && userIds.length > 1) {
+            userChildren.push(new Paragraph({
+                children: [new TextRun({ text: "3. Matriz de Indicadores por Técnico", bold: true, font: DEFAULT_FONT })],
+                spacing: { before: 400, after: 200 }
+            }));
+
+            const userCols = userIds.map(uid => {
+                const u = data.users.find(usr => usr.id === uid);
+                let name = u?.user_metadata?.full_name || u?.name || u?.email || "Técnico";
+                const parts = name.split(' ');
+                if (parts.length > 1) name = `${parts[0]} ${parts[1].charAt(0)}.`;
+                return { name, uid };
+            });
+
+            const matrixHeader = new TableRow({
+                children: [
+                    createCell("Concepto", { bold: true, shading: COLOR_HEADER }),
+                    ...userCols.map(u => createCell(u.name, { bold: true, shading: COLOR_HEADER, alignment: AlignmentType.CENTER }))
+                ]
+            });
+
+            const matrixBody = MATRIX_ROWS.map(type => {
+                return new TableRow({
+                    children: [
+                        createCell(formatLabel(type), { shading: COLOR_ROW }),
+                        ...userCols.map(u => {
+                            const uPartes = partesByUser[u.uid] || [];
+                            const count = uPartes.flatMap(p => p.actuaciones).filter(a => a.type === type).length;
+                            return createCell(count > 0 ? count.toString() : "", { shading: COLOR_ROW, alignment: AlignmentType.CENTER });
+                        })
+                    ]
+                });
+            });
+
+            userChildren.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: tableBorders,
+                rows: [matrixHeader, ...matrixBody]
+            }));
+        }
+
         sections.push({
-            properties: { type: "nextPage" },
-            children: [
-                new Paragraph({ text: "INDICADORES APLICACIONES", heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
-                new Paragraph({ text: format(data.startDate, 'MMMM yyyy', { locale: es }).toUpperCase(), heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, spacing: { after: 100 } }),
-                new Paragraph({ text: `Informe Individual: ${userName}`, alignment: AlignmentType.RIGHT, spacing: { after: 400 } }),
-
-                new Table({
-                    width: { size: 100, type: WidthType.PERCENTAGE },
-                    rows: t1Rows,
-                    // spacing: { after: 400 } // Removed invalid spacing property
-                }),
-
-                new Paragraph({ text: "", spacing: { after: 300 } }),
-
-                new Table({
-                    width: { size: 100, type: WidthType.PERCENTAGE },
-                    rows: [t2Header, ...t2Body]
-                })
-            ]
+            properties: {
+                page: {
+                    margin: {
+                        top: 1134,    // 2cm in twips (1cm = 567 twips)
+                        bottom: 1134,
+                        left: 1134,
+                        right: 1134,
+                    }
+                },
+                type: sectionIdx > 0 ? "nextPage" : undefined
+            },
+            children: userChildren
         });
     });
 
@@ -233,5 +258,5 @@ export const generateWordReport = async (data: ReportData) => {
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `Informe_Corporativo_${format(new Date(), 'yyyyMMdd_HHmm')}.docx`);
+    saveAs(blob, `informe_indicadores.docx`);
 };
