@@ -39,28 +39,38 @@ export const NotionEditor = ({
 
   const [isReady, setIsReady] = useState(false);
 
-  // Effect to load initial HTML content if provided
+  // Effect to handle external content updates
+  // This allows AddActuacionForm to push text (auto-fill) to the editor
   useEffect(() => {
-    const loadInitialContent = async () => {
-      if (initialContent && editor) {
-        try {
-          // If it looks like HTML, convert it. Otherwise treat as text/markdown
-          if (initialContent.startsWith("<")) {
-            const blocks = await editor.tryParseHTMLToBlocks(initialContent);
+    const updateContent = async () => {
+      if (editor && initialContent !== undefined) {
+        // Compare current editor HTML with incoming initialContent to avoid loops
+        const currentHtml = await editor.blocksToFullHTML(editor.document);
+        if (currentHtml !== initialContent) {
+          try {
+            let blocks;
+            if (initialContent.startsWith("<")) {
+              blocks = await editor.tryParseHTMLToBlocks(initialContent);
+            } else {
+              blocks = await editor.tryParseMarkdownToBlocks(initialContent);
+            }
             editor.replaceBlocks(editor.document, blocks);
-          } else if (initialContent) {
-            const blocks = await editor.tryParseMarkdownToBlocks(initialContent);
-            editor.replaceBlocks(editor.document, blocks);
+          } catch (e) {
+            console.error("Failed to update content in NotionEditor", e);
           }
-        } catch (e) {
-          console.error("Failed to parse initial content in NotionEditor", e);
         }
       }
-      setIsReady(true);
     };
 
-    loadInitialContent();
-  }, [editor]); // Run once when editor is created
+    updateContent();
+  }, [initialContent, editor]);
+
+  // Initial ready state
+  useEffect(() => {
+    if (editor) {
+      setIsReady(true);
+    }
+  }, [editor]);
 
   // Listen for changes and export as HTML
   const handleChange = async () => {
@@ -73,7 +83,7 @@ export const NotionEditor = ({
   if (!isReady) return <div className="p-4 text-slate-400">Cargando editor...</div>;
 
   return (
-    <div className="notion-editor-container bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden min-h-[300px]">
+    <div className="notion-editor-container bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden min-h-[300px] transition-all duration-300">
       <BlockNoteView
         editor={editor}
         onChange={handleChange}

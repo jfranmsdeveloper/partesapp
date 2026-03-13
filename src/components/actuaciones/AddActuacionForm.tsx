@@ -118,7 +118,14 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 <button
                                     key={t}
                                     type="button"
-                                    onClick={() => setType(t)}
+                                    onClick={() => {
+                                        setType(t);
+                                        // Auto-fill intro text if notes are empty or just placeholder paragraphs
+                                        const cleanNotes = notes.replace(/<[^>]*>/g, '').trim();
+                                        if (!cleanNotes || cleanNotes === 'Describe los detalles de la actuación...') {
+                                            setNotes(`<p><strong>${config.label}:</strong> </p>`);
+                                        }
+                                    }}
                                     className={clsx(
                                         'relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 text-xs font-medium gap-2 w-24 h-24 group',
                                         isSelected

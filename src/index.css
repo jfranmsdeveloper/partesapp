@@ -90,6 +90,36 @@
   opacity: 0.6;
 }
 
+/* BlockNote Modern / Minimalist Customization */
+.notion-editor-container {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+}
+
+.notion-editor-container:focus-within {
+  border-color: var(--color-primary-400);
+  box-shadow: 0 4px 24px rgba(249, 115, 22, 0.08);
+}
+
+.notion-editor-container .bn-editor {
+  padding-top: 32px !important; /* Breathing room at the top */
+  padding-bottom: 32px !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+  font-family: var(--font-sans) !important;
+  line-height: normal !important; /* BlockNote handles line height internally, but we want it clean */
+}
+
+/* Hide some BlockNote noise for a cleaner look if desired */
+.notion-editor-container .bn-block-outer {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.dark .notion-editor-container {
+  background-color: #0c0c0c;
+}
+
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Outfit', sans-serif;
