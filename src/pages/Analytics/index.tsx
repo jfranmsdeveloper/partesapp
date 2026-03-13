@@ -45,9 +45,10 @@ export default function Analytics() {
             trendMap[d] = 0;
         }
         filteredPartes.forEach(p => {
+            // Use p.createdAt (which is start_date if available) for the trend
             const d = format(new Date(p.createdAt), 'yyyy-MM-dd');
             if (trendMap[d] !== undefined) {
-                trendMap[d] += p.actuaciones.length;
+                trendMap[d] += 1; // Count the number of partes per day
             }
         });
         const trendData = Object.entries(trendMap).map(([date, count]) => ({ date, count }));

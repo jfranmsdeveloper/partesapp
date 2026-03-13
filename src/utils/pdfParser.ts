@@ -133,15 +133,19 @@ export const parsePartePDF = async (file: File, onProgress?: (status: string) =>
         }
 
         // 2. DATE & TIME (Blue): "recibido por ... el DD/MM/YYYY a las HH:MM"
-        // Note: regex flags 'i' for case insensitive, 'm' not needed as we search full string but headers are specific
         const dateTimeMatch = fullText.match(/recibido\s+por.*?el\s+(\d{2}[/-]\d{2}[/-]\d{4})\s+a\s+las\s+(\d{1,2}[:.]\d{2})/i);
         if (dateTimeMatch) {
             data.date = dateTimeMatch[1]; // 08/01/2026
             data.time = dateTimeMatch[2].replace('.', ':'); // 11:06
         } else {
-            // Fallback Date
-            const fallbackDate = fullText.match(/(\d{2}[/-]\d{2}[/-]\d{4})/);
-            if (fallbackDate) data.date = fallbackDate[1];
+            // Expanded fallback Date: Look for common date patterns after "fecha" or "el"
+            const dateMatch = fullText.match(/(?:fecha|el|del)\s*[:.]?\s*(\d{2}[/-]\d{2}[/-]\d{4})/i) || 
+                              fullText.match(/(\d{2}[/-]\d{2}[/-]\d{4})/);
+            if (dateMatch) data.date = dateMatch[1];
+            
+            // Fallback Time
+            const timeMatch = fullText.match(/(\d{2}[:.]\d{2})/);
+            if (timeMatch) data.time = timeMatch[1].replace('.', ':');
         }
 
         // 3. USER (Orange)

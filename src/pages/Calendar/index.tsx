@@ -49,7 +49,9 @@ export default function CalendarPage() {
                 ...a,
                 parteId: p.id,
                 parteTitle: p.title,
-                date: a.timestamp ? parseISO(a.timestamp.replace(' ', 'T')) : parseISO(p.createdAt)
+                // Prioritize Parte date for calendar grouping (The PDF date)
+                // rather than the specific timestamp of the action which might be "Now"
+                date: parseISO(p.createdAt) 
             }))
         );
     }, [partes]);

@@ -258,7 +258,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                     title: p.description || 'Sin título',
                     type: p.type as any,
                     status: p.status as any,
-                    createdAt: p.start_date || p.created_at,
+                    createdAt: p.start_date || p.created_at || new Date().toISOString(),
                     createdBy: p.created_by || 'Sistema',
                     userId: p.user_id || '',
                     clientId: p.client_id,
