@@ -33,8 +33,24 @@ import type { ActuacionType } from '../../types';
 export default function CalendarPage() {
     const navigate = useNavigate();
     const { partes } = useUserStore();
-    const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [currentMonth, setCurrentMonth] = useState(() => {
+        if (partes.length === 0) return new Date();
+        const sorted = [...partes].sort((a, b) => {
+            const dateA = a.createdAt.includes('T') ? parseISO(a.createdAt) : new Date(a.createdAt);
+            const dateB = b.createdAt.includes('T') ? parseISO(b.createdAt) : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+        });
+        return sorted[0].createdAt.includes('T') ? parseISO(sorted[0].createdAt) : new Date(sorted[0].createdAt);
+    });
+    const [selectedDate, setSelectedDate] = useState<Date>(() => {
+        if (partes.length === 0) return new Date();
+        const sorted = [...partes].sort((a, b) => {
+            const dateA = a.createdAt.includes('T') ? parseISO(a.createdAt) : new Date(a.createdAt);
+            const dateB = b.createdAt.includes('T') ? parseISO(b.createdAt) : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+        });
+        return sorted[0].createdAt.includes('T') ? parseISO(sorted[0].createdAt) : new Date(sorted[0].createdAt);
+    });
 
     // Calendar logic
     const monthStart = startOfMonth(currentMonth);
