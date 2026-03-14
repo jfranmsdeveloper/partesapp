@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { useAIStore, aiService } from '../../services/aiService';
-import { useAppStore } from '../../store/useAppStore';
-import { Sparkles, X, ChevronRight } from 'lucide-react';
-import type { Parte } from '../../types';
+import { useNavigate } from 'react-router-dom';
 
 export const AIAssistantOverlay: React.FC = () => {
     const { engine, isLoaded } = useAIStore();
     const { partes } = useAppStore();
+    const navigate = useNavigate();
+    const [targetParteId, setTargetParteId] = useState<string | null>(null);
     const [suggestion, setSuggestion] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
 
@@ -29,12 +27,20 @@ export const AIAssistantOverlay: React.FC = () => {
                 const prompt = `Analiza este parte que lleva ${daysOpen} días abierto: "${oldestParte.title}". Sugiere una acción rápida para cerrarlo. Máximo 15 palabras.`;
                 const advice = await aiService.generate(prompt);
                 setSuggestion(advice);
+                setTargetParteId(oldestParte.id);
                 setIsVisible(true);
             }
         }, 30000);
 
         return () => clearInterval(analyzePeriodically);
     }, [engine, isLoaded, partes, isVisible]);
+
+    const handleViewParte = () => {
+        if (targetParteId) {
+            navigate(`/parte/${targetParteId}`);
+            setIsVisible(false);
+        }
+    };
 
     if (!isVisible || !suggestion) return null;
 
@@ -60,7 +66,10 @@ export const AIAssistantOverlay: React.FC = () => {
                         </p>
                         
                         <div className="mt-3 flex items-center gap-2">
-                            <button className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-widest">
+                            <button 
+                                onClick={handleViewParte}
+                                className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-widest"
+                            >
                                 Ver Parte <ChevronRight className="w-3 h-3" />
                             </button>
                         </div>

@@ -54,23 +54,23 @@ export const NotionEditor = ({
       setSuggestion(null);
       clearTimeout(timeoutId);
 
-      // Small delay to detect pause in typing
+      // detect typing pause
       timeoutId = setTimeout(async () => {
         setIsSuggesting(true);
         try {
+          // const selection = editor.getSelection(); // We want to know where the cursor is
           const blocks = editor.document;
-          // Simple heuristic: get text from the blocks
           const contextText = await editor.blocksToMarkdownLossy(blocks);
           
-          if (contextText.length < 5) {
+          if (contextText.length < 3) {
              setIsSuggesting(false);
              return;
           }
 
-          const prompt = `Continúa escribiendo de forma natural y profesional para un parte de trabajo técnico. Solo devuelve la continuación (máximo 5 palabras), sin comillas ni explicaciones.\nContexto: "${contextText}"`;
+          const prompt = `Actúa como un escritor fantasma profesional. Basado en este contexto técnico de un parte de trabajo, completa la frase actual discretamente. Solo devuelve entre 1 y 4 palabras. No uses comillas.\nContexto: "${contextText}"`;
           
           const completion = await aiService.generate(prompt);
-          if (completion && completion.trim().length > 0) {
+          if (completion && completion.trim().length > 0 && completion.length < 40) {
             setSuggestion(completion.trim());
           }
         } catch (err) {
@@ -78,7 +78,7 @@ export const NotionEditor = ({
         } finally {
           setIsSuggesting(false);
         }
-      }, 1500); // 1.5s pause
+      }, 800); // 0.8s pause for "real-time" feel
     };
 
     const unsubscribe = editor.onChange(handleTextChange);
@@ -94,19 +94,29 @@ export const NotionEditor = ({
       if (e.key === 'Tab' && suggestion) {
         e.preventDefault();
         
-        // Better way: append to current block text
         const cursorPosition = editor.getTextCursorPosition();
         if (!cursorPosition) return;
         const currentBlock = cursorPosition.block;
         
         // BlockNote content is an array of StyledText
         const newContent = JSON.parse(JSON.stringify(currentBlock.content));
-        newContent.push({ type: "text", text: " " + suggestion, styles: {} });
+        
+        // If last element is text, append to it. Else create new.
+        if (newContent.length > 0 && newContent[newContent.length-1].type === 'text') {
+            newContent[newContent.length-1].text += " " + suggestion;
+        } else {
+            newContent.push({ type: "text", text: suggestion, styles: {} });
+        }
         
         editor.updateBlock(currentBlock, {
             content: newContent
         });
         setSuggestion(null);
+      }
+      
+      // Clear suggestion on any keypress (except Tab) to stay reactive
+      if (e.key !== 'Tab') {
+          setSuggestion(null);
       }
     };
 
@@ -115,11 +125,9 @@ export const NotionEditor = ({
   }, [editor, suggestion]);
 
   // Effect to handle external content updates
-  // This allows AddActuacionForm to push text (auto-fill) to the editor
   useEffect(() => {
     const updateContent = async () => {
       if (editor && initialContent !== undefined) {
-        // Compare current editor HTML with incoming initialContent to avoid loops
         const currentHtml = await editor.blocksToFullHTML(editor.document);
         if (currentHtml !== initialContent) {
           try {
@@ -162,24 +170,23 @@ export const NotionEditor = ({
       <BlockNoteView
         editor={editor}
         onChange={handleChange}
-        theme="light" // Can be made dynamic if needed
+        theme="light"
         className="min-h-[300px]"
         data-placeholder={placeholder}
       />
       
-      {/* Ghostwriter UI Indicator */}
+      {/* Ghostwriter UI Indicator - More integrated */}
       {(isSuggesting || suggestion) && (
-        <div className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-slate-100/80 dark:bg-white/5 backdrop-blur-md rounded-full border border-slate-200 dark:border-white/10 animate-in fade-in slide-in-from-bottom-2">
+        <div className="absolute top-2 right-4 flex items-center gap-2 px-3 py-1.5 bg-indigo-50/80 dark:bg-white/5 backdrop-blur-md rounded-full border border-indigo-100 dark:border-white/10 animate-in fade-in zoom-in-95 duration-200">
             {isSuggesting ? (
                 <>
                     <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />
-                    <span className="text-[10px] font-medium text-slate-500 uppercase tracking-tight">Pensando...</span>
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">IA Pensando...</span>
                 </>
             ) : (
                 <>
-                    <span className="text-[10px] font-medium text-slate-400">Sugerencia:</span>
-                    <span className="text-[10px] font-bold text-indigo-500 italic">"{suggestion}"</span>
-                    <span className="text-[10px] px-1.5 py-0.5 bg-indigo-500 text-white rounded-md font-bold tabular-nums">TAB</span>
+                    <span className="text-[10px] font-medium text-slate-500">Sugerencia (TAB):</span>
+                    <span className="text-[10px] font-bold text-indigo-600 italic">"{suggestion}"</span>
                 </>
             )}
         </div>
