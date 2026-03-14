@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '../utils/supabase';
 
 export type AIEngine = 'ollama' | 'webllm';
 export const DEFAULT_WEBLLM_MODEL = "Llama-3-8B-Instruct-q4f32_1-MLC";
@@ -73,22 +74,56 @@ export const aiService = {
         const { model, setLoadProgress, setIsLoaded } = useAIStore.getState();
         if (engineInstance) return;
 
+        const adapter = (supabase as any);
+        const webModelId = model && model.includes(':') ? DEFAULT_WEBLLM_MODEL : (model || DEFAULT_WEBLLM_MODEL);
+
+        // 1. Prepare Fetch Wrapper to intercept and save/load from local folder
+        const originalFetch = window.fetch;
+        window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+            const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
+            
+            // Only intercept model-related files from MLC CDN
+            if (url.includes('mlc-ai') || url.includes('huggingface.co')) {
+                const fileName = url.split('/').pop() || 'file';
+                
+                // Try to load from local folder first
+                const localFile = await adapter.getModelFile(webModelId, fileName);
+                if (localFile) {
+                    console.log(`FSA IA: Usando archivo local ${fileName}`);
+                    return new Response(localFile);
+                }
+
+                // If not local, fetch from network and save
+                console.log(`FSA IA: Descargando y guardando ${fileName}...`);
+                const response = await originalFetch(input, init);
+                if (response.ok) {
+                    const blob = await response.clone().blob();
+                    // Save in background
+                    adapter.saveModelFile(webModelId, fileName, blob);
+                }
+                return response;
+            }
+
+            return originalFetch(input, init);
+        };
+
         try {
             engineInstance = new webLLM.MLCEngine();
             engineInstance.setInitProgressCallback((report) => {
                 setLoadProgress(Math.round(report.progress * 100));
             });
 
-            // If the model string looks like an Ollama tag, use the default WebLLM model instead
-            const webModel = model && model.includes(':') ? DEFAULT_WEBLLM_MODEL : (model || DEFAULT_WEBLLM_MODEL);
-            
-            await engineInstance.reload(webModel);
+            await engineInstance.reload(webModelId);
             setIsLoaded(true);
+            console.log("FSA IA: Motor listo con persistencia local.");
         } catch (error) {
             console.error("WebLLM Init Error:", error);
             setIsLoaded(false);
             engineInstance = null;
-            throw error; // Rethrow to handle in UI
+            throw error;
+        } finally {
+            // Restore fetch
+            window.fetch = originalFetch;
         }
     },
 

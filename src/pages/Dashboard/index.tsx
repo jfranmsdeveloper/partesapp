@@ -14,18 +14,20 @@ import clsx from 'clsx';
 import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
-    const { partes, users } = useUserStore();
+    const { partes, currentUser } = useUserStore();
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<string>('all');
+    
+    // Strictly filter to current user only as requested
+    const selectedUserId = currentUser?.id || currentUser?.email;
 
     // Current Date
     const today = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
 
-    // Filtered Partes based on selection
+    // Filtered Partes based on active session
     const filteredPartes = useMemo(() => {
-        if (selectedUser === 'all') return partes;
-        return partes.filter(p => p.userId === selectedUser);
-    }, [partes, selectedUser]);
+        if (!selectedUserId) return [];
+        return partes.filter(p => p.userId === selectedUserId || p.createdBy === (currentUser?.user_metadata?.full_name || currentUser?.name));
+    }, [partes, selectedUserId, currentUser]);
 
     // --- Complex Metrics Calculation (using filteredPartes) ---
     const metrics = useMemo(() => {
@@ -110,47 +112,7 @@ export default function Dashboard() {
                     </Button>
                 </div>
 
-                {/* User Filters - Centered & Premium Pills */}
-                <div className="flex justify-center w-full">
-                    <div className="flex items-center gap-3 overflow-x-auto py-2 px-4 max-w-full scrollbar-hide no-scrollbar mask-grad-x">
-                        <button
-                            onClick={() => setSelectedUser('all')}
-                            className={clsx(
-                                "flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 shadow-sm whitespace-nowrap",
-                                selectedUser === 'all'
-                                    ? "bg-brand-gradient text-white scale-105 shadow-lg shadow-orange-500/20"
-                                    : "bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:scale-105"
-                            )}
-                        >
-                            <Users className="w-4 h-4" />
-                            Global
-                        </button>
-
-                        <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2" />
-
-                        {users.map((user) => (
-                            <button
-                                key={user.id}
-                                onClick={() => setSelectedUser(user.id || '')}
-                                className={clsx(
-                                    "flex items-center gap-3 pl-2 pr-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 shadow-sm whitespace-nowrap border border-transparent",
-                                    selectedUser === user.id
-                                        ? "bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900/50 scale-105 shadow-xl shadow-orange-500/10"
-                                        : "bg-white/40 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:bg-white/80 dark:hover:bg-slate-700 hover:scale-105"
-                                )}
-                            >
-                                {user.avatar_url ? (
-                                    <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-slate-800" />
-                                ) : (
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-300 to-amber-300 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white dark:ring-slate-800">
-                                        {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
-                                    </div>
-                                )}
-                                <span>{user.user_metadata?.full_name?.split(' ')[0] || user.email.split('@')[0]}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                {/* User Filters - Removed as per request (Only show own data) */}
 
                 {/* KPI Grid - Pastel & Glass */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

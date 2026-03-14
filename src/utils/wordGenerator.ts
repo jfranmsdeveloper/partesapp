@@ -206,47 +206,45 @@ export const generateWordReport = async (data: ReportData) => {
             rows: t2Rows
         }));
 
-        // 3. MATRIX (Only on first page or dedicated section)
-        if (sectionIdx === 0 && userIds.length > 1) {
-            userChildren.push(new Paragraph({
-                children: [new TextRun({ text: "3. Matriz de Indicadores por Técnico", bold: true, font: DEFAULT_FONT })],
-                spacing: { before: 400, after: 200 }
-            }));
+        // 3. MATRIX (Resumen Global)
+        userChildren.push(new Paragraph({
+            children: [new TextRun({ text: "3. Matriz de Indicadores por Técnico", bold: true, font: DEFAULT_FONT })],
+            spacing: { before: 400, after: 200 }
+        }));
 
-            const userCols = userIds.map(uid => {
-                const u = data.users.find(usr => usr.id === uid);
-                let name = u?.user_metadata?.full_name || u?.name || u?.email || "Técnico";
-                const parts = name.split(' ');
-                if (parts.length > 1) name = `${parts[0]} ${parts[1].charAt(0)}.`;
-                return { name, uid };
-            });
+        const userCols = userIds.map(uid => {
+            const u = data.users.find(usr => usr.id === uid);
+            let name = u?.user_metadata?.full_name || u?.name || u?.email || "Técnico";
+            const parts = name.split(' ');
+            if (parts.length > 1) name = `${parts[0]} ${parts[1].charAt(0)}.`;
+            return { name, uid };
+        });
 
-            const matrixHeader = new TableRow({
+        const matrixHeader = new TableRow({
+            children: [
+                createCell("Concepto", { bold: true, shading: COLOR_HEADER }),
+                ...userCols.map(u => createCell(u.name, { bold: true, shading: COLOR_HEADER, alignment: AlignmentType.CENTER }))
+            ]
+        });
+
+        const matrixBody = MATRIX_ROWS.map(type => {
+            return new TableRow({
                 children: [
-                    createCell("Concepto", { bold: true, shading: COLOR_HEADER }),
-                    ...userCols.map(u => createCell(u.name, { bold: true, shading: COLOR_HEADER, alignment: AlignmentType.CENTER }))
+                    createCell(formatLabel(type), { shading: COLOR_ROW }),
+                    ...userCols.map(u => {
+                        const uPartes = partesByUser[u.uid] || [];
+                        const count = uPartes.flatMap(p => p.actuaciones).filter(a => a.type === type).length;
+                        return createCell(count > 0 ? count.toString() : "", { shading: COLOR_ROW, alignment: AlignmentType.CENTER });
+                    })
                 ]
             });
+        });
 
-            const matrixBody = MATRIX_ROWS.map(type => {
-                return new TableRow({
-                    children: [
-                        createCell(formatLabel(type), { shading: COLOR_ROW }),
-                        ...userCols.map(u => {
-                            const uPartes = partesByUser[u.uid] || [];
-                            const count = uPartes.flatMap(p => p.actuaciones).filter(a => a.type === type).length;
-                            return createCell(count > 0 ? count.toString() : "", { shading: COLOR_ROW, alignment: AlignmentType.CENTER });
-                        })
-                    ]
-                });
-            });
-
-            userChildren.push(new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
-                borders: tableBorders,
-                rows: [matrixHeader, ...matrixBody]
-            }));
-        }
+        userChildren.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: tableBorders,
+            rows: [matrixHeader, ...matrixBody]
+        }));
 
         sections.push({
             properties: {
@@ -301,36 +299,10 @@ export const generateWordReport = async (data: ReportData) => {
                                                             color: "2D3E50"
                                                         }),
                                                     ],
-                                                }),
-                                                new Paragraph({
-                                                    children: [
-                                                        new TextRun({
-                                                            text: "Gestión de Actuaciones y Servicios",
-                                                            size: 16,
-                                                            font: DEFAULT_FONT,
-                                                            color: "64748B"
-                                                        }),
-                                                    ],
-                                                }),
+                                                })
                                             ],
                                             verticalAlign: "center",
-                                        }),
-                                        new TableCell({
-                                            children: [
-                                                new Paragraph({
-                                                    children: [
-                                                        new TextRun({
-                                                            text: format(new Date(), 'dd/MM/yyyy'),
-                                                            size: 16,
-                                                            font: DEFAULT_FONT,
-                                                            color: "94A3B8"
-                                                        }),
-                                                    ],
-                                                    alignment: AlignmentType.RIGHT,
-                                                }),
-                                            ],
-                                            verticalAlign: "center",
-                                        }),
+                                        })
                                     ],
                                 }),
                             ],
