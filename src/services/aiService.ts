@@ -76,54 +76,92 @@ export const aiService = {
 
         const adapter = (supabase as any);
         const webModelId = model && model.includes(':') ? DEFAULT_WEBLLM_MODEL : (model || DEFAULT_WEBLLM_MODEL);
-
-        // 1. Prepare Fetch Wrapper to intercept and save/load from local folder
-        const originalFetch = window.fetch;
-        window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-            const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
-            
-            // Only intercept model-related files from MLC CDN
-            if (url.includes('mlc-ai') || url.includes('huggingface.co')) {
-                const fileName = url.split('/').pop() || 'file';
-                
-                // Try to load from local folder first
-                const localFile = await adapter.getModelFile(webModelId, fileName);
-                if (localFile) {
-                    console.log(`FSA IA: Usando archivo local ${fileName}`);
-                    return new Response(localFile);
-                }
-
-                // If not local, fetch from network and save
-                console.log(`FSA IA: Descargando y guardando ${fileName}...`);
-                const response = await originalFetch(input, init);
-                if (response.ok) {
-                    const blob = await response.clone().blob();
-                    // Save in background
-                    adapter.saveModelFile(webModelId, fileName, blob);
-                }
-                return response;
-            }
-
-            return originalFetch(input, init);
-        };
+        const baseUrl = `https://huggingface.co/mlc-ai/${webModelId}/resolve/main/`;
 
         try {
+            console.log(`FSA IA: Iniciando preparación completa de ${webModelId}...`);
+            setLoadProgress(1);
+
+            // 1. Fetch Manifests
+            const configResp = await fetch(`${baseUrl}mlc-chat-config.json`);
+            const cacheResp = await fetch(`${baseUrl}ndarray-cache.json`);
+            if (!configResp.ok || !cacheResp.ok) throw new Error("No se pudo obtener el manifiesto del modelo");
+
+            const cache = await cacheResp.json();
+
+            // 2. Identify all files (metadata + shards)
+            const shards = cache.records.map((r: any) => r.dataPath);
+            const metaFiles = [
+                'mlc-chat-config.json',
+                'ndarray-cache.json',
+                'tokenizer.model',
+                'tokenizer.json',
+                'tokenizer_config.json'
+            ];
+
+            const allFiles = [...metaFiles, ...shards];
+            const total = allFiles.length;
+            let current = 0;
+
+            const blobUrls: Record<string, string> = {};
+
+            // 3. Sync and Create Blob URLs
+            for (const file of allFiles) {
+                let blob: Blob | null = null;
+                const fileExists = await adapter.hasModelFile(webModelId, file);
+
+                if (fileExists) {
+                    const f = await adapter.getModelFile(webModelId, file);
+                    blob = f as Blob;
+                } else {
+                    console.log(`FSA IA: Descargando ${file}...`);
+                    const fResp = await fetch(`${baseUrl}${file}`);
+                    if (fResp.ok) {
+                        blob = await fResp.blob();
+                        await adapter.saveModelFile(webModelId, file, blob);
+                    }
+                }
+
+                if (blob) {
+                    blobUrls[file] = URL.createObjectURL(blob);
+                }
+                
+                current++;
+                setLoadProgress(Math.floor((current / total) * 50)); // First 50% for syncing
+            }
+
+            // 5. Start WebLLM Engine with our intercepted fetch
+            // We keep the fetch override active to serve local blobs
+            const originalFetch = window.fetch;
+            window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+                const url = typeof input === 'string' ? input : (input instanceof URL ? input.href : input.url);
+                const fileName = url.split('/').pop() || '';
+                
+                if (blobUrls[fileName]) {
+                    console.log(`FSA IA: Sirviendo local ${fileName}`);
+                    // Use the blob directly
+                    const blob = await (await originalFetch(blobUrls[fileName])).blob();
+                    return new Response(blob);
+                }
+                return originalFetch(input, init);
+            };
+
             engineInstance = new webLLM.MLCEngine();
             engineInstance.setInitProgressCallback((report) => {
-                setLoadProgress(Math.round(report.progress * 100));
+                setLoadProgress(50 + Math.round(report.progress * 50));
             });
 
-            await engineInstance.reload(webModelId);
+            await engineInstance.reload(webModelId, undefined); 
             setIsLoaded(true);
-            console.log("FSA IA: Motor listo con persistencia local.");
+            console.log("FSA IA: Motor listo con archivos locales.");
+            
+            // Keep fetch override for future internal fetches if any
+            // window.fetch = originalFetch; // We'll keep it for the session
         } catch (error) {
             console.error("WebLLM Init Error:", error);
             setIsLoaded(false);
             engineInstance = null;
             throw error;
-        } finally {
-            // Restore fetch
-            window.fetch = originalFetch;
         }
     },
 
