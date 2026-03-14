@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, TextRun, BorderStyle, type ISectionOptions } from 'docx';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, HeadingLevel, AlignmentType, TextRun, BorderStyle, ImageRun, Header, type ISectionOptions } from 'docx';
 import { saveAs } from 'file-saver';
 import { type Parte, type ActuacionType, type User } from '../types';
 import { format } from 'date-fns';
@@ -55,6 +55,17 @@ export const generateWordReport = async (data: ReportData) => {
         if (!partesByUser[uid]) partesByUser[uid] = [];
         partesByUser[uid].push(p);
     });
+    // Load logo as array buffer
+    let logoData: ArrayBuffer | null = null;
+    try {
+        const response = await fetch('/logo.png');
+        if (response.ok) {
+            logoData = await response.arrayBuffer();
+        }
+    } catch (e) {
+        console.error("Failed to load logo for report", e);
+    }
+
     const userIds = Object.keys(partesByUser);
 
     const calculateMetrics = (partes: Parte[]) => {
@@ -241,13 +252,91 @@ export const generateWordReport = async (data: ReportData) => {
             properties: {
                 page: {
                     margin: {
-                        top: 1134,    // 2cm in twips (1cm = 567 twips)
+                        top: 1134,
                         bottom: 1134,
                         left: 1134,
                         right: 1134,
                     }
                 },
                 type: sectionIdx > 0 ? "nextPage" : undefined
+            },
+            headers: {
+                default: new Header({
+                    children: [
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: {
+                                bottom: { style: BorderStyle.SINGLE, size: 1, color: COLOR_BORDER },
+                                top: { style: BorderStyle.NONE },
+                                left: { style: BorderStyle.NONE },
+                                right: { style: BorderStyle.NONE },
+                            },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({
+                                            children: logoData ? [
+                                                new Paragraph({
+                                                    children: [
+                                                        new ImageRun({
+                                                            data: logoData,
+                                                            transformation: { width: 40, height: 40 },
+                                                            type: 'png'
+                                                        }),
+                                                    ],
+                                                }),
+                                            ] : [],
+                                            verticalAlign: "center",
+                                            width: { size: 15, type: WidthType.PERCENTAGE },
+                                        }),
+                                        new TableCell({
+                                            children: [
+                                                new Paragraph({
+                                                    children: [
+                                                        new TextRun({
+                                                            text: "Serglobin S.L.",
+                                                            bold: true,
+                                                            size: 24,
+                                                            font: DEFAULT_FONT,
+                                                            color: "2D3E50"
+                                                        }),
+                                                    ],
+                                                }),
+                                                new Paragraph({
+                                                    children: [
+                                                        new TextRun({
+                                                            text: "Gestión de Actuaciones y Servicios",
+                                                            size: 16,
+                                                            font: DEFAULT_FONT,
+                                                            color: "64748B"
+                                                        }),
+                                                    ],
+                                                }),
+                                            ],
+                                            verticalAlign: "center",
+                                        }),
+                                        new TableCell({
+                                            children: [
+                                                new Paragraph({
+                                                    children: [
+                                                        new TextRun({
+                                                            text: format(new Date(), 'dd/MM/yyyy'),
+                                                            size: 16,
+                                                            font: DEFAULT_FONT,
+                                                            color: "94A3B8"
+                                                        }),
+                                                    ],
+                                                    alignment: AlignmentType.RIGHT,
+                                                }),
+                                            ],
+                                            verticalAlign: "center",
+                                        }),
+                                    ],
+                                }),
+                            ],
+                        }),
+                    ],
+                }),
             },
             children: userChildren
         });
