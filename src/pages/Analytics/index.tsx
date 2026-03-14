@@ -3,9 +3,8 @@ import { useUserStore } from '../../hooks/useUserStore';
 import { TimePerClientChart } from '../../components/dashboard/TimePerClientChart';
 import { ActivityTypeChart } from '../../components/dashboard/ActivityTypeChart';
 import { TrendChart } from '../../components/dashboard/TrendChart';
-import { StatusDistributionChart } from '../../components/dashboard/StatusDistributionChart';
 import { Card } from '../../components/ui/Card';
-import { Users, TrendingUp, Clock } from 'lucide-react';
+import { TrendingUp, Clock } from 'lucide-react';
 import {
     format,
     subDays,
@@ -17,9 +16,9 @@ import {
 import clsx from 'clsx';
 
 export default function Analytics() {
-    const { partes, users } = useUserStore();
+    const { partes, users, currentUser } = useUserStore();
     const [range, setRange] = useState<number>(30); // Default 30 days
-    const selectedUser = 'all'; // Keep as constant for now to avoid unused state
+    const selectedUserId = currentUser?.id || currentUser?.email;
 
     // Filter logic
     const filteredPartes = useMemo(() => {
@@ -29,10 +28,10 @@ export default function Analytics() {
         return partes.filter(p => {
             const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
             const isInRange = isWithinInterval(date, { start, end });
-            const isSelectedUser = selectedUser === 'all' || p.userId === selectedUser;
-            return isInRange && isSelectedUser;
+            const isSelf = selectedUserId && (p.userId === selectedUserId || p.createdBy === (currentUser?.user_metadata?.full_name || currentUser?.name));
+            return isInRange && isSelf;
         });
-    }, [partes, range, selectedUser]);
+    }, [partes, range, selectedUserId, currentUser]);
 
     // Data Mapping for Charts
     const analyticsData = useMemo(() => {
@@ -115,7 +114,7 @@ export default function Analytics() {
                     </div>
                     <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">Visual Insights</h1>
                     <p className="text-lg text-slate-500 dark:text-slate-400 font-light max-w-xl">
-                        Analiza el rendimiento del equipo y la distribución del tiempo por clientes en los últimos <span className="font-bold text-slate-900 dark:text-white">{range} días</span>.
+                        Analiza tu rendimiento y la distribución de tu tiempo en los últimos <span className="font-bold text-slate-900 dark:text-white">{range} días</span>.
                     </p>
                 </div>
 
@@ -190,19 +189,7 @@ export default function Analytics() {
                     <TrendChart data={analyticsData.trendData} />
                 </div>
 
-                {/* 3. Workload Distribution */}
-                <Card className="p-8 space-y-8 flex flex-col">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Carga por Usuario</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Distribución de horas por integrante</p>
-                        </div>
-                        <Users className="w-5 h-5 text-indigo-500" />
-                    </div>
-                    <div className="flex-1 min-h-[400px]">
-                        <StatusDistributionChart data={analyticsData.userDistribution} />
-                    </div>
-                </Card>
+                {/* User Distribution removed as per request */}
 
                 {/* 4. Activity Type Breakdown */}
                 <ActivityTypeChart data={analyticsData.activityData} />
