@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { Menu, Brain } from 'lucide-react';
 import { CommandPalette } from '../ui/CommandPalette';
 import { AIChatSidebar } from '../ai/AIChatSidebar';
+import { AIAssistantOverlay } from '../ai/AIAssistantOverlay';
 import { useAIStore } from '../../services/aiService';
 
 export const Layout = () => {
@@ -59,6 +60,8 @@ export const Layout = () => {
                 isOpen={isAISidebarOpen} 
                 onClose={() => setIsAISidebarOpen(false)} 
             />
+
+            <AIAssistantOverlay />
 
             {/* AI Floating Button */}
             {!isAISidebarOpen && (
