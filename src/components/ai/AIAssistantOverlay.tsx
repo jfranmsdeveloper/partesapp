@@ -1,10 +1,15 @@
+import React, { useEffect, useState } from 'react';
+import { useAIStore, aiService } from '../../services/aiService';
+import { useAppStore } from '../../store/useAppStore';
+import { Sparkles, X, ChevronRight } from 'lucide-react';
+import type { Parte } from '../../types';
 import { useNavigate } from 'react-router-dom';
 
 export const AIAssistantOverlay: React.FC = () => {
     const { engine, isLoaded } = useAIStore();
     const { partes } = useAppStore();
     const navigate = useNavigate();
-    const [targetParteId, setTargetParteId] = useState<string | null>(null);
+    const [targetParteId, setTargetParteId] = useState<number | null>(null);
     const [suggestion, setSuggestion] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
 
