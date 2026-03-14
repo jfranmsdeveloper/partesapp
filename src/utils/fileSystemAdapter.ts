@@ -539,48 +539,6 @@ class FileSystemAdapter {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // AI Model Storage - Persistence in user folder
-    // -----------------------------------------------------------------------
-
-    async saveModelFile(modelId: string, fileName: string, blob: Blob): Promise<void> {
-        if (!this.handle) return;
-        try {
-            const aiDir = await this.handle.getDirectoryHandle('ai-models', { create: true });
-            const modelDir = await aiDir.getDirectoryHandle(modelId, { create: true });
-            const fileHandle = await modelDir.getFileHandle(fileName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            console.log(`FSA: Guardado archivo de modelo ${modelId}/${fileName}`);
-        } catch (e) {
-            console.error('Error saving model file:', e);
-        }
-    }
-
-    async getModelFile(modelId: string, fileName: string): Promise<File | null> {
-        if (!this.handle) return null;
-        try {
-            const aiDir = await this.handle.getDirectoryHandle('ai-models', { create: false });
-            const modelDir = await aiDir.getDirectoryHandle(modelId, { create: false });
-            const fileHandle = await modelDir.getFileHandle(fileName, { create: false });
-            return await fileHandle.getFile();
-        } catch {
-            return null;
-        }
-    }
-
-    async hasModelFile(modelId: string, fileName: string): Promise<boolean> {
-        if (!this.handle) return false;
-        try {
-            const aiDir = await this.handle.getDirectoryHandle('ai-models', { create: false });
-            const modelDir = await aiDir.getDirectoryHandle(modelId, { create: false });
-            await modelDir.getFileHandle(fileName, { create: false });
-            return true;
-        } catch {
-            return false;
-        }
-    }
 
     // -----------------------------------------------------------------------
     // Supabase-compatible API

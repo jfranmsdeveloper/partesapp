@@ -35,8 +35,8 @@ export const TimePerClientChart = ({ data }: TimePerClientChartProps) => {
     return (
         <Card className="h-[450px] flex flex-col p-8 border-none bg-slate-50/50 dark:bg-dark-surface/50 backdrop-blur-sm">
             <div className="mb-8">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tiempo por Cliente</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Inversión horaria acumulada por cliente</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tiempo por Empleado Público</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Inversión horaria acumulada por técnico</p>
             </div>
             
             <div className="flex-1 w-full min-h-0">

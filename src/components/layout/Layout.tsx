@@ -1,22 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { Menu, Brain } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { CommandPalette } from '../ui/CommandPalette';
-import { AIChatSidebar } from '../ai/AIChatSidebar';
-import { AIAssistantOverlay } from '../ai/AIAssistantOverlay';
-import { useAIStore } from '../../services/aiService';
 
 export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-    const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
 
-    // Auto-check AI availability on mount
-    const { checkAvailability } = useAIStore();
-    useEffect(() => {
-        checkAvailability();
-    }, [checkAvailability]);
+    // Auto-check AI availability deleted
 
     // Global shortcut for Command Palette
     useEffect(() => {
@@ -24,10 +16,6 @@ export const Layout = () => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
                 setIsCommandPaletteOpen(prev => !prev);
-            }
-            if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
-                e.preventDefault();
-                setIsAISidebarOpen(prev => !prev);
             }
         };
 
@@ -56,25 +44,6 @@ export const Layout = () => {
                 onClose={() => setIsCommandPaletteOpen(false)} 
             />
 
-            <AIChatSidebar 
-                isOpen={isAISidebarOpen} 
-                onClose={() => setIsAISidebarOpen(false)} 
-            />
-
-            <AIAssistantOverlay />
-
-            {/* AI Floating Button */}
-            {!isAISidebarOpen && (
-                <button
-                    onClick={() => setIsAISidebarOpen(true)}
-                    className="fixed bottom-6 right-6 z-30 p-4 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full shadow-2xl shadow-blue-500/40 transition-all hover:scale-110 active:scale-95 group overflow-hidden"
-                    title="Asistente IA (⌘J)"
-                >
-                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <Brain className="w-6 h-6" />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white dark:border-dark-bg rounded-full animate-pulse" />
-                </button>
-            )}
 
             <main className="md:pl-64 transition-all duration-300 ease-in-out">
                 {/* On mobile, remove huge padding to max-width to use full screen real estate */}

@@ -4,7 +4,7 @@ import { TimePerClientChart } from '../../components/dashboard/TimePerClientChar
 import { ActivityTypeChart } from '../../components/dashboard/ActivityTypeChart';
 import { TrendChart } from '../../components/dashboard/TrendChart';
 import { Card } from '../../components/ui/Card';
-import { TrendingUp, Clock } from 'lucide-react';
+import { TrendingUp, Clock, Activity } from 'lucide-react';
 import {
     format,
     subDays,
@@ -26,22 +26,35 @@ export default function Analytics() {
         const end = endOfDay(new Date());
 
         return partes.filter(p => {
-            const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
-            const isInRange = isWithinInterval(date, { start, end });
-            const isSelf = selectedUserId && (p.userId === selectedUserId || p.createdBy === (currentUser?.user_metadata?.full_name || currentUser?.name));
-            return isInRange && isSelf;
+            if (!p.createdAt) return false;
+            try {
+                const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
+                const isInRange = isWithinInterval(date, { start, end });
+                
+                // More robust user matching
+                const userMatch = selectedUserId && (
+                    p.userId === selectedUserId || 
+                    p.createdBy === currentUser?.email ||
+                    p.createdBy === (currentUser?.user_metadata?.full_name || currentUser?.name)
+                );
+                
+                return isInRange && userMatch;
+            } catch (e) {
+                console.error("Error parsing date for analytics:", p.createdAt);
+                return false;
+            }
         });
     }, [partes, range, selectedUserId, currentUser]);
 
     // Data Mapping for Charts
     const analyticsData = useMemo(() => {
-        // 1. Time per Client
-        const clientMap: Record<string, number> = {};
+        // 1. Time per Technician
+        const userMap: Record<string, number> = {};
         filteredPartes.forEach(p => {
-            const clientName = p.clientName || 'Sin Cliente';
-            clientMap[clientName] = (clientMap[clientName] || 0) + p.totalTime;
+            const userName = p.createdBy || 'Sistema';
+            userMap[userName] = (userMap[userName] || 0) + p.totalTime;
         });
-        const timePerClient = Object.entries(clientMap).map(([name, duration]) => ({ name, duration }));
+        const timePerUser = Object.entries(userMap).map(([name, duration]) => ({ name, duration }));
 
         // 2. Trend (Daily Activity)
         const trendMap: Record<string, number> = {};
@@ -90,7 +103,7 @@ export default function Analytics() {
         const totalPartes = filteredPartes.length;
 
         return {
-            timePerClient,
+            timePerUser,
             trendData,
             activityData,
             userDistribution,
@@ -112,9 +125,9 @@ export default function Analytics() {
                         <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Panel de Analíticas</span>
                     </div>
-                    <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">Visual Insights</h1>
+                    <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">Analíticas Profesionales</h1>
                     <p className="text-lg text-slate-500 dark:text-slate-400 font-light max-w-xl">
-                        Analiza tu rendimiento y la distribución de tu tiempo en los últimos <span className="font-bold text-slate-900 dark:text-white">{range} días</span>.
+                        Métricas de rendimiento y distribución de tiempo en los últimos <span className="font-bold text-slate-900 dark:text-white">{range} días</span>.
                     </p>
                 </div>
 
@@ -126,8 +139,8 @@ export default function Analytics() {
                             className={clsx(
                                 "px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all duration-300",
                                 range === d 
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-105" 
-                                    : "text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600"
+                                    ? "bg-slate-900 text-white shadow-lg shadow-slate-500/20 scale-105" 
+                                    : "text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900"
                             )}
                         >
                             {d} Días
@@ -138,11 +151,11 @@ export default function Analytics() {
 
             {/* Metric Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="p-8 rounded-[2rem] bg-indigo-500 text-white shadow-xl relative overflow-hidden group">
+                <div className="p-8 rounded-[2rem] bg-slate-900 text-white shadow-xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
                         <Clock className="w-16 h-16" />
                     </div>
-                    <p className="text-indigo-100 text-xs font-black uppercase tracking-[0.2em] mb-1">Tiempo Total</p>
+                    <p className="text-slate-100 text-xs font-black uppercase tracking-[0.2em] mb-1">Inversión Total</p>
                     <h3 className="text-4xl font-black tabular-nums">{analyticsData.metrics.totalDuration} <span className="text-lg font-light opacity-80">min</span></h3>
                     <div className="mt-4 w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
                         <div className="h-full bg-white rounded-full" style={{ width: '70%' }} />
@@ -179,20 +192,53 @@ export default function Analytics() {
 
             {/* Main Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* 1. Time Per Client - Horizontal Bar */}
+                {/* 1. Time Per User - Horizontal Bar */}
                 <div className="lg:col-span-2">
-                    <TimePerClientChart data={analyticsData.timePerClient} />
+                    {analyticsData.timePerUser.length > 0 ? (
+                        <TimePerClientChart data={analyticsData.timePerUser} />
+                    ) : (
+                        <Card className="h-[450px] flex flex-col items-center justify-center p-8 border-none bg-slate-50/50 dark:bg-dark-surface/50 backdrop-blur-sm">
+                             <TrendingUp className="w-12 h-12 text-slate-300 mb-4" />
+                             <p className="text-slate-500 font-medium">No hay datos de tiempo disponibles para este periodo.</p>
+                        </Card>
+                    )}
                 </div>
 
                 {/* 2. Trend Area Chart */}
-                <div className="lg:col-span-2">
-                    <TrendChart data={analyticsData.trendData} />
-                </div>
+                <Card className="p-8 h-[450px] flex flex-col border-slate-100 dark:border-slate-800">
+                    <div className="mb-8">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tendencia de Actividad</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Número de partes creados diariamente</p>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                        {analyticsData.trendData.length > 0 ? (
+                            <TrendChart data={analyticsData.trendData} />
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-50">
+                                <Activity className="w-12 h-12 mb-4" />
+                                <p className="font-medium">No hay datos de tendencia para este periodo</p>
+                            </div>
+                        )}
+                    </div>
+                </Card>
 
-                {/* User Distribution removed as per request */}
-
-                {/* 4. Activity Type Breakdown */}
-                <ActivityTypeChart data={analyticsData.activityData} />
+                {/* 3. Activity Type Distribution */}
+                <Card className="p-8 h-[450px] flex flex-col border-slate-100 dark:border-slate-800">
+                    <div className="mb-8">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tipos de Actuación</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Distribución por categoría de trabajo</p>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                        {analyticsData.activityData.some(d => d.count > 0) ? (
+                            <ActivityTypeChart data={analyticsData.activityData} />
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-50">
+                                <Clock className="w-12 h-12 mb-4" />
+                                <p className="font-medium">No hay registros de actividades disponibles</p>
+                            </div>
+                        )}
+                    </div>
+                </Card>
             </div>
         </div>
     );

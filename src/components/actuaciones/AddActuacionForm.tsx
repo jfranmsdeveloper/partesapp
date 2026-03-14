@@ -7,9 +7,7 @@ import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
 import { NotionEditor } from '../ui/NotionEditor';
-import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
-import { aiService, useAIStore } from '../../services/aiService';
-import { Wand2, Loader2, Mic, MicOff, FileText, Plus, X } from 'lucide-react';
+import { FileText, Plus, X } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 
 interface AddActuacionFormProps {
@@ -28,8 +26,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     const [priority, setPriority] = useState<'BAJA' | 'MEDIA' | 'ALTA'>(initialData?.priority || 'MEDIA');
     const [tagInput, setTagInput] = useState(initialData?.tags?.join(', ') || '');
     const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
-    const [isProcessingCommand, setIsProcessingCommand] = useState(false);
-    const { isAvailable: isAIAvailable } = useAIStore();
 
     const [customTimestamp, setCustomTimestamp] = useState(() => {
         if (initialData?.timestamp) return toLocalISOString(new Date(initialData.timestamp));
@@ -37,72 +33,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         return toLocalISOString(new Date());
     });
 
-    const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport } = useSpeechRecognition();
-
-    useEffect(() => {
-        if (transcript) {
-            // Fix: Clean transcript and append it to our notes
-            // We need to ensure we don't duplicate or lose context
-            setNotes(prev => {
-                const cleanTranscript = transcript.trim();
-                if (!cleanTranscript) return prev;
-                
-                // If it's a Notion HTML, we should try to inject it before the last </p>
-                if (prev.endsWith('</p>')) {
-                    return prev.slice(0, -4) + ' ' + cleanTranscript + '</p>';
-                }
-                return prev + ' ' + cleanTranscript;
-            });
-            resetTranscript();
-        }
-    }, [transcript, resetTranscript]);
-
-    const handleImproveWriting = async () => {
-        if (!notes || notes === '<p></p>') return;
-        
-        setIsProcessingCommand(true); // Reuse same loading state
-        try {
-            const prompt = `Actúa como un guía técnico experto. Transforma estas notas de un parte de trabajo en una guía paso a paso clara, profesional y fácil de entender. Usa párrafos cortos o listas si es necesario. No inventes datos. 
-            
-            Notas actuales: ${notes}`;
-            
-            const improved = await aiService.generate(prompt);
-            if (improved) {
-                // Wrap in P tags if not present
-                const cleanImproved = improved.startsWith('<p>') ? improved : `<p>${improved.replace(/\n/g, '</p><p>')}</p>`;
-                setNotes(cleanImproved);
-            }
-        } catch (error) {
-            console.error('Error improving writing:', error);
-            alert('❌ No he podido mejorar la redacción en este momento.');
-        } finally {
-            setIsProcessingCommand(false);
-        }
-    };
-
-    const handleProcessVoiceCommand = async () => {
-        if (!transcript.trim()) return;
-        
-        setIsProcessingCommand(true);
-        try {
-            const command = await aiService.parseVoiceCommand(transcript);
-            
-            if (command.type) setType(command.type as ActuacionType);
-            if (command.duration) setDuration(command.duration.toString());
-            if (command.notes) {
-                setNotes(`<p>${command.notes}</p>`); // Replace for now if it's a structural command
-            }
-            if (command.user) setUser(command.user);
-            
-            resetTranscript();
-            alert('✨ Comando procesado e aplicado al formulario.');
-        } catch (error) {
-            console.error('Error processing voice command:', error);
-            alert('❌ No he podido entender el comando correctamente.');
-        } finally {
-            setIsProcessingCommand(false);
-        }
-    };
 
     useEffect(() => {
         if (initialData) {
@@ -341,44 +271,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 <div className="space-y-4">
                     <div className="flex justify-between items-center px-1">
                         <label className="text-sm font-medium text-slate-700">Descripción detallada</label>
-                        {hasRecognitionSupport && (
-                            <Button
-                                type="button"
-                                onClick={isListening ? stopListening : startListening}
-                                variant={isListening ? 'danger' : 'outline'}
-                                size="sm"
-                                className={clsx("rounded-full h-8", isListening && "animate-pulse")}
-                            >
-                                {isListening ? <MicOff className="w-3.5 h-3.5 mr-2" /> : <Mic className="w-3.5 h-3.5 mr-2 text-blue-500" />}
-                                {isListening ? "Detener" : "Dictar"}
-                            </Button>
-                        )}
-                        {hasRecognitionSupport && isAIAvailable && (
-                             <Button
-                                type="button"
-                                onClick={handleProcessVoiceCommand}
-                                variant="outline"
-                                size="sm"
-                                disabled={!transcript || isProcessingCommand}
-                                className="rounded-full h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
-                            >
-                                {isProcessingCommand ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 mr-2" />}
-                                {isProcessingCommand ? "Procesando..." : "Comando IA"}
-                            </Button>
-                        )}
-                        {isAIAvailable && (
-                             <Button
-                                type="button"
-                                onClick={handleImproveWriting}
-                                variant="outline"
-                                size="sm"
-                                disabled={!notes || notes === '<p></p>' || isProcessingCommand}
-                                className="rounded-full h-8 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-                            >
-                                {isProcessingCommand ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 mr-2" />}
-                                {isProcessingCommand ? "Mejorando..." : "Perfeccionar Texto"}
-                            </Button>
-                        )}
                     </div>
                     <NotionEditor
                         initialContent={notes}

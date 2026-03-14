@@ -10,11 +10,10 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, FileText, Eye, Printer, Copy, Check, Files, Brain, Sparkles, Wand2 } from 'lucide-react';
+import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, FileText, Eye, Printer, Copy, Check, Files } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
-import { aiService, useAIStore } from '../../services/aiService';
 
 import { toLocalISOString } from '../../utils/dateUtils';
 
@@ -50,10 +49,6 @@ export const ParteEditor = () => {
     const [editingActuacion, setEditingActuacion] = useState<{ id: string, data: any } | null>(null);
     const [showCopied, setShowCopied] = useState(false);
 
-    // AI Summary State
-    const [aiSummary, setAiSummary] = useState<string | null>(null);
-    const [isSummarizing, setIsSummarizing] = useState(false);
-    const { isAvailable: isAIAvailable } = useAIStore();
 
     const currentParte = id ? partes.find(p => p.id === parseInt(id)) : undefined;
 
@@ -430,23 +425,6 @@ export const ParteEditor = () => {
         }
     };
 
-    const handleGenerateSummary = async () => {
-        if (!currentParte || currentParte.actuaciones.length === 0) return;
-        
-        setIsSummarizing(true);
-        try {
-            const actuacionesText = currentParte.actuaciones
-                .map(a => `${a.type}: ${a.notes || 'Sin notas'}`)
-                .join('\n');
-            const summary = await aiService.summarizePartes(actuacionesText);
-            setAiSummary(summary);
-        } catch (error) {
-            console.error('Error generating summary:', error);
-            alert('❌ Error al generar el resumen con el Cerebro IA.');
-        } finally {
-            setIsSummarizing(false);
-        }
-    };
 
     if (!isNew && !currentParte) {
         return <div>Parte no encontrado</div>;
@@ -586,94 +564,6 @@ export const ParteEditor = () => {
                     </div>
                 )}
 
-                {/* AI Summary Section (Only if !isNew and has actuaciones) */}
-                {!isNew && currentParte && currentParte.actuaciones.length > 0 && (
-                    <div className="w-[90%] max-w-7xl">
-                        <Card className="overflow-hidden border-blue-200/50 dark:border-blue-900/30">
-                            <div className="flex justify-between items-center mb-6">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                        <Brain className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                    </div>
-                                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 italic">Cerebro IA Local</h2>
-                                </div>
-                                {!aiSummary ? (
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        onClick={handleGenerateSummary}
-                                        disabled={isSummarizing || !isAIAvailable}
-                                        className="group"
-                                    >
-                                        {isSummarizing ? (
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        ) : (
-                                            <Sparkles className="w-4 h-4 mr-2 text-blue-500 group-hover:animate-pulse" />
-                                        )}
-                                        {isSummarizing ? 'Pensando...' : 'Generar Resumen Inteligente'}
-                                    </Button>
-                                ) : (
-                                    <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        onClick={() => setAiSummary(null)}
-                                        className="text-slate-400 hover:text-slate-600"
-                                    >
-                                        Limpiar
-                                    </Button>
-                                )}
-                            </div>
-
-                            {aiSummary ? (
-                                <div className="relative p-6 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-2xl border border-blue-100 dark:border-blue-500/10 animate-in fade-in zoom-in-95 duration-500">
-                                    <div className="absolute top-4 right-4 text-blue-500/20">
-                                        <Wand2 className="w-12 h-12 rotate-12" />
-                                    </div>
-                                    <div className="relative z-10">
-                                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed italic text-sm md:text-base font-medium">
-                                            "{aiSummary}"
-                                        </p>
-                                        <div className="mt-4 flex justify-end">
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline" 
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(aiSummary);
-                                                    alert('✅ Resumen copiado al portapapeles');
-                                                }}
-                                                className="text-[10px] uppercase font-black tracking-widest"
-                                            >
-                                                Copiar al Portapapeles
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 px-4">
-                                    {!isAIAvailable ? (
-                                        <div className="space-y-3">
-                                            <p className="text-sm text-slate-500 font-medium">
-                                                El Cerebro IA está desconectado. 
-                                            </p>
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm" 
-                                                onClick={() => navigate('/profile')}
-                                                className="text-[10px] uppercase font-black tracking-widest"
-                                            >
-                                                Configurar en mi Perfil
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-slate-500 font-medium italic">
-                                            Pulsa el botón para que la IA escanee las actuaciones y genere un resumen ejecutivo para tu informe.
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </Card>
-                    </div>
-                )}
 
                 {/* 1. Datos Generales (Always Visible) */}
                 <div className="w-[90%] max-w-7xl">

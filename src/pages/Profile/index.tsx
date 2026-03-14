@@ -3,9 +3,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
-import { User, Lock, Save, Upload, Plus, Trash2, Edit2, FileText, Brain, Globe, Bot, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useAIStore } from '../../services/aiService';
-import { clsx } from 'clsx';
+import { User, Lock, Save, Upload, Plus, Trash2, Edit2, FileText } from 'lucide-react';
 import type { Snippet } from '../../types';
 
 export default function Profile() {
@@ -28,16 +26,6 @@ export default function Profile() {
     const [snipTitle, setSnipTitle] = useState('');
     const [snipContent, setSnipContent] = useState('');
 
-    // AI Settings State
-    const { 
-        endpoint, model, setEndpoint, setModel, checkAvailability, isAvailable, 
-        engine, setEngine, loadProgress, isLoaded 
-    } = useAIStore();
-    const [tempEndpoint, setTempEndpoint] = useState(endpoint);
-    const [tempModel, setTempModel] = useState(model);
-    const [isCheckingAI, setIsCheckingAI] = useState(false);
-    const [isInitializingNative, setIsInitializingNative] = useState(false);
-    const [aiError, setAiError] = useState<string | null>(null);
 
     useEffect(() => {
         if (currentUser) {
@@ -239,179 +227,6 @@ export default function Profile() {
                 </form>
             </Card>
 
-            {/* AI Configuration Card */}
-            <Card>
-                <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-2">
-                    <div className="flex flex-col">
-                        <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                            <Brain className="w-5 h-5 text-blue-500" />
-                            Cerebro IA
-                        </h2>
-                        <p className="text-[10px] text-slate-400 font-bold mt-1">
-                            {engine === 'ollama' ? 'Motor Externo (Ollama)' : 'Motor Nativo (Navegador)'}
-                        </p>
-                    </div>
-                    <div className={clsx(
-                        "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500",
-                        isAvailable ? "bg-green-100 text-green-700 shadow-[0_0_10px_rgba(34,197,94,0.2)]" : "bg-red-100 text-red-700"
-                    )}>
-                        {isAvailable ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                        {isAvailable ? 'Listo' : 'No Disponible'}
-                    </div>
-                </div>
-
-                <div className="space-y-6">
-                    {/* Engine Selector */}
-                    <div className="grid grid-cols-2 gap-3 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
-                        {(['ollama', 'webllm'] as const).map((type) => (
-                            <button
-                                key={type}
-                                onClick={() => setEngine(type)}
-                                className={clsx(
-                                    "py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                                    engine === type 
-                                        ? "bg-white dark:bg-slate-700 text-blue-600 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
-                                )}
-                            >
-                                {type === 'ollama' ? 'Ollama' : 'Nativo (vía WebGPU)'}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-500/10 mb-6">
-                        <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
-                            <Globe className="w-3 h-3 inline mr-1 mb-0.5" />
-                            {engine === 'ollama' 
-                                ? 'Requiere Ollama instalado localmente. Máxima velocidad.' 
-                                : 'Ejecuta la IA 100% en el navegador usando WebGPU. Privacidad absoluta.'}
-                        </p>
-                    </div>
-
-                    {engine === 'ollama' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-2">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-1">
-                                    <Globe className="w-3 h-3" />
-                                    Endpoint API
-                                </label>
-                                <Input
-                                    value={tempEndpoint}
-                                    onChange={(e) => setTempEndpoint(e.target.value)}
-                                    placeholder="http://localhost:11434/api/generate"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-1">
-                                    <Bot className="w-3 h-3" />
-                                    Modelo (Tag)
-                                </label>
-                                <Input
-                                    value={tempModel}
-                                    onChange={(e) => setTempModel(e.target.value)}
-                                    placeholder="llama3:latest"
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                             <div className="space-y-1.5">
-                                <p className="text-xs font-black text-slate-500 uppercase mb-2">Estado del Modelo Nativo</p>
-                                <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6 border border-slate-100 dark:border-white/5">
-                                    {isLoaded ? (
-                                        <div className="flex items-center gap-3 text-green-600">
-                                            <div className="p-2 bg-green-100 rounded-lg">
-                                                <CheckCircle2 className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold">Modelo cargado en memoria</p>
-                                                <p className="text-[10px] opacity-80">La IA se ejecutará localmente via WebGPU</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
-                                                    {isInitializingNative ? `Descargando... ${loadProgress}%` : 'No inicializado'}
-                                                </p>
-                                                <Button 
-                                                    size="sm" 
-                                                    onClick={async () => {
-                                                        try {
-                                                            setIsInitializingNative(true);
-                                                            setAiError(null);
-                                                            const { aiService } = await import('../../services/aiService');
-                                                            await aiService.initWebLLM();
-                                                            setIsInitializingNative(false);
-                                                        } catch (err: any) {
-                                                            setIsInitializingNative(false);
-                                                            setAiError(err.message || 'Error al cargar el modelo');
-                                                        }
-                                                    }}
-                                                    disabled={isInitializingNative}
-                                                >
-                                                    {isInitializingNative ? 'Iniciando...' : 'Activar IA Nativa'}
-                                                </Button>
-                                            </div>
-                                            {aiError && (
-                                                <p className="text-[10px] text-red-500 font-bold bg-red-50 p-2 rounded-lg border border-red-100">
-                                                    ⚠️ {aiError}
-                                                </p>
-                                            )}
-                                            {isInitializingNative && (
-                                                <div className="h-1.5 w-full bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
-                                                    <div 
-                                                        className="h-full bg-blue-500 transition-all duration-300"
-                                                        style={{ width: `${loadProgress}%` }}
-                                                    />
-                                                </div>
-                                            )}
-                                            <p className="text-[10px] text-slate-400 italic">
-                                                * Se descargará aproximadamente 1GB de datos la primera vez.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                             </div>
-                        </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-4">
-                        <p className="text-[10px] text-slate-400 font-bold max-w-[200px]">
-                            {engine === 'ollama' ? 'Se recomienda llama3 o mistral.' : 'Usando Llama-3-8B optimizado para browser.'}
-                        </p>
-                        {engine === 'ollama' && (
-                            <div className="flex gap-3">
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={async () => {
-                                        setIsCheckingAI(true);
-                                        setEndpoint(tempEndpoint);
-                                        setModel(tempModel);
-                                        await checkAvailability();
-                                        setIsCheckingAI(false);
-                                    }}
-                                    disabled={isCheckingAI}
-                                >
-                                    {isCheckingAI ? 'Comprobando...' : 'Probar Conexión'}
-                                </Button>
-                                <Button 
-                                    size="sm"
-                                    onClick={() => {
-                                        setEndpoint(tempEndpoint);
-                                        setModel(tempModel);
-                                        setSuccessMsg('Configuración guardada');
-                                        setTimeout(() => setSuccessMsg(''), 3000);
-                                    }}
-                                >
-                                    Guardar
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </Card>
 
             {/* Snippets Management Card */}
             <Card>
