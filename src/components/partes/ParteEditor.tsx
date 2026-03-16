@@ -66,7 +66,6 @@ export const ParteEditor = () => {
     }, [currentParte]);
 
     const [isUploading, setIsUploading] = useState(false);
-    const [uploadStatus, setUploadStatus] = useState(''); // New state for progress text
     const singleInputRef = useRef<HTMLInputElement>(null);
 
     const handleCreateParte = async (e: React.FormEvent) => {
@@ -109,9 +108,9 @@ export const ParteEditor = () => {
         if (!file) return;
 
         setIsUploading(true);
-        setUploadStatus('Iniciando...');
+
         try {
-            const data = await parsePartePDF(file, (status) => setUploadStatus(status));
+            const data = await parsePartePDF(file);
 
             if (!isNew && currentParte) {
                 // If we are editing an existing parte, LINK the PDF to it
@@ -134,7 +133,7 @@ export const ParteEditor = () => {
 
             // ... (rest of logic for NEW partes)
             if (data.createdBy) {
-                setUploadStatus('Registrando solicitante...');
+
                 const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
                 if (clientId) {
                     setSelectedClientId(clientId);
@@ -155,63 +154,10 @@ export const ParteEditor = () => {
             alert('❌ Error al procesar el PDF.');
         } finally {
             setIsUploading(false);
-            setUploadStatus('');
             e.target.value = '';
         }
     };
 
-    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (files.length === 0) return;
-
-        setIsUploading(true);
-        try {
-            let processed = 0;
-            for (const file of files) {
-                processed++;
-                setUploadStatus(`Procesando ${processed} de ${files.length}: ${file.name}`);
-
-                const data = await parsePartePDF(file);
-
-                // Create client if needed
-                let clientId = '';
-                if (data.createdBy) {
-                    clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || '';
-                }
-
-                // Format date
-                let formattedDate = toLocalISOString(new Date()).replace('T', ' ') + ':00';
-                if (data.date) {
-                    const [d, m, y] = data.date.split(/[-/]/);
-                    const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-                    const timeStr = data.time || '09:00';
-                    const dt = `${dateStr}T${timeStr}`;
-                    formattedDate = dt.replace('T', ' ') + (dt.includes(':') && dt.split(':').length === 2 ? ':00' : '');
-                }
-
-                // Add the parte directly
-                await addParte({
-                    title: data.title || file.name,
-                    status: 'ABIERTO',
-                    createdBy: currentUser?.user_metadata?.full_name || currentUser?.name || 'Sistema',
-                    id: data.id || undefined,
-                    createdAt: formattedDate,
-                    pdfFile: data.pdfFile,
-                    clientId: clientId || undefined
-                });
-            }
-
-            alert(`✅ Se han importado ${files.length} partes correctamente.`);
-            navigate('/management');
-        } catch (error) {
-            console.error(error);
-            alert('❌ Error en el proceso masivo.');
-        } finally {
-            setIsUploading(false);
-            setUploadStatus('');
-            e.target.value = '';
-        }
-    };
 
     const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => {
         if (!currentParte) return;

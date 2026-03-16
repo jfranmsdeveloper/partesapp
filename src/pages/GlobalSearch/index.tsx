@@ -85,7 +85,11 @@ export default function GlobalSearch() {
         const workerName = workers.find(w => w.id === selectedWorkerId)?.name;
         if (!workerName) return [];
 
-        return partes.filter(p => p.createdBy === workerName).sort((a, b) => b.id - a.id);
+        return partes.filter(p => p.createdBy === workerName).sort((a, b) => {
+            const idA = String(a.id);
+            const idB = String(b.id);
+            return idB.localeCompare(idA, undefined, { numeric: true, sensitivity: 'base' });
+        });
     }, [partes, selectedWorkerId, workers]);
 
     const activeView = searchTerm ? 'search' : selectedWorkerId ? 'detail' : 'grid';
