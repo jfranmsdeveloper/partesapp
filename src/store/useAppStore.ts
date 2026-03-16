@@ -288,7 +288,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                         notes: a.description,
                         user: a.user || 'Sistema'
                     })),
-                    totalTime: p.total_time || pActs.reduce((acc: number, act: any) => acc + (act.duration || 0), 0),
+                    totalTime: Number(p.total_time || pActs.reduce((acc: number, act: any) => acc + (Number(act.duration) || 0), 0)),
                     totalActuaciones: pActs.length
                 };
             });

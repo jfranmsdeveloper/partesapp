@@ -1,5 +1,4 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Card } from '../ui/Card';
 import { useTheme } from '../../hooks/useTheme';
 
 interface DataItem {
@@ -33,47 +32,40 @@ export const TimePerClientChart = ({ data }: TimePerClientChartProps) => {
     };
 
     return (
-        <Card className="h-[450px] flex flex-col p-8 border-none bg-slate-50/50 dark:bg-dark-surface/50 backdrop-blur-sm">
-            <div className="mb-8">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Tiempo por Empleado Público</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Inversión horaria acumulada por técnico</p>
-            </div>
-            
-            <div className="flex-1 w-full min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={sortedData}
-                        margin={{ top: 5, right: 30, left: 40, bottom: 20 }}
-                        layout="vertical"
+        <div className="w-full h-full min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                    data={sortedData}
+                    margin={{ top: 0, right: 30, left: 40, bottom: 0 }}
+                    layout="vertical"
+                >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke={isDark ? '#334155' : '#e2e8f0'} opacity={0.3} />
+                    <XAxis type="number" hide />
+                    <YAxis
+                        dataKey="name"
+                        type="category"
+                        tick={{ fontSize: 10, fontWeight: 700, fill: isDark ? '#94a3b8' : '#64748b' }}
+                        width={120}
+                        axisLine={false}
+                        tickLine={false}
+                    />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0,0,0,0.02)' }} />
+                    <Bar 
+                        dataKey="duration" 
+                        radius={[0, 12, 12, 0]} 
+                        barSize={24}
+                        animationDuration={1500}
                     >
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke={isDark ? '#334155' : '#e2e8f0'} opacity={0.5} />
-                        <XAxis type="number" hide />
-                        <YAxis
-                            dataKey="name"
-                            type="category"
-                            tick={{ fontSize: 11, fontWeight: 600, fill: isDark ? '#94a3b8' : '#64748b' }}
-                            width={120}
-                            axisLine={false}
-                            tickLine={false}
-                        />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
-                        <Bar 
-                            dataKey="duration" 
-                            radius={[0, 10, 10, 0]} 
-                            barSize={32}
-                            animationDuration={1500}
-                        >
-                            {sortedData.map((_entry, index) => (
-                                <Cell 
-                                    key={`cell-${index}`} 
-                                    fill={index % 2 === 0 ? '#f97316' : '#fb923c'} 
-                                    fillOpacity={0.8 - (index * 0.05)}
-                                />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </Card>
+                        {sortedData.map((_entry, index) => (
+                            <Cell 
+                                key={`cell-${index}`} 
+                                fill={index % 2 === 0 ? '#6366f1' : '#818cf8'} 
+                                fillOpacity={1 - (index * 0.08)}
+                            />
+                        ))}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
     );
 };

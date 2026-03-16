@@ -285,7 +285,7 @@ export default function Analytics() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8">
                 {/* 1. Time Per User - Premium Large Chart */}
                 <motion.div variants={itemVariants} className="lg:col-span-2">
-                    <Card className="p-10 rounded-[3rem] border-none shadow-2xl bg-white dark:bg-slate-900 overflow-hidden relative">
+                    <Card className="p-10 rounded-[3rem] border-none shadow-2xl bg-white dark:bg-slate-900 overflow-hidden relative h-[500px] flex flex-col">
                         <div className="flex justify-between items-center mb-10">
                             <div className="space-y-1">
                                 <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Rendimiento por Técnico</h3>
@@ -293,11 +293,11 @@ export default function Analytics() {
                             </div>
                             <Users className="w-6 h-6 text-slate-300" />
                         </div>
-                        <div className="min-h-[400px]">
+                        <div className="flex-1 min-h-0">
                             {analyticsData.timePerUser.length > 0 ? (
                                 <TimePerClientChart data={analyticsData.timePerUser} />
                             ) : (
-                                <div className="h-[400px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 transition-all duration-300">
+                                <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 transition-all duration-300">
                                     <Users className="w-16 h-16 mb-4 opacity-10" />
                                     <p className="text-sm font-bold tracking-tight opacity-50">No hay datos de técnicos para este periodo</p>
                                 </div>
@@ -309,11 +309,14 @@ export default function Analytics() {
                 {/* 2. Side Panel with Trend and Info */}
                 <div className="lg:col-span-1 space-y-8">
                     <motion.div variants={itemVariants}>
-                        <Card className="p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl border-none h-[400px] flex flex-col relative overflow-hidden">
-                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-                             <div className="mb-6 relative z-10">
-                                <h3 className="text-xl font-black tracking-tight">Tendencia de Registro</h3>
-                                <p className="text-indigo-100/70 text-xs">Actividad diaria últimos {range} días</p>
+                        <Card className="p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl border-none h-[242px] flex flex-col relative overflow-hidden group">
+                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-white/20 transition-all duration-700" />
+                             <div className="mb-4 relative z-10 flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-xl font-black tracking-tight">Tendencia</h3>
+                                    <p className="text-indigo-100/70 text-xs font-bold uppercase tracking-widest">{range} DÍAS</p>
+                                </div>
+                                <Activity className="w-5 h-5 text-indigo-200/50" />
                             </div>
                             <div className="flex-1 min-h-0 relative z-10">
                                 <TrendChart data={analyticsData.trendData} />
@@ -322,10 +325,13 @@ export default function Analytics() {
                     </motion.div>
 
                     <motion.div variants={itemVariants}>
-                        <Card className="p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl h-[332px] flex flex-col">
-                             <div className="mb-6">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Categorías</h3>
-                                <p className="text-slate-500 text-xs">Distribución de tipos de actuación</p>
+                        <Card className="p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl h-[226px] flex flex-col group">
+                             <div className="mb-4 flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Categorías</h3>
+                                    <p className="text-slate-500 text-xs">Distribución de tipos</p>
+                                </div>
+                                <BarChart3 className="w-5 h-5 text-slate-300" />
                             </div>
                             <div className="flex-1 min-h-0">
                                 <ActivityTypeChart data={analyticsData.activityData} />
