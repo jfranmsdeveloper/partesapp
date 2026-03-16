@@ -573,7 +573,7 @@ class FileSystemAdapter {
             if (pendingAction) {
                 if (pendingAction.type === 'update') {
                     if (pendingAction.id) {
-                        const index = collection.findIndex((item: any) => item.id == pendingAction.id || item.id === pendingAction.id);
+                        const index = collection.findIndex((item: any) => String(item.id) === String(pendingAction.id));
                         if (index > -1) {
                             const userName = this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
 
@@ -605,9 +605,12 @@ class FileSystemAdapter {
 
                 } else if (pendingAction.type === 'delete') {
                     if (pendingAction.id) {
-                        this.state[table] = collection.filter((item: any) => item.id != pendingAction.id);
+                        this.state[table] = collection.filter((item: any) => String(item.id) !== String(pendingAction.id));
+                    } else if (pendingAction.inValues && pendingAction.column) {
+                        const vals = pendingAction.inValues.map((v: any) => String(v));
+                        this.state[table] = collection.filter((item: any) => !vals.includes(String(item[pendingAction.column])));
                     } else if (pendingAction.column && pendingAction.val) {
-                        this.state[table] = collection.filter((item: any) => item[pendingAction.column] != pendingAction.val);
+                        this.state[table] = collection.filter((item: any) => String(item[pendingAction.column]) !== String(pendingAction.val));
                     }
                     const ok = await this.saveDatabase();
                     if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
@@ -629,9 +632,16 @@ class FileSystemAdapter {
                                 const maxManual = manualIds.length > 0 ? Math.max(...manualIds) : 0;
                                 newItem.id = `MAN-${maxManual + 1}`;
                             } else {
-                                const numericIds = collection.map((item: any) => typeof item.id === 'number' ? item.id : parseInt(item.id)).filter((id: number) => !isNaN(id));
+                                const numericIds = collection
+                                    .map((item: any) => {
+                                        const raw = item.id;
+                                        if (typeof raw === 'number') return raw;
+                                        if (typeof raw === 'string' && !raw.startsWith('MAN-')) return parseInt(raw);
+                                        return NaN;
+                                    })
+                                    .filter((id: number) => !isNaN(id));
                                 const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
-                                newItem.id = maxId + 1;
+                                newItem.id = String(maxId + 1);
                             }
                         } else {
                             newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -668,8 +678,13 @@ class FileSystemAdapter {
             let results = [...collection];
 
             for (const key of Object.keys(queryParams)) {
-                if (key === 'order' || key === 'select') continue;
-                results = results.filter((item: any) => item[key] == queryParams[key]);
+                if (key === 'order' || key === 'select' || key === 'inValues') continue;
+                results = results.filter((item: any) => String(item[key]) === String(queryParams[key]));
+            }
+
+            if (queryParams.inValues && queryParams.inColumn) {
+                const vals = queryParams.inValues.map((v: any) => String(v));
+                results = results.filter((item: any) => vals.includes(String(item[queryParams.inColumn])));
             }
 
             if (queryParams.order) {
@@ -698,6 +713,16 @@ class FileSystemAdapter {
                     pendingAction.val = val;
                 } else {
                     queryParams[col] = val;
+                }
+                return builder;
+            },
+            in: (col: string, vals: any[]) => {
+                if (pendingAction && (pendingAction.type === 'update' || pendingAction.type === 'delete')) {
+                    pendingAction.column = col;
+                    pendingAction.inValues = vals;
+                } else {
+                    queryParams.inColumn = col;
+                    queryParams.inValues = vals;
                 }
                 return builder;
             },

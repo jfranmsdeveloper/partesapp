@@ -10,7 +10,7 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, FileText, Eye, Printer, Copy, Check, Files, FileWarning } from 'lucide-react';
+import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
@@ -67,9 +67,7 @@ export const ParteEditor = () => {
 
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState(''); // New state for progress text
-
     const singleInputRef = useRef<HTMLInputElement>(null);
-    const bulkInputRef = useRef<HTMLInputElement>(null);
 
     const handleCreateParte = async (e: React.FormEvent) => {
         e.preventDefault();
