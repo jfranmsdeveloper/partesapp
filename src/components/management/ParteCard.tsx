@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Parte } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { Badge } from '../ui/Badge';
-import { Clock, List, Check } from 'lucide-react';
+import { Clock, List, Check, FileWarning } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { clsx } from 'clsx';
@@ -58,7 +58,12 @@ export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: Part
             )}
 
             <div className={clsx("flex justify-between items-start mb-2 relative z-10", isSelectionMode && "pl-8")}>
-                <span className="text-xs font-mono text-slate-400 dark:text-slate-500">#{parte.id}</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-slate-400 dark:text-slate-500">#{parte.id}</span>
+                    {!parte.pdfFile && (
+                        <FileWarning className="w-3.5 h-3.5 text-orange-500" />
+                    )}
+                </div>
                 <Badge
                     variant={
                         parte.status === 'ABIERTO' ? 'success' :

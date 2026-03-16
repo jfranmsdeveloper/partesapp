@@ -61,6 +61,7 @@ interface AppState {
      * Does NOT touch the 'Emitido por' field (which is only for the 5 internal app users).
      */
     upsertClientFromPDF: (fullName: string, code?: string) => Promise<string | null>;
+    linkPdfToParte: (currentId: number | string, newId: number | string, pdfData: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -579,6 +580,33 @@ export const useAppStore = create<AppState>((set, get) => ({
             console.error('Error in upsertClientFromPDF:', e);
             return null;
         }
+    },
+
+    linkPdfToParte: async (currentId: number | string, newId: number | string, pdfData: string) => {
+        console.log(`Linking PDF: ${currentId} -> ${newId}`);
+        
+        // 1. Update the Parte ID and pdfFile
+        const { error: parteError } = await supabase
+            .from('partes')
+            .update({ id: newId, pdf_file: pdfData })
+            .eq('id', currentId);
+            
+        if (parteError) {
+            console.error('Error updating parte ID:', parteError);
+            throw parteError;
+        }
+
+        // 2. Update all linked Actuaciones to point to the new ID
+        const { error: actuacionError } = await supabase
+            .from('actuaciones')
+            .update({ parte_id: newId })
+            .eq('parte_id', currentId);
+
+        if (actuacionError) {
+            console.error('Error updating actuaciones part_id:', actuacionError);
+        }
+
+        await get().fetchData();
     },
 
     addSnippet: async (snippetData) => {

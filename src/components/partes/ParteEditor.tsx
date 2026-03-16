@@ -10,7 +10,7 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, FileText, Eye, Printer, Copy, Check, Files } from 'lucide-react';
+import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, FileText, Eye, Printer, Copy, Check, Files, FileWarning } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
@@ -22,7 +22,7 @@ export const ParteEditor = () => {
     const { id } = useParams();
     const isNew = !id;
 
-    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF } = useUserStore();
+    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF, linkPdfToParte } = useUserStore();
 
     const [title, setTitle] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
@@ -115,12 +115,26 @@ export const ParteEditor = () => {
         try {
             const data = await parsePartePDF(file, (status) => setUploadStatus(status));
 
+            if (!isNew && currentParte) {
+                // If we are editing an existing parte, LINK the PDF to it
+                if (data.id) {
+                    await linkPdfToParte(currentParte.id, data.id, data.pdfFile!);
+                    setCustomId(data.id);
+                    setUploadedPdf(data.pdfFile);
+                    alert(`✅ PDF vinculado correctamente. El ID del parte ha cambiado de ${currentParte.id} a ${data.id}.`);
+                } else {
+                    setUploadedPdf(data.pdfFile);
+                    alert('✅ PDF cargado correctamente.');
+                }
+                return;
+            }
+
             setUploadedPdf(data.pdfFile); // Save base64
 
             if (data.title) setTitle(data.title);
             if (data.id) setCustomId(data.id);
 
-            // The name from 'Emitido por el usuario' becomes the SOLICITADO POR (client)
+            // ... (rest of logic for NEW partes)
             if (data.createdBy) {
                 setUploadStatus('Registrando solicitante...');
                 const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
@@ -568,22 +582,44 @@ export const ParteEditor = () => {
                 {/* 1. Datos Generales (Always Visible) */}
                 <div className="w-[90%] max-w-7xl">
                     <Card>
-                        <h2 className="text-lg font-semibold mb-4">Datos Generales</h2>
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            Datos Generales
+                            {!isNew && !uploadedPdf && (
+                                <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <FileWarning className="w-3 h-3" />
+                                    SIN PDF
+                                </span>
+                            )}
+                        </h2>
 
-                        {isNew && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                                {/* Option 1: Individual */}
-                                <div 
-                                    onClick={() => !isUploading && singleInputRef.current?.click()}
-                                    className={clsx("p-6 border-2 border-dashed rounded-xl transition-all cursor-pointer group flex flex-col items-center text-center gap-3",
-                                        uploadedPdf ? "border-green-300 bg-green-50/50" : "border-slate-200 hover:border-blue-400 hover:bg-blue-50/30",
-                                        isUploading && "opacity-50 cursor-not-allowed")}
-                                >
+                        {!isNew && !uploadedPdf && (
+                            <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl flex items-start gap-3">
+                                <FileWarning className="w-5 h-5 text-orange-600 mt-0.5" />
+                                <div className="space-y-1">
+                                    <p className="text-sm font-semibold text-orange-800 dark:text-orange-400">Este parte fue creado manualmente</p>
+                                    <p className="text-xs text-orange-700 dark:text-orange-500/80">
+                                        No tiene un PDF asociado. Puedes subir uno ahora para vincularlo. Se actualizará el ID del parte pero se mantendrán los datos actuales.
+                                    </p>
+                                    <Button 
+                                        onClick={() => !isUploading && singleInputRef.current?.click()}
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="mt-2"
+                                        disabled={isUploading}
+                                    >
+                                        <FileUp className="w-3 h-3 mr-2" />
+                                        Vincular PDF
+                                    </Button>
                                     <input
                                         type="file"
                                         ref={singleInputRef}
+                                        className="hidden"
                                         accept=".pdf"
                                         onChange={handleSingleUpload}
+                                    />
+                                </div>
+                            </div>
+                        )}
                                         className="hidden"
                                     />
                                     <div className={clsx("p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform", 

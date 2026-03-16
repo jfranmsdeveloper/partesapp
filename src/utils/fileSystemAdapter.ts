@@ -436,9 +436,13 @@ class FileSystemAdapter {
         // For partes, try to keep numeric sequence if possible
         this.state.partes.forEach(p => {
             if (!p.id) {
-                const numericIds = this.state.partes.map(part => typeof part.id === 'number' ? part.id : parseInt(part.id)).filter(id => !isNaN(id));
-                const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
-                p.id = maxId + 1;
+                const manualIds = this.state.partes
+                    .filter(part => typeof part.id === 'string' && part.id.startsWith('MAN-'))
+                    .map(part => parseInt((part.id as string).split('-')[1]))
+                    .filter(num => !isNaN(num));
+                
+                const maxManual = manualIds.length > 0 ? Math.max(...manualIds) : 0;
+                p.id = `MAN-${maxManual + 1}`;
                 count++;
             }
         });
@@ -615,9 +619,20 @@ class FileSystemAdapter {
                     // Ensure ID generation if missing
                     if (!newItem.id) {
                         if (table === 'partes') {
-                            const numericIds = collection.map((item: any) => typeof item.id === 'number' ? item.id : parseInt(item.id)).filter((id: number) => !isNaN(id));
-                            const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
-                            newItem.id = maxId + 1;
+                            // If it doesn't have a PDF, it's a manual entry
+                            const isManual = !newItem.pdf_file;
+                            if (isManual) {
+                                const manualIds = collection
+                                    .filter((item: any) => typeof item.id === 'string' && item.id.startsWith('MAN-'))
+                                    .map((item: any) => parseInt(item.id.split('-')[1]))
+                                    .filter((num: number) => !isNaN(num));
+                                const maxManual = manualIds.length > 0 ? Math.max(...manualIds) : 0;
+                                newItem.id = `MAN-${maxManual + 1}`;
+                            } else {
+                                const numericIds = collection.map((item: any) => typeof item.id === 'number' ? item.id : parseInt(item.id)).filter((id: number) => !isNaN(id));
+                                const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+                                newItem.id = maxId + 1;
+                            }
                         } else {
                             newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                         }
