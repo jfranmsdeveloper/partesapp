@@ -433,8 +433,14 @@ class FileSystemAdapter {
 
         const generateId = (prefix: string) => crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
+        // For partes, try to keep numeric sequence if possible
         this.state.partes.forEach(p => {
-            if (!p.id) { p.id = generateId('parte'); count++; }
+            if (!p.id) {
+                const numericIds = this.state.partes.map(part => typeof part.id === 'number' ? part.id : parseInt(part.id)).filter(id => !isNaN(id));
+                const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+                p.id = maxId + 1;
+                count++;
+            }
         });
 
         this.state.actuaciones.forEach(a => {
@@ -608,7 +614,13 @@ class FileSystemAdapter {
 
                     // Ensure ID generation if missing
                     if (!newItem.id) {
-                        newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                        if (table === 'partes') {
+                            const numericIds = collection.map((item: any) => typeof item.id === 'number' ? item.id : parseInt(item.id)).filter((id: number) => !isNaN(id));
+                            const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+                            newItem.id = maxId + 1;
+                        } else {
+                            newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                        }
                     }
 
                     // PREVENT DUPLICATES: Check if ID already exists

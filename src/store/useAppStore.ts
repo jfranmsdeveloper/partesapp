@@ -27,15 +27,15 @@ interface AppState {
     // Data Actions
     fetchData: () => Promise<void>;
 
-    addParte: (parte: Omit<Parte, 'id' | 'actuaciones' | 'totalTime' | 'totalActuaciones' | 'userId' | 'pdfFile' | 'pdfFileSigned'> & { id?: number; pdfFile?: string }) => Promise<void>;
-    updateParteStatus: (id: number, status: ParteStatus) => Promise<void>;
-    updateParte: (id: number, data: Partial<Parte>) => Promise<void>;
-    deleteParte: (id: number) => Promise<void>;
-    deletePartes: (ids: number[]) => Promise<void>;
+    addParte: (parte: Omit<Parte, 'id' | 'actuaciones' | 'totalTime' | 'totalActuaciones' | 'userId' | 'pdfFile' | 'pdfFileSigned'> & { id?: number | string; pdfFile?: string }) => Promise<void>;
+    updateParteStatus: (id: number | string, status: ParteStatus) => Promise<void>;
+    updateParte: (id: number | string, data: Partial<Parte>) => Promise<void>;
+    deleteParte: (id: number | string) => Promise<void>;
+    deletePartes: (ids: (number | string)[]) => Promise<void>;
 
-    addActuacion: (parteId: number, actuacion: Omit<Actuacion, 'id' | 'parteId'>) => Promise<void>;
-    updateActuacion: (parteId: number, actuacionId: string, data: Partial<Actuacion>) => Promise<void>;
-    deleteActuacion: (parteId: number, actuacionId: string) => Promise<void>;
+    addActuacion: (parteId: number | string, actuacion: Omit<Actuacion, 'id' | 'parteId'>) => Promise<void>;
+    updateActuacion: (parteId: number | string, actuacionId: string, data: Partial<Actuacion>) => Promise<void>;
+    deleteActuacion: (parteId: number | string, actuacionId: string) => Promise<void>;
 
     addClient: (client: Omit<Client, 'id' | 'userId'>) => Promise<string | null>; // Returns the new client ID
     updateClient: (id: string, data: Partial<Client>) => Promise<void>;
@@ -45,7 +45,7 @@ interface AppState {
     updateSnippet: (id: string, data: Partial<Snippet>) => Promise<void>;
     deleteSnippet: (id: string) => Promise<void>;
 
-    getParte: (id: number) => Parte | undefined;
+    getParte: (id: number | string) => Parte | undefined;
     updateUserProfile: (email: string, data: Partial<User>) => Promise<void>;
     changePassword: (email: string, oldPass: string, newPass: string) => Promise<boolean>;
 
@@ -333,7 +333,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().fetchData();
     },
 
-    updateParteStatus: async (id, status) => {
+    updateParteStatus: async (id: number | string, status: ParteStatus) => {
         console.log('Updating Parte Status:', id, status);
         const closedAt = status === 'CERRADO' ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
 
@@ -350,7 +350,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
     },
 
-    updateParte: async (id, data) => {
+    updateParte: async (id: number | string, data: Partial<Parte>) => {
         const updatePayload: any = {};
         if (data.title) updatePayload.description = data.title;
         if (data.status) updatePayload.status = data.status;
@@ -380,14 +380,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
     },
 
-    deleteParte: async (id) => {
+    deleteParte: async (id: number | string) => {
         // Delete related actuaciones first to ensure definitive deletion
         await supabase.from('actuaciones').delete().eq('parte_id', id);
         // Then delete the parte
         await supabase.from('partes').delete().eq('id', id);
         await get().fetchData();
     },
-    deletePartes: async (ids) => {
+    deletePartes: async (ids: (number | string)[]) => {
         if (ids.length === 0) return;
         // Delete all actuaciones for these partes
         await supabase.from('actuaciones').delete().in('parte_id', ids);
@@ -396,7 +396,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().fetchData();
     },
 
-    addActuacion: async (parteId, actuacion) => {
+    addActuacion: async (parteId: number | string, actuacion: Omit<Actuacion, 'id' | 'parteId'>) => {
         const { error } = await supabase
             .from('actuaciones')
             .insert({
@@ -412,7 +412,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (!error) await get().fetchData();
     },
 
-    updateActuacion: async (_parteId, actuacionId, data) => {
+    updateActuacion: async (_parteId: number | string, actuacionId: string, data: Partial<Actuacion>) => {
         const payload: any = {};
         if (data.notes !== undefined) payload.description = data.notes;
         if (data.duration !== undefined) payload.duration = data.duration;
@@ -424,7 +424,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().fetchData();
     },
 
-    deleteActuacion: async (_parteId, actuacionId) => {
+    deleteActuacion: async (_parteId: number | string, actuacionId: string) => {
         await supabase.from('actuaciones').delete().eq('id', actuacionId);
         await get().fetchData();
     },
@@ -456,7 +456,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().fetchData();
     },
 
-    getParte: (id: number) => get().partes.find(p => p.id === id),
+    getParte: (id: number | string) => get().partes.find(p => p.id == id),
 
     updateUserProfile: async (_email, data) => {
         await supabase.auth.updateUser({ data: { full_name: data.name } });

@@ -19,7 +19,7 @@ export default function Management() {
 
     // Selection State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [selectedIds, setSelectedIds] = useState<(number | string)[]>([]);
 
     const [filters, setFilters] = useState<FilterState>({
         globalSearch: '',
@@ -76,7 +76,7 @@ export default function Management() {
     };
 
     // Selection Handlers
-    const toggleSelection = (id: number) => {
+    const toggleSelection = (id: number | string) => {
         setSelectedIds(prev => 
             prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
         );

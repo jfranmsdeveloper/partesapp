@@ -11,7 +11,7 @@ interface ParteCardProps {
     parte: Parte;
     isSelectionMode?: boolean;
     isSelected?: boolean;
-    onSelect?: (id: number) => void;
+    onSelect?: (id: number | string) => void;
 }
 
 export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: ParteCardProps) => {

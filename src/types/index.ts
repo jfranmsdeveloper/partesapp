@@ -19,7 +19,7 @@ export type ActuacionType =
 
 export interface Actuacion {
     id: string;
-    parteId: number;
+    parteId: number | string;
     type: ActuacionType;
     timestamp: string; // ISO date string
     duration: number; // minutes
@@ -30,7 +30,7 @@ export interface Actuacion {
 }
 
 export interface Parte {
-    id: number;
+    id: number | string;
     title: string;
     status: ParteStatus;
     createdAt: string; // ISO date string

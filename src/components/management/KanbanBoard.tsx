@@ -10,7 +10,7 @@ interface KanbanBoardProps {
 
 export const KanbanBoard = ({ partes }: KanbanBoardProps) => {
     const { updateParteStatus } = useUserStore();
-    const [draggedId, setDraggedId] = useState<number | null>(null);
+    const [draggedId, setDraggedId] = useState<number | string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
     const columns = {
@@ -19,7 +19,7 @@ export const KanbanBoard = ({ partes }: KanbanBoardProps) => {
         'CERRADO': partes.filter(p => p.status === 'CERRADO'),
     };
 
-    const handleDragStart = (e: React.DragEvent, id: number) => {
+    const handleDragStart = (e: React.DragEvent, id: number | string) => {
         setDraggedId(id);
         e.dataTransfer.effectAllowed = 'move';
         // Hide ghost image slightly or customize it if needed

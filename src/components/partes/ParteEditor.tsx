@@ -96,7 +96,7 @@ export const ParteEditor = () => {
             title,
             status: 'ABIERTO',
             createdBy,
-            id: customId ? parseInt(customId) : undefined,
+            id: customId || undefined,
             createdAt: customDate.replace('T', ' ') + (customDate.includes(':') && customDate.split(':').length === 2 ? ':00' : ''),
             pdfFile: uploadedPdf,
             clientId: selectedClientId
@@ -182,7 +182,7 @@ export const ParteEditor = () => {
                     title: data.title || file.name,
                     status: 'ABIERTO',
                     createdBy: currentUser?.user_metadata?.full_name || currentUser?.name || 'Sistema',
-                    id: data.id ? parseInt(data.id) : undefined,
+                    id: data.id || undefined,
                     createdAt: formattedDate,
                     pdfFile: data.pdfFile,
                     clientId: clientId || undefined
@@ -717,7 +717,7 @@ export const ParteEditor = () => {
                                 <div className="md:col-span-2">
                                     <Input
                                         label="Nº Parte"
-                                        type="number"
+                                        type="text"
                                         value={customId}
                                         onChange={(e) => setCustomId(e.target.value)}
                                         placeholder="Auto"
