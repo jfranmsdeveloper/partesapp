@@ -548,7 +548,7 @@ export const ParteEditor = () => {
                     <Card>
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             Datos Generales
-                            {!isNew && !uploadedPdf && (
+                            {!isNew && !currentParte?.pdfFile && !uploadedPdf && (
                                 <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                                     <FileWarning className="w-3 h-3" />
                                     SIN PDF
@@ -556,7 +556,7 @@ export const ParteEditor = () => {
                             )}
                         </h2>
 
-                        {!isNew && !uploadedPdf && (
+                        {!isNew && currentParte && !currentParte.pdfFile && !uploadedPdf && (
                             <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl flex items-start gap-3">
                                 <FileWarning className="w-5 h-5 text-orange-600 mt-0.5" />
                                 <div className="space-y-1">

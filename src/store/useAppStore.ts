@@ -251,8 +251,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
             // Map to internal types
             const mappedPartes: Parte[] = (partesData || []).map((p: any) => {
-                const pActs = (actData || []).filter((a: any) => a.parte_id === p.id);
-                const client = mappedClients.find(c => c.id === p.client_id);
+                const pActs = (actData || []).filter((a: any) => String(a.parte_id) === String(p.id));
+                const client = mappedClients.find(c => String(c.id) === String(p.client_id));
 
                 return {
                     id: p.id,

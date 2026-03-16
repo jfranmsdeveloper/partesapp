@@ -4,7 +4,7 @@ import { TimePerClientChart } from '../../components/dashboard/TimePerClientChar
 import { ActivityTypeChart } from '../../components/dashboard/ActivityTypeChart';
 import { TrendChart } from '../../components/dashboard/TrendChart';
 import { Card } from '../../components/ui/Card';
-import { Clock, Activity, Users, BarChart3, ArrowUpRight, Target, Zap } from 'lucide-react';
+import { Clock, Activity, Users, BarChart3, ArrowUpRight, Zap } from 'lucide-react';
 import {
     format,
     subDays,
@@ -297,9 +297,9 @@ export default function Analytics() {
                             {analyticsData.timePerUser.length > 0 ? (
                                 <TimePerClientChart data={analyticsData.timePerUser} />
                             ) : (
-                                <div className="h-[400px] flex flex-col items-center justify-center text-slate-300">
-                                     <Target className="w-16 h-16 mb-4 opacity-20" />
-                                     <p className="font-bold text-lg">Sin datos aún</p>
+                                <div className="h-[400px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 transition-all duration-300">
+                                    <Users className="w-16 h-16 mb-4 opacity-10" />
+                                    <p className="text-sm font-bold tracking-tight opacity-50">No hay datos de técnicos para este periodo</p>
                                 </div>
                             )}
                         </div>
