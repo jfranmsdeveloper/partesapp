@@ -50,7 +50,7 @@ export const ParteEditor = () => {
     const [showCopied, setShowCopied] = useState(false);
 
 
-    const currentParte = id ? partes.find(p => p.id === parseInt(id)) : undefined;
+    const currentParte = id ? partes.find(p => String(p.id) === String(id)) : undefined;
 
     // Initialize form if editing
     useEffect(() => {
@@ -618,51 +618,6 @@ export const ParteEditor = () => {
                                         onChange={handleSingleUpload}
                                     />
                                 </div>
-                            </div>
-                        )}
-                                        className="hidden"
-                                    />
-                                    <div className={clsx("p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform", 
-                                        uploadedPdf ? "bg-green-100 text-green-600" : "bg-white text-blue-500 border border-slate-100")}>
-                                        <FileText className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-slate-800">Importar PDF Individual</p>
-                                        <p className="text-xs text-slate-500 mt-1">Extrae datos para que los revises y completes el formulario.</p>
-                                    </div>
-                                </div>
-
-                                {/* Option 2: Bulk */}
-                                <div 
-                                    onClick={() => !isUploading && bulkInputRef.current?.click()}
-                                    className={clsx("p-6 border-2 border-dashed rounded-xl transition-all cursor-pointer group flex flex-col items-center text-center gap-3",
-                                        "border-slate-200 hover:border-orange-400 hover:bg-orange-50/30",
-                                        isUploading && "opacity-50 cursor-not-allowed")}
-                                >
-                                    <input
-                                        type="file"
-                                        ref={bulkInputRef}
-                                        accept=".pdf"
-                                        multiple
-                                        onChange={handleBulkUpload}
-                                        className="hidden"
-                                    />
-                                    <div className="p-3 rounded-full shadow-sm bg-white text-orange-500 border border-slate-100 group-hover:scale-110 transition-transform">
-                                        <Files className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-slate-800">Carga Masiva (Varios)</p>
-                                        <p className="text-xs text-slate-500 mt-1">Procesa varios PDFs y los guarda automáticamente.</p>
-                                    </div>
-                                </div>
-
-                                {/* Global Status Overlay if uploading */}
-                                {isUploading && (
-                                    <div className="md:col-span-2 p-4 bg-blue-600 rounded-xl flex items-center justify-center gap-3 text-white shadow-lg animate-pulse">
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span className="font-medium">{uploadStatus}</span>
-                                    </div>
-                                )}
                             </div>
                         )}
 

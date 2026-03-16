@@ -24,6 +24,8 @@ export default function Analytics() {
     const filteredPartes = useMemo(() => {
         const start = startOfDay(subDays(new Date(), range));
         const end = endOfDay(new Date());
+        const userRole = currentUser?.role || currentUser?.user_metadata?.role;
+        const isAdmin = userRole === 'admin';
 
         return partes.filter(p => {
             if (!p.createdAt) return false;
@@ -31,7 +33,9 @@ export default function Analytics() {
                 const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt);
                 const isInRange = isWithinInterval(date, { start, end });
                 
-                // More robust user matching
+                // If admin, show all. If user, show only theirs.
+                if (isAdmin) return isInRange;
+
                 const userMatch = selectedUserId && (
                     p.userId === selectedUserId || 
                     p.createdBy === currentUser?.email ||
@@ -151,14 +155,14 @@ export default function Analytics() {
 
             {/* Metric Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="p-8 rounded-[2rem] bg-slate-900 text-white shadow-xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                <div className="p-8 rounded-[2rem] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl relative overflow-hidden group border border-white/5">
+                    <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform duration-500">
                         <Clock className="w-16 h-16" />
                     </div>
-                    <p className="text-slate-100 text-xs font-black uppercase tracking-[0.2em] mb-1">Inversión Total</p>
-                    <h3 className="text-4xl font-black tabular-nums">{analyticsData.metrics.totalDuration} <span className="text-lg font-light opacity-80">min</span></h3>
-                    <div className="mt-4 w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-white rounded-full" style={{ width: '70%' }} />
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Inversión Total</p>
+                    <h3 className="text-4xl font-black tabular-nums">{analyticsData.metrics.totalDuration} <span className="text-lg font-light opacity-60">min</span></h3>
+                    <div className="mt-4 w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.6)]" style={{ width: '70%', transition: 'width 1s ease-out' }} />
                     </div>
                 </div>
 
