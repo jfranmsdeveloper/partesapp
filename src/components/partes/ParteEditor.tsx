@@ -22,7 +22,7 @@ export const ParteEditor = () => {
     const { id } = useParams();
     const isNew = !id;
 
-    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF, linkPdfToParte } = useUserStore();
+    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF, linkPdfToParte, isLoading } = useUserStore();
 
     const [title, setTitle] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
@@ -440,8 +440,28 @@ export const ParteEditor = () => {
     };
 
 
+    if (!isNew && isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-vh-50 py-20 gap-4">
+                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                <p className="text-slate-500 animate-pulse font-medium">Cargando información del parte...</p>
+            </div>
+        );
+    }
+
     if (!isNew && !currentParte) {
-        return <div>Parte no encontrado</div>;
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="p-4 bg-red-50 rounded-full">
+                    <Trash2 className="w-10 h-10 text-red-400" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800">Parte no encontrado</h2>
+                <p className="text-slate-500 text-center max-w-xs">El parte que buscas no existe o ha sido eliminado.</p>
+                <Button onClick={() => navigate('/management')} variant="outline">
+                    Volver a Gestión
+                </Button>
+            </div>
+        );
     }
 
     return (

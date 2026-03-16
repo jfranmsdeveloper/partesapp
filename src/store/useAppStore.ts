@@ -457,7 +457,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().fetchData();
     },
 
-    getParte: (id: number | string) => get().partes.find(p => p.id == id),
+    getParte: (id: number | string) => get().partes.find(p => String(p.id) === String(id)),
 
     updateUserProfile: async (_email, data) => {
         await supabase.auth.updateUser({ data: { full_name: data.name } });
