@@ -4,11 +4,9 @@ import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import type { ActuacionType } from '../../types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { DatePicker } from '../ui/DatePicker';
 import { NotionEditor } from '../ui/NotionEditor';
 import { X, Layers, Clock, User, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
-import { toLocalISOString } from '../../utils/dateUtils';
 
 interface BulkActuacionModalProps {
     isOpen: boolean;
@@ -24,7 +22,6 @@ export const BulkActuacionModal = ({ isOpen, onClose, selectedIds }: BulkActuaci
     const [duration, setDuration] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [user, setUser] = useState<string>(currentUser?.name || currentUser?.user_metadata?.full_name || '');
-    const [customTimestamp, setCustomTimestamp] = useState(toLocalISOString(new Date()));
     const [isSaving, setIsSaving] = useState(false);
 
     const handleNotesChange = useCallback((html: string) => {
@@ -44,7 +41,6 @@ export const BulkActuacionModal = ({ isOpen, onClose, selectedIds }: BulkActuaci
                 duration: parseInt(duration),
                 notes,
                 user,
-                timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : ''),
                 priority: 'MEDIA', // Default for bulk
                 tags: []
             });
@@ -192,29 +188,13 @@ export const BulkActuacionModal = ({ isOpen, onClose, selectedIds }: BulkActuaci
                                             </select>
                                         </div>
 
-                                        <div className="space-y-2">
-                                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                                <Layers className="w-3 h-3" /> Fecha de Registro
+                                        <div className="space-y-2 p-4 bg-orange-100/50 dark:bg-orange-950/20 rounded-2xl border border-orange-200/50">
+                                            <label className="text-xs font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest flex items-center gap-2">
+                                                <Layers className="w-3 h-3" /> Fecha Auto-calculada
                                             </label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <DatePicker
-                                                    value={customTimestamp.split('T')[0]}
-                                                    onChange={(date) => {
-                                                        const time = customTimestamp.split('T')[1]?.slice(0, 5) || '09:00';
-                                                        setCustomTimestamp(`${date}T${time}`);
-                                                    }}
-                                                    className="bg-white dark:bg-slate-900 border-0 shadow-sm text-xs"
-                                                />
-                                                <Input
-                                                    type="time"
-                                                    value={customTimestamp.split('T')[1]?.slice(0, 5) || '09:00'}
-                                                    onChange={(e) => {
-                                                        const date = customTimestamp.split('T')[0];
-                                                        setCustomTimestamp(`${date}T${e.target.value}`);
-                                                    }}
-                                                    className="bg-white dark:bg-slate-900 border-0 shadow-sm text-xs"
-                                                />
-                                            </div>
+                                            <p className="text-[10px] text-orange-700/80 dark:text-orange-300/60 leading-relaxed font-medium">
+                                                Esta actuación se registrará automáticamente <strong>al finalizar</strong> el tiempo actual de cada parte (Fecha PDF + duración acumulada).
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

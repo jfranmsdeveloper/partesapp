@@ -62,7 +62,7 @@ interface AppState {
      */
     upsertClientFromPDF: (fullName: string, code?: string) => Promise<string | null>;
     linkPdfToParte: (currentId: number | string, newId: number | string, pdfData: string) => Promise<void>;
-    bulkAddActuacion: (parteIds: (number | string)[], actuacion: Omit<Actuacion, 'id' | 'parteId'>) => Promise<void>;
+    bulkAddActuacion: (parteIds: (number | string)[], actuacion: Omit<Actuacion, 'id' | 'parteId' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -647,15 +647,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     bulkAddActuacion: async (parteIds, actuacion) => {
         if (parteIds.length === 0) return;
 
-        const operations = parteIds.map(parteId => ({
-            id: crypto.randomUUID ? crypto.randomUUID() : `act-${Date.now()}-${Math.random()}`,
-            parte_id: parteId,
-            type: actuacion.type,
-            description: actuacion.notes,
-            date: actuacion.timestamp || new Date().toISOString(),
-            duration: actuacion.duration,
-            user: actuacion.user
-        }));
+        const { partes } = get();
+
+        const operations = parteIds.map(parteId => {
+            const parte = partes.find(p => String(p.id) === String(parteId));
+            let timestamp = actuacion.timestamp;
+
+            if (parte) {
+                // Auto-calculate timestamp based on report start date + current total duration
+                const baseDate = new Date(parte.createdAt);
+                const finalDate = new Date(baseDate.getTime() + (parte.totalTime * 60 * 1000));
+                // Database format (YYYY-MM-DD HH:MM:SS)
+                timestamp = finalDate.toISOString().replace('T', ' ').slice(0, 19);
+            }
+
+            return {
+                id: crypto.randomUUID ? crypto.randomUUID() : `act-${Date.now()}-${Math.random()}`,
+                parte_id: parteId,
+                type: actuacion.type,
+                description: actuacion.notes,
+                date: timestamp || new Date().toISOString(),
+                duration: actuacion.duration,
+                user: actuacion.user
+            };
+        });
 
         const { error } = await supabase
             .from('actuaciones')
