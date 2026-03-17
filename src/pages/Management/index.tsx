@@ -10,12 +10,14 @@ import type { FilterState } from '../../components/management/ManagementFilters'
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
-import { Square, CheckSquare, Trash2, X } from 'lucide-react';
+import { Square, CheckSquare, Trash2, X, Plus } from 'lucide-react';
+import { BulkActuacionModal } from '../../components/management/BulkActuacionModal';
 
 export default function Management() {
     const { partes, fixLegacyAuthorship, currentUser, deletePartes } = useUserStore();
     const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
     // Selection State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -189,6 +191,15 @@ export default function Management() {
                         
                         <div className="flex items-center gap-3">
                             <Button 
+                                variant="primary" 
+                                size="sm" 
+                                className="bg-orange-500 hover:bg-orange-600 border-0"
+                                onClick={() => setIsBulkModalOpen(true)}
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Añadir Actuación
+                            </Button>
+                            <Button 
                                 variant="danger" 
                                 size="sm" 
                                 className="bg-red-500 hover:bg-red-600 border-0"
@@ -214,6 +225,16 @@ export default function Management() {
             <AddClientModal
                 isOpen={isClientModalOpen}
                 onClose={() => setIsClientModalOpen(false)}
+            />
+
+            <BulkActuacionModal
+                isOpen={isBulkModalOpen}
+                onClose={() => {
+                    setIsBulkModalOpen(false);
+                    setIsSelectionMode(false);
+                    setSelectedIds([]);
+                }}
+                selectedIds={selectedIds}
             />
         </div>
     );

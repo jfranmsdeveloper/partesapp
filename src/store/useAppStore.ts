@@ -62,6 +62,7 @@ interface AppState {
      */
     upsertClientFromPDF: (fullName: string, code?: string) => Promise<string | null>;
     linkPdfToParte: (currentId: number | string, newId: number | string, pdfData: string) => Promise<void>;
+    bulkAddActuacion: (parteIds: (number | string)[], actuacion: Omit<Actuacion, 'id' | 'parteId'>) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -288,7 +289,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                         notes: a.description,
                         user: a.user || 'Sistema'
                     })),
-                    totalTime: Number(p.total_time || pActs.reduce((acc: number, act: any) => acc + (Number(act.duration) || 0), 0)),
+                    totalTime: (Number(p.total_time) || 0) + pActs.reduce((acc: number, act: any) => acc + (Number(act.duration) || 0), 0),
                     totalActuaciones: pActs.length
                 };
             });
@@ -641,6 +642,31 @@ export const useAppStore = create<AppState>((set, get) => ({
             .eq('id', id);
 
         if (!error) await get().fetchData();
+    },
+
+    bulkAddActuacion: async (parteIds, actuacion) => {
+        if (parteIds.length === 0) return;
+
+        const operations = parteIds.map(parteId => ({
+            id: crypto.randomUUID ? crypto.randomUUID() : `act-${Date.now()}-${Math.random()}`,
+            parte_id: parteId,
+            type: actuacion.type,
+            description: actuacion.notes,
+            date: actuacion.timestamp || new Date().toISOString(),
+            duration: actuacion.duration,
+            user: actuacion.user
+        }));
+
+        const { error } = await supabase
+            .from('actuaciones')
+            .insert(operations);
+
+        if (error) {
+            console.error('Error in bulkAddActuacion:', error);
+            throw error;
+        }
+
+        await get().fetchData();
     }
 }));
 
