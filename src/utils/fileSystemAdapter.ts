@@ -588,10 +588,23 @@ class FileSystemAdapter {
                             const ok = await this.saveDatabase();
                             if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo. Verifica permisos.' } };
                         }
+                    } else if (pendingAction.column && pendingAction.inValues) {
+                        const vals = pendingAction.inValues.map((v: any) => String(v));
+                        let updated = false;
+                        for (let i = 0; i < collection.length; i++) {
+                            if (vals.includes(String(collection[i][pendingAction.column]))) {
+                                collection[i] = { ...collection[i], ...pendingAction.body };
+                                updated = true;
+                            }
+                        }
+                        if (updated) {
+                            const ok = await this.saveDatabase();
+                            if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
+                        }
                     } else if (pendingAction.column && pendingAction.val) {
                         let updated = false;
                         for (let i = 0; i < collection.length; i++) {
-                            if (collection[i][pendingAction.column] === pendingAction.val) {
+                            if (String(collection[i][pendingAction.column]) === String(pendingAction.val)) {
                                 collection[i] = { ...collection[i], ...pendingAction.body };
                                 updated = true;
                             }
@@ -617,60 +630,67 @@ class FileSystemAdapter {
                     return { data: null, error: null };
 
                 } else if (pendingAction.type === 'insert') {
-                    let newItem = { ...pendingAction.body };
+                    const rows = Array.isArray(pendingAction.body) ? pendingAction.body : [pendingAction.body];
+                    const inserted = [];
 
-                    // Ensure ID generation if missing
-                    if (!newItem.id) {
-                        if (table === 'partes') {
-                            // If it doesn't have a PDF, it's a manual entry
-                            const isManual = !newItem.pdf_file;
-                            if (isManual) {
-                                const manualIds = collection
-                                    .filter((item: any) => typeof item.id === 'string' && item.id.startsWith('MAN-'))
-                                    .map((item: any) => parseInt(item.id.split('-')[1]))
-                                    .filter((num: number) => !isNaN(num));
-                                const maxManual = manualIds.length > 0 ? Math.max(...manualIds) : 0;
-                                newItem.id = `MAN-${maxManual + 1}`;
+                    for (const row of rows) {
+                        let newItem = { ...row };
+
+                        // Ensure ID generation if missing
+                        if (!newItem.id) {
+                            if (table === 'partes') {
+                                // If it doesn't have a PDF, it's a manual entry
+                                const isManual = !newItem.pdf_file;
+                                if (isManual) {
+                                    const manualIds = collection
+                                        .filter((item: any) => typeof item.id === 'string' && item.id.startsWith('MAN-'))
+                                        .map((item: any) => parseInt(item.id.split('-')[1]))
+                                        .filter((num: number) => !isNaN(num));
+                                    const maxManual = manualIds.length > 0 ? Math.max(...manualIds) : 0;
+                                    newItem.id = `MAN-${maxManual + 1}`;
+                                } else {
+                                    const numericIds = collection
+                                        .map((item: any) => {
+                                            const raw = item.id;
+                                            if (typeof raw === 'number') return raw;
+                                            if (typeof raw === 'string' && !raw.startsWith('MAN-')) return parseInt(raw);
+                                            return NaN;
+                                        })
+                                        .filter((id: number) => !isNaN(id));
+                                    const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+                                    newItem.id = String(maxId + 1);
+                                }
                             } else {
-                                const numericIds = collection
-                                    .map((item: any) => {
-                                        const raw = item.id;
-                                        if (typeof raw === 'number') return raw;
-                                        if (typeof raw === 'string' && !raw.startsWith('MAN-')) return parseInt(raw);
-                                        return NaN;
-                                    })
-                                    .filter((id: number) => !isNaN(id));
-                                const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
-                                newItem.id = String(maxId + 1);
+                                newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                             }
-                        } else {
-                            newItem.id = crypto.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                         }
+
+                        // PREVENT DUPLICATES: Check if ID already exists
+                        const exists = collection.some((item: any) => String(item.id) === String(newItem.id));
+                        if (exists) {
+                            continue; // Skip or handle error? Standardizing on skip for batch if collision, but usually we throw.
+                        }
+
+                        if (newItem.pdf_file && newItem.pdf_file.startsWith('data:')) {
+                            const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
+                            newItem.pdf_file = await this.saveFile(newItem.pdf_file, userName, 'parte');
+                        }
+                        if (newItem.pdf_file_signed && newItem.pdf_file_signed.startsWith('data:')) {
+                            const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
+                            newItem.pdf_file_signed = await this.saveFile(newItem.pdf_file_signed, userName, 'parte_signed');
+                        }
+                        if (newItem.avatar_url && newItem.avatar_url.startsWith('data:')) {
+                            const userName = newItem.user_metadata?.full_name || 'Avatar';
+                            newItem.avatar_url = await this.saveFile(newItem.avatar_url, userName, 'avatar');
+                        }
+
+                        collection.push(newItem);
+                        inserted.push(newItem);
                     }
 
-                    // PREVENT DUPLICATES: Check if ID already exists
-                    const exists = collection.some((item: any) => String(item.id) === String(newItem.id));
-                    if (exists) {
-                        return { data: null, error: { message: `Ya existe un registro con el ID ${newItem.id}.` } };
-                    }
-
-                    if (newItem.pdf_file && newItem.pdf_file.startsWith('data:')) {
-                        const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
-                        newItem.pdf_file = await this.saveFile(newItem.pdf_file, userName, 'parte');
-                    }
-                    if (newItem.pdf_file_signed && newItem.pdf_file_signed.startsWith('data:')) {
-                        const userName = newItem.created_by || this.activeSessionUser?.user_metadata?.full_name || 'Sistema';
-                        newItem.pdf_file_signed = await this.saveFile(newItem.pdf_file_signed, userName, 'parte_signed');
-                    }
-                    if (newItem.avatar_url && newItem.avatar_url.startsWith('data:')) {
-                        const userName = newItem.user_metadata?.full_name || 'Avatar';
-                        newItem.avatar_url = await this.saveFile(newItem.avatar_url, userName, 'avatar');
-                    }
-
-                    this.state[table].push(newItem);
                     const ok = await this.saveDatabase();
                     if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
-                    return { data: [newItem], error: null };
+                    return { data: inserted, error: null };
                 }
             }
 
