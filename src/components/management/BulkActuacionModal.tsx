@@ -22,6 +22,7 @@ export const BulkActuacionModal = ({ isOpen, onClose, selectedIds }: BulkActuaci
     const [duration, setDuration] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [user, setUser] = useState<string>(currentUser?.name || currentUser?.user_metadata?.full_name || '');
+    const [shouldClose, setShouldClose] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     const handleNotesChange = useCallback((html: string) => {
@@ -43,12 +44,13 @@ export const BulkActuacionModal = ({ isOpen, onClose, selectedIds }: BulkActuaci
                 user,
                 priority: 'MEDIA', // Default for bulk
                 tags: []
-            });
+            }, { shouldClose });
             onClose();
             // Reset form
             setType(null);
             setDuration('');
             setNotes('');
+            setShouldClose(false);
         } catch (error) {
             console.error('Bulk add error:', error);
             alert('Error al realizar la operación masiva');
@@ -222,24 +224,41 @@ export const BulkActuacionModal = ({ isOpen, onClose, selectedIds }: BulkActuaci
                             </section>
 
                             {/* Footer Actions */}
-                            <div className="flex justify-end items-center gap-4 pt-8 border-t border-slate-100 dark:border-slate-800 mt-12">
-                                <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    onClick={onClose}
-                                    className="px-8 py-3 font-bold text-slate-500"
-                                >
-                                    Cancelar selección
-                                </Button>
-                                <Button 
-                                    type="submit" 
-                                    disabled={!type || !duration} 
-                                    variant="primary"
-                                    className="px-12 py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 font-black text-lg shadow-2xl shadow-orange-500/20 disabled:grayscale disabled:opacity-50"
-                                >
-                                    <Layers className="w-5 h-5 mr-3" />
-                                    Añadir Actuaciones ({selectedIds.length})
-                                </Button>
+                            <div className="flex justify-end items-center gap-6 pt-8 border-t border-slate-100 dark:border-slate-800 mt-12">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={shouldClose}
+                                            onChange={(e) => setShouldClose(e.target.checked)}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                                    </div>
+                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-orange-500 transition-colors">
+                                        Cerrar partes al finalizar
+                                    </span>
+                                </label>
+
+                                <div className="flex gap-4">
+                                    <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        onClick={onClose}
+                                        className="px-8 py-3 font-bold text-slate-500"
+                                    >
+                                        Cancelar selección
+                                    </Button>
+                                    <Button 
+                                        type="submit" 
+                                        disabled={!type || !duration} 
+                                        variant="primary"
+                                        className="px-12 py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 font-black text-lg shadow-2xl shadow-orange-500/20 disabled:grayscale disabled:opacity-50"
+                                    >
+                                        <Layers className="w-5 h-5 mr-3" />
+                                        {shouldClose ? 'Añadir y Cerrar' : 'Añadir Actuaciones'} ({selectedIds.length})
+                                    </Button>
+                                </div>
                             </div>
                         </form>
                     )}

@@ -62,7 +62,7 @@ interface AppState {
      */
     upsertClientFromPDF: (fullName: string, code?: string) => Promise<string | null>;
     linkPdfToParte: (currentId: number | string, newId: number | string, pdfData: string) => Promise<void>;
-    bulkAddActuacion: (parteIds: (number | string)[], actuacion: Omit<Actuacion, 'id' | 'parteId' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
+    bulkAddActuacion: (parteIds: (number | string)[], actuacion: Omit<Actuacion, 'id' | 'parteId' | 'timestamp'> & { timestamp?: string }, options?: { shouldClose?: boolean }) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -644,9 +644,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (!error) await get().fetchData();
     },
 
-    bulkAddActuacion: async (parteIds, actuacion) => {
+    bulkAddActuacion: async (parteIds, actuacion, options) => {
         if (parteIds.length === 0) return;
 
+        console.log('Starting bulkAddActuacion for IDs:', parteIds);
         const { partes } = get();
 
         const operations = parteIds.map(parteId => {
@@ -654,10 +655,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             let timestamp = actuacion.timestamp;
 
             if (parte) {
-                // Auto-calculate timestamp based on report start date + current total duration
                 const baseDate = new Date(parte.createdAt);
                 const finalDate = new Date(baseDate.getTime() + (parte.totalTime * 60 * 1000));
-                // Database format (YYYY-MM-DD HH:MM:SS)
                 timestamp = finalDate.toISOString().replace('T', ' ').slice(0, 19);
             }
 
@@ -665,22 +664,40 @@ export const useAppStore = create<AppState>((set, get) => ({
                 id: crypto.randomUUID ? crypto.randomUUID() : `act-${Date.now()}-${Math.random()}`,
                 parte_id: parteId,
                 type: actuacion.type,
-                description: actuacion.notes,
+                description: actuacion.notes || '',
                 date: timestamp || new Date().toISOString(),
                 duration: actuacion.duration,
                 user: actuacion.user
             };
         });
 
-        const { error } = await supabase
+        console.log('Inserting operations:', operations);
+        const { error: insertError } = await supabase
             .from('actuaciones')
             .insert(operations);
 
-        if (error) {
-            console.error('Error in bulkAddActuacion:', error);
-            throw error;
+        if (insertError) {
+            console.error('Error inserting bulk actuaciones:', insertError);
+            throw insertError;
         }
 
+        if (options?.shouldClose) {
+            console.log('Closing partes in bulk...');
+            const { error: closeError } = await supabase
+                .from('partes')
+                .update({ 
+                    status: 'CERRADO',
+                    closed_at: new Date().toISOString() 
+                })
+                .in('id', parteIds);
+            
+            if (closeError) {
+                console.error('Error closing partes in bulk:', closeError);
+                throw closeError;
+            }
+        }
+
+        console.log('Bulk operations completed successfully. Refreshing data...');
         await get().fetchData();
     }
 }));
