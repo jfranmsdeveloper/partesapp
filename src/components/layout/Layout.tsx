@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Menu } from 'lucide-react';
 import { CommandPalette } from '../ui/CommandPalette';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
 
 export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
