@@ -199,7 +199,7 @@ export const ParteEditor = () => {
                 }
 
                 // 2. Parse Date
-                let createdAt = undefined;
+                let createdAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
                 if (data.date) {
                     const [d, m, y] = data.date.split(/[-/]/);
                     const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
@@ -601,6 +601,7 @@ export const ParteEditor = () => {
                                 className="hidden"
                                 accept=".pdf"
                                 onChange={handleSingleUpload}
+                                onClick={(e) => e.stopPropagation()}
                             />
                         </div>
 
@@ -634,6 +635,7 @@ export const ParteEditor = () => {
                                 accept=".pdf"
                                 multiple
                                 onChange={handleBulkUpload}
+                                onClick={(e) => e.stopPropagation()}
                             />
                         </div>
                     </div>
@@ -763,6 +765,7 @@ export const ParteEditor = () => {
                                         className="hidden"
                                         accept=".pdf"
                                         onChange={handleSingleUpload}
+                                        onClick={(e) => e.stopPropagation()}
                                     />
                                 </div>
                             </div>
@@ -801,7 +804,7 @@ export const ParteEditor = () => {
                                                 id="upload-pdf-manual"
                                             />
                                             <label htmlFor="upload-pdf-manual">
-                                                <Button variant="outline" className="w-full cursor-pointer" type="button" onClick={() => document.getElementById('upload-pdf-manual')?.click()}>
+                                                <Button variant="outline" className="w-full cursor-pointer" type="button" onClick={(e) => { e.preventDefault(); document.getElementById('upload-pdf-manual')?.click(); }}>
                                                     <FileUp className="w-4 h-4 mr-2" />
                                                     Subir PDF Abierto
                                                 </Button>
@@ -838,7 +841,7 @@ export const ParteEditor = () => {
                                                 id="upload-pdf-signed"
                                             />
                                             <label htmlFor="upload-pdf-signed">
-                                                <Button variant="outline" className="w-full dashed border-slate-300 text-slate-500 hover:text-blue-500 cursor-pointer" type="button" onClick={() => document.getElementById('upload-pdf-signed')?.click()}>
+                                                <Button variant="outline" className="w-full dashed border-slate-300 text-slate-500 hover:text-blue-500 cursor-pointer" type="button" onClick={(e) => { e.preventDefault(); document.getElementById('upload-pdf-signed')?.click(); }}>
                                                     <FileUp className="w-4 h-4 mr-2" />
                                                     Subir Firmado
                                                 </Button>
