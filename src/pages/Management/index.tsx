@@ -180,23 +180,23 @@ export default function Management() {
                 </h1>
                 <div className="flex gap-2">
                     <Button 
-                        variant="outline"
+                        variant="primary"
                         size="sm"
                         onClick={() => navigate('/new')}
-                        className="bg-white dark:bg-slate-800 border-blue-200 hover:border-blue-300 dark:border-blue-900 shadow-sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md border-0"
                     >
-                        <FileUp className="w-4 h-4 mr-2 text-blue-500" />
-                        Añadir Individual
+                        <FileUp className="w-4 h-4 mr-2" />
+                        PDF Individual
                     </Button>
                     <Button 
-                        variant="outline"
+                        variant="primary"
                         size="sm"
                         onClick={() => bulkInputRef.current?.click()}
                         disabled={isBulkUploading}
-                        className="bg-white dark:bg-slate-800 border-orange-200 hover:border-orange-300 dark:border-orange-900 shadow-sm"
+                        className="bg-orange-500 hover:bg-orange-600 text-white shadow-md border-0"
                     >
-                        {isBulkUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-orange-500" /> : <Files className="w-4 h-4 mr-2 text-orange-500" />}
-                        Carga Masiva
+                        {isBulkUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Files className="w-4 h-4 mr-2" />}
+                        Carga Masiva PDF
                     </Button>
                     <input
                         type="file"

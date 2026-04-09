@@ -3,7 +3,7 @@ import { useUserStore } from '../../hooks/useUserStore';
 import { KPICard } from '../../components/dashboard/KPICard';
 import { StatusDistributionChart } from '../../components/dashboard/StatusDistributionChart';
 
-import { FileText, Clock, CheckCircle, Activity, FileDown, Calendar, Users, TrendingUp, ArrowRight } from 'lucide-react';
+import { FileText, Clock, CheckCircle, Activity, FileDown, Calendar, Users, TrendingUp, ArrowRight, FileUp, Files, Loader2 } from 'lucide-react';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import { Button } from '../../components/ui/Button';
 import { ReportModal } from '../../components/reports/ReportModal';
@@ -11,11 +11,18 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Card } from '../../components/ui/Card';
 import clsx from 'clsx';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useRef } from 'react';
+import { parsePartePDF } from '../../utils/pdfParser';
 
 export default function Dashboard() {
-    const { partes, currentUser } = useUserStore();
+    const navigate = useNavigate();
+    const { partes, currentUser, addParte, upsertClientFromPDF } = useUserStore();
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+    // Bulk Upload State
+    const [isBulkUploading, setIsBulkUploading] = useState(false);
+    const bulkInputRef = useRef<HTMLInputElement>(null);
     
     // Strictly filter to current user only as requested
     const selectedUserId = currentUser?.id || currentUser?.email;
@@ -81,6 +88,60 @@ export default function Dashboard() {
         };
     }, [filteredPartes]);
 
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setIsBulkUploading(true);
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const file of files) {
+            try {
+                const data = await parsePartePDF(file);
+                
+                let clientId = undefined;
+                if (data.createdBy) {
+                    clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || undefined;
+                }
+
+                let createdAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                if (data.date) {
+                    const [d, m, y] = data.date.split(/[-/]/);
+                    const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    let timeStr = data.time || '09:00';
+                    createdAt = `${dateStr} ${timeStr}:00`;
+                }
+
+                await addParte({
+                    title: data.title || `Parte importado - ${file.name}`,
+                    status: 'ABIERTO',
+                    createdBy: data.createdBy || 'Sistema',
+                    id: data.id || undefined,
+                    createdAt: createdAt,
+                    pdfFile: data.pdfFile,
+                    clientId: clientId
+                });
+
+                successCount++;
+            } catch (err) {
+                console.error(`Error importing ${file.name}:`, err);
+                errorCount++;
+            }
+        }
+
+        setIsBulkUploading(false);
+        if (e.target) e.target.value = '';
+
+        if (errorCount === 0) {
+            alert(`✅ ¡Éxito! Se han importado ${successCount} partes correctamente.`);
+            navigate('/management');
+        } else {
+            alert(`⚠️ Se importaron ${successCount} partes, pero hubo errores en ${errorCount} archivos.`);
+            navigate('/management');
+        }
+    };
+
     return (
         <div className="w-full font-sans selection:bg-orange-500/30">
             <div className="relative z-10 w-full mx-auto space-y-8">
@@ -100,16 +161,43 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    <Button
-                        onClick={() => setIsReportModalOpen(true)}
-                        className="group relative overflow-hidden bg-orange-500 dark:bg-orange-400 hover:bg-orange-600 dark:hover:bg-orange-300 text-white dark:text-slate-900 rounded-[24px] px-8 py-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
-                        <div className="relative flex items-center gap-3 font-semibold text-lg">
-                            <FileDown className="w-5 h-5" />
-                            <span>Exportar Informe</span>
-                        </div>
-                    </Button>
+                    <div className="flex flex-wrap gap-4">
+                        <Button
+                            onClick={() => navigate('/new')}
+                            variant="primary"
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-[20px] px-6 py-4 shadow-xl border-0"
+                        >
+                            <FileUp className="w-5 h-5 mr-2" />
+                            Importar PDF Individual
+                        </Button>
+
+                        <Button
+                            onClick={() => bulkInputRef.current?.click()}
+                            variant="primary"
+                            disabled={isBulkUploading}
+                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-[20px] px-6 py-4 shadow-xl border-0"
+                        >
+                            {isBulkUploading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Files className="w-5 h-5 mr-2" />}
+                            Carga Masiva PDF
+                        </Button>
+                        <input
+                            type="file"
+                            multiple
+                            accept=".pdf"
+                            ref={bulkInputRef}
+                            className="hidden"
+                            onChange={handleBulkUpload}
+                        />
+
+                        <Button
+                            onClick={() => setIsReportModalOpen(true)}
+                            variant="outline"
+                            className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-[20px] px-6 py-4 shadow-md hover:bg-slate-50 border-slate-200 dark:border-slate-700"
+                        >
+                            <FileDown className="w-5 h-5 mr-2" />
+                            Exportar Informe
+                        </Button>
+                    </div>
                 </div>
 
                 {/* User Filters - Removed as per request (Only show own data) */}

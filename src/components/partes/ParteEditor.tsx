@@ -579,8 +579,8 @@ export const ParteEditor = () => {
                         <div 
                             onClick={() => !isUploading && !isBulkUploading && singleInputRef.current?.click()}
                             className={clsx(
-                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-8 border-2 border-dashed transition-all duration-300 cursor-pointer",
-                                isUploading ? "border-blue-500 bg-blue-50/30" : "border-slate-200 dark:border-slate-800 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-500/10"
+                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-10 border-4 border-dashed transition-all duration-300 cursor-pointer",
+                                isUploading ? "border-blue-500 bg-blue-50/30" : "border-blue-100 dark:border-blue-900/30 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-500/20"
                             )}
                         >
                             <div className="relative z-10 flex flex-col items-center text-center gap-4">
@@ -609,8 +609,8 @@ export const ParteEditor = () => {
                         <div 
                             onClick={() => !isUploading && !isBulkUploading && bulkInputRef.current?.click()}
                             className={clsx(
-                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-8 border-2 border-dashed transition-all duration-300 cursor-pointer",
-                                isBulkUploading ? "border-orange-500 bg-orange-50/30" : "border-slate-200 dark:border-slate-800 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-500/10"
+                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-10 border-4 border-dashed transition-all duration-300 cursor-pointer",
+                                isBulkUploading ? "border-orange-500 bg-orange-50/30" : "border-orange-100 dark:border-orange-900/30 hover:border-orange-400 hover:shadow-2xl hover:shadow-orange-500/20"
                             )}
                         >
                             <div className="relative z-10 flex flex-col items-center text-center gap-4">

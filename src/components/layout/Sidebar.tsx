@@ -10,7 +10,7 @@ const API_NAV_ITEMS = [
     { label: 'Analíticas', icon: TrendingUp, to: '/analytics', adminOnly: false },
     { label: 'Calendario', icon: Calendar, to: '/calendar', adminOnly: false },
     { label: 'Gestión de Partes', icon: FileText, to: '/management', adminOnly: false },
-    { label: 'Nuevo Parte', icon: PlusCircle, to: '/new', adminOnly: false },
+    { label: 'Importar PDF', icon: PlusCircle, to: '/new', adminOnly: false },
     { label: 'Explorador Global', icon: Search, to: '/global', adminOnly: false },
     { label: 'Usuarios', icon: Users, to: '/users', adminOnly: true },
 ];
