@@ -1,8 +1,8 @@
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 
-// Use local worker
-GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
+// Use local worker with correct base path for Vite
+GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}pdf.worker.min.mjs`;
 
 interface ParsedParteData {
     id?: string;
@@ -39,14 +39,7 @@ export const parsePartePDF = async (file: File, onProgress?: (status: string) =>
             throw new Error('El formato debe ser PDF.');
         }
 
-        // Magic Bytes Validation for true confirmation
-        const headerBuffer = await file.slice(0, 4).arrayBuffer();
-        const headerView = new Uint8Array(headerBuffer);
-        const headerHex = Array.from(headerView).map(b => b.toString(16).padStart(2, '0')).join('');
-        // PDF magic bytes: 25 50 44 46 (%PDF)
-        if (headerHex !== '25504446') {
-            throw new Error('El archivo no es un PDF válido (Firma incorrecta).');
-        }
+        // Removed overly strict Magic Bytes Validation because it rejects PDFs that contain a Byte Order Mark (BOM) or leading empty bytes/metadata which are valid under PDF specification. pdfjs-dist will throw an error if the file isn't valid anyway.
 
         // 1. Convert to Base64 for storage
         const base64File = await fileToBase64(file);
