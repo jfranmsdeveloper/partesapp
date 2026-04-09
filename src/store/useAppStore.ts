@@ -9,6 +9,9 @@ interface AppState {
     isLoading: boolean;
     error: string | null;
 
+    isCommandPaletteOpen: boolean;
+    setCommandPaletteOpen: (isOpen: boolean) => void;
+
     // Auth State
     currentUser: User | null;
     hasPendingHandle: boolean;
@@ -70,6 +73,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     activeView: 'list',
     setActiveView: (view) => set({ activeView: view }),
+    isCommandPaletteOpen: false,
+    setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
     isLoading: true, // Start true to prevent redirect before check
     error: null,
 

@@ -3,10 +3,11 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Menu } from 'lucide-react';
 import { CommandPalette } from '../ui/CommandPalette';
+import { useAppStore } from '../store/useAppStore';
 
 export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+    const { isCommandPaletteOpen, setCommandPaletteOpen } = useAppStore();
 
     // Auto-check AI availability deleted
 
@@ -15,13 +16,13 @@ export const Layout = () => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
-                setIsCommandPaletteOpen(prev => !prev);
+                setCommandPaletteOpen(!isCommandPaletteOpen);
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [isCommandPaletteOpen, setCommandPaletteOpen]);
 
     return (
         <div className="min-h-screen transition-colors duration-300 bg-[#F4F4F5] dark:bg-dark-bg">
@@ -41,7 +42,7 @@ export const Layout = () => {
 
             <CommandPalette 
                 isOpen={isCommandPaletteOpen} 
-                onClose={() => setIsCommandPaletteOpen(false)} 
+                onClose={() => setCommandPaletteOpen(false)} 
             />
 
 

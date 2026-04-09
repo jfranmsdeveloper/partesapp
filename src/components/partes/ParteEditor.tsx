@@ -10,7 +10,7 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
@@ -22,7 +22,7 @@ export const ParteEditor = () => {
     const { id } = useParams();
     const isNew = !id;
 
-    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF, linkPdfToParte, isLoading } = useUserStore();
+    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF, linkPdfToParte, isLoading, setCommandPaletteOpen } = useUserStore();
 
     const [title, setTitle] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
@@ -51,6 +51,27 @@ export const ParteEditor = () => {
 
 
     const currentParte = id ? partes.find(p => String(p.id) === String(id)) : undefined;
+
+    const [currentIndex, setCurrentIndex] = useState(-1);
+
+    useEffect(() => {
+        if (!isNew && currentParte) {
+            const index = partes.findIndex(p => String(p.id) === String(currentParte.id));
+            setCurrentIndex(index);
+        }
+    }, [currentParte, partes, isNew]);
+
+    const handlePrevParte = () => {
+        if (currentIndex < partes.length - 1) {
+            navigate(`/parte/${partes[currentIndex + 1].id}`);
+        }
+    };
+
+    const handleNextParte = () => {
+        if (currentIndex > 0) {
+            navigate(`/parte/${partes[currentIndex - 1].id}`);
+        }
+    };
 
     // Initialize form if editing
     useEffect(() => {
@@ -451,6 +472,44 @@ export const ParteEditor = () => {
                         </div>
                     )}
                 </div>
+
+                {/* NEW CONTROLS: Search and Paginator */}
+                {!isNew && (
+                    <div className="flex items-center gap-3">
+                        {/* Search Bar */}
+                        <button 
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors shadow-sm"
+                            onClick={() => setCommandPaletteOpen(true)}
+                            type="button"
+                        >
+                            <Search className="w-4 h-4" />
+                            <span className="hidden sm:inline">Buscar...</span>
+                            <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold ml-1">⌘K</kbd>
+                        </button>
+                        
+                        {/* Paginator */}
+                        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
+                            <button
+                                onClick={handlePrevParte}
+                                disabled={currentIndex === -1 || currentIndex >= partes.length - 1} // Oldest (left visually represents going back in time)
+                                className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 border-r border-slate-200 dark:border-slate-700 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                title="Parte anterior"
+                                type="button"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={handleNextParte}
+                                disabled={currentIndex <= 0} // Newest
+                                className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                title="Parte siguiente"
+                                type="button"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Main Form Layout - Refactored to Vertical Stack (90% Width) */}

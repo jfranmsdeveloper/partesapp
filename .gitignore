@@ -21,3 +21,4 @@ dist-ssr
 .DS_Store
 .vercel
 .env*.local
+partes-app.zip
