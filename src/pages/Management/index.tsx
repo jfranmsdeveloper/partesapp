@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../hooks/useUserStore';
 import { ParteCard } from '../../components/management/ParteCard';
 import { KanbanBoard } from '../../components/management/KanbanBoard';
@@ -10,10 +11,11 @@ import type { FilterState } from '../../components/management/ManagementFilters'
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
-import { Square, CheckSquare, Trash2, X, Plus } from 'lucide-react';
+import { Square, CheckSquare, Trash2, X, Plus, FileUp } from 'lucide-react';
 import { BulkActuacionModal } from '../../components/management/BulkActuacionModal';
 
 export default function Management() {
+    const navigate = useNavigate();
     const { partes, fixLegacyAuthorship, currentUser, deletePartes } = useUserStore();
     const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -120,6 +122,15 @@ export default function Management() {
                     Gestión de Partes
                 </h1>
                 <div className="flex gap-2">
+                    <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate('/new')}
+                        className="bg-white dark:bg-slate-800"
+                    >
+                        <FileUp className="w-4 h-4 mr-2 text-orange-500" />
+                        Importar PDF
+                    </Button>
                     {view === 'list' && (
                         <Button 
                             variant={isSelectionMode ? "primary" : "outline"}

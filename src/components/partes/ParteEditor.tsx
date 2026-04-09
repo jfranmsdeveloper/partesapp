@@ -10,7 +10,7 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files, Zap, CheckCircle2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
@@ -87,7 +87,9 @@ export const ParteEditor = () => {
     }, [currentParte]);
 
     const [isUploading, setIsUploading] = useState(false);
+    const [isBulkUploading, setIsBulkUploading] = useState(false);
     const singleInputRef = useRef<HTMLInputElement>(null);
+    const bulkInputRef = useRef<HTMLInputElement>(null);
 
     const handleCreateParte = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -152,21 +154,20 @@ export const ParteEditor = () => {
             if (data.title) setTitle(data.title);
             if (data.id) setCustomId(data.id);
 
-            // ... (rest of logic for NEW partes)
-            if (data.createdBy) {
-
-                const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
-                if (clientId) {
-                    setSelectedClientId(clientId);
-                }
-            }
-
             // Construct date time if available
             if (data.date) {
                 const [d, m, y] = data.date.split(/[-/]/);
                 const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                 let timeStr = data.time || '09:00';
                 setCustomDate(`${dateStr}T${timeStr}`);
+            }
+
+            if (data.createdBy) {
+                setCreatedBy(data.createdBy);
+                const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
+                if (clientId) {
+                    setSelectedClientId(clientId);
+                }
             }
 
             alert('✅ Datos extraídos correctamente.');
@@ -176,6 +177,63 @@ export const ParteEditor = () => {
         } finally {
             setIsUploading(false);
             e.target.value = '';
+        }
+    };
+
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setIsBulkUploading(true);
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const file of files) {
+            try {
+                const data = await parsePartePDF(file);
+                
+                // 1. Upsert Client (if present in PDF)
+                let clientId = undefined;
+                if (data.createdBy) {
+                    clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || undefined;
+                }
+
+                // 2. Parse Date
+                let createdAt = undefined;
+                if (data.date) {
+                    const [d, m, y] = data.date.split(/[-/]/);
+                    const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    let timeStr = data.time || '09:00';
+                    createdAt = `${dateStr} ${timeStr}:00`;
+                }
+
+                // 3. Add Parte
+                await addParte({
+                    title: data.title || `Parte importado - ${file.name}`,
+                    status: 'ABIERTO',
+                    createdBy: data.createdBy || 'Sistema',
+                    id: data.id || undefined,
+                    createdAt: createdAt,
+                    pdfFile: data.pdfFile,
+                    clientId: clientId
+                });
+
+                successCount++;
+            } catch (err) {
+                console.error(`Error importing ${file.name}:`, err);
+                errorCount++;
+            }
+        }
+
+        setIsBulkUploading(false);
+        if (e.target) e.target.value = '';
+
+        if (errorCount === 0) {
+            alert(`✅ ¡Éxito! Se han importado ${successCount} partes correctamente.`);
+            navigate('/management');
+        } else {
+            alert(`⚠️ Importación completada con avisos:\n- ${successCount} exitosos\n- ${errorCount} errores`);
+            navigate('/management');
         }
     };
 
@@ -513,6 +571,73 @@ export const ParteEditor = () => {
             </div>
 
             <div className="flex flex-col items-center w-full gap-8 pb-20">
+
+                {/* Import Selection (Only for New Partes) */}
+                {isNew && (
+                    <div className="w-[90%] max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 1. Individual Import */}
+                        <div 
+                            onClick={() => !isUploading && !isBulkUploading && singleInputRef.current?.click()}
+                            className={clsx(
+                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-8 border-2 border-dashed transition-all duration-300 cursor-pointer",
+                                isUploading ? "border-blue-500 bg-blue-50/30" : "border-slate-200 dark:border-slate-800 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-500/10"
+                            )}
+                        >
+                            <div className="relative z-10 flex flex-col items-center text-center gap-4">
+                                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform duration-300">
+                                    {isUploading ? <Loader2 className="w-8 h-8 animate-spin" /> : <FileUp className="w-8 h-8" />}
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">Cargar PDF Individual</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Escanea un archivo y revisa los datos antes de guardar</p>
+                                </div>
+                            </div>
+                            {/* Decorative background element */}
+                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
+                            
+                            <input
+                                type="file"
+                                ref={singleInputRef}
+                                className="hidden"
+                                accept=".pdf"
+                                onChange={handleSingleUpload}
+                            />
+                        </div>
+
+                        {/* 2. Bulk/Massive Import */}
+                        <div 
+                            onClick={() => !isUploading && !isBulkUploading && bulkInputRef.current?.click()}
+                            className={clsx(
+                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-8 border-2 border-dashed transition-all duration-300 cursor-pointer",
+                                isBulkUploading ? "border-orange-500 bg-orange-50/30" : "border-slate-200 dark:border-slate-800 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-500/10"
+                            )}
+                        >
+                            <div className="relative z-10 flex flex-col items-center text-center gap-4">
+                                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 group-hover:scale-110 transition-transform duration-300">
+                                    {isBulkUploading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Files className="w-8 h-8" />}
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-center gap-2 mb-1">
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Carga Masiva</h3>
+                                        <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Varios</span>
+                                    </div>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Importa múltiples archivos PDF a la vez automáticamente</p>
+                                </div>
+                            </div>
+                            {/* Decorative background element */}
+                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors"></div>
+
+                            <input
+                                type="file"
+                                ref={bulkInputRef}
+                                className="hidden"
+                                accept=".pdf"
+                                multiple
+                                onChange={handleBulkUpload}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* 2. Actuaciones (Only if !isNew) */}
                 {!isNew && currentParte && (
