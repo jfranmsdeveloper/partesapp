@@ -431,28 +431,29 @@ export const ParteEditor = () => {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-                        <ChevronLeft className="w-5 h-5 mr-1" />
-                        Volver
-                    </Button>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                        {isNew ? 'Nuevo Parte de Trabajo' : `Parte #${currentParte?.id}`}
-                    </h1>
-                    {!isNew && currentParte && (
-                        <div className="relative">
-                            <select
-                                value={currentParte.status}
-                                onChange={(e) => {
-                                    const newStatus = e.target.value as any;
-                                    if (newStatus === 'CERRADO' && currentParte.actuaciones.length === 0) {
-                                        alert('⚠️ No se puede cerrar un parte sin actuaciones. Añade al menos una actuación.');
-                                        return;
-                                    }
-                                    updateParteStatus(currentParte.id, newStatus);
-                                }}
+            {/* Header - Centrado y con ancho coherente */}
+            <div className="mx-auto w-[90%] max-w-7xl">
+                <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+                            <ChevronLeft className="w-5 h-5 mr-1" />
+                            Volver
+                        </Button>
+                        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                            {isNew ? 'Nuevo Parte de Trabajo' : `Parte #${currentParte?.id}`}
+                        </h1>
+                        {!isNew && currentParte && (
+                            <div className="relative">
+                                <select
+                                    value={currentParte.status}
+                                    onChange={(e) => {
+                                        const newStatus = e.target.value as any;
+                                        if (newStatus === 'CERRADO' && currentParte.actuaciones.length === 0) {
+                                            alert('⚠️ No se puede cerrar un parte sin actuaciones. Añade al menos una actuación.');
+                                            return;
+                                        }
+                                        updateParteStatus(currentParte.id, newStatus);
+                                    }}
                                 className={clsx(
                                     "appearance-none cursor-pointer pl-3 pr-8 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border-0 focus:ring-2 focus:ring-offset-1 transition-all",
                                     currentParte.status === 'ABIERTO' ? 'bg-green-100 text-green-700 ring-green-500' :
@@ -511,8 +512,9 @@ export const ParteEditor = () => {
                     </div>
                 )}
             </div>
+        </div>
 
-            {/* Main Form Layout - Refactored to Vertical Stack (90% Width) */}
+        {/* Main Form Layout - Refactored to Vertical Stack (90% Width) */}
             <div className="flex flex-col items-center w-full gap-8 pb-20">
 
                 {/* 2. Actuaciones (Only if !isNew) */}
