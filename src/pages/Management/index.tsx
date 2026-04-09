@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../hooks/useUserStore';
+import { parsePartePDF } from '../../utils/pdfParser';
 import { ParteCard } from '../../components/management/ParteCard';
 import { KanbanBoard } from '../../components/management/KanbanBoard';
 import { TimelineView } from '../../components/management/TimelineView';
@@ -11,15 +12,19 @@ import type { FilterState } from '../../components/management/ManagementFilters'
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
-import { Square, CheckSquare, Trash2, X, Plus, FileUp } from 'lucide-react';
+import { Square, CheckSquare, Trash2, X, Plus, FileUp, Loader2, Files } from 'lucide-react';
 import { BulkActuacionModal } from '../../components/management/BulkActuacionModal';
 
 export default function Management() {
     const navigate = useNavigate();
-    const { partes, fixLegacyAuthorship, currentUser, deletePartes } = useUserStore();
+    const { partes, addParte, fixLegacyAuthorship, currentUser, deletePartes, upsertClientFromPDF } = useUserStore();
     const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+
+    // Bulk Upload State
+    const [isBulkUploading, setIsBulkUploading] = useState(false);
+    const bulkInputRef = useRef<HTMLInputElement>(null);
 
     // Selection State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -115,6 +120,58 @@ export default function Management() {
         checkAndFix();
     }, [partes.length, currentUser]);
 
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setIsBulkUploading(true);
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const file of files) {
+            try {
+                const data = await parsePartePDF(file);
+                
+                let clientId = undefined;
+                if (data.createdBy) {
+                    clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || undefined;
+                }
+
+                let createdAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                if (data.date) {
+                    const [d, m, y] = data.date.split(/[-/]/);
+                    const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    let timeStr = data.time || '09:00';
+                    createdAt = `${dateStr} ${timeStr}:00`;
+                }
+
+                await addParte({
+                    title: data.title || `Parte importado - ${file.name}`,
+                    status: 'ABIERTO',
+                    createdBy: data.createdBy || 'Sistema',
+                    id: data.id || undefined,
+                    createdAt: createdAt,
+                    pdfFile: data.pdfFile,
+                    clientId: clientId
+                });
+
+                successCount++;
+            } catch (err) {
+                console.error(`Error importing ${file.name}:`, err);
+                errorCount++;
+            }
+        }
+
+        setIsBulkUploading(false);
+        if (e.target) e.target.value = '';
+
+        if (errorCount === 0) {
+            alert(`✅ ¡Éxito! Se han importado ${successCount} partes correctamente.`);
+        } else {
+            alert(`⚠️ Se importaron ${successCount} partes, pero hubo errores en ${errorCount} archivos.`);
+        }
+    };
+
     return (
         <div className="space-y-6 pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -126,11 +183,29 @@ export default function Management() {
                         variant="outline"
                         size="sm"
                         onClick={() => navigate('/new')}
-                        className="bg-white dark:bg-slate-800"
+                        className="bg-white dark:bg-slate-800 border-blue-200 hover:border-blue-300 dark:border-blue-900 shadow-sm"
                     >
-                        <FileUp className="w-4 h-4 mr-2 text-orange-500" />
-                        Importar PDF
+                        <FileUp className="w-4 h-4 mr-2 text-blue-500" />
+                        Añadir Individual
                     </Button>
+                    <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => bulkInputRef.current?.click()}
+                        disabled={isBulkUploading}
+                        className="bg-white dark:bg-slate-800 border-orange-200 hover:border-orange-300 dark:border-orange-900 shadow-sm"
+                    >
+                        {isBulkUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-orange-500" /> : <Files className="w-4 h-4 mr-2 text-orange-500" />}
+                        Carga Masiva
+                    </Button>
+                    <input
+                        type="file"
+                        multiple
+                        accept=".pdf"
+                        ref={bulkInputRef}
+                        className="hidden"
+                        onChange={handleBulkUpload}
+                    />
                     {view === 'list' && (
                         <Button 
                             variant={isSelectionMode ? "primary" : "outline"}
