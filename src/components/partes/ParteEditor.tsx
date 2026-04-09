@@ -431,9 +431,9 @@ export const ParteEditor = () => {
 
     return (
         <div className="space-y-6">
-            {/* Header - Centrado y con ancho coherente */}
+            {/* Cabecera - Centrada y con controles */}
             <div className="mx-auto w-[90%] max-w-7xl">
-                <div className="flex items-center justify-between w-full">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
                     <div className="flex items-center gap-4">
                         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
                             <ChevronLeft className="w-5 h-5 mr-1" />
@@ -454,67 +454,64 @@ export const ParteEditor = () => {
                                         }
                                         updateParteStatus(currentParte.id, newStatus);
                                     }}
-                                className={clsx(
-                                    "appearance-none cursor-pointer pl-3 pr-8 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border-0 focus:ring-2 focus:ring-offset-1 transition-all",
-                                    currentParte.status === 'ABIERTO' ? 'bg-green-100 text-green-700 ring-green-500' :
-                                        currentParte.status === 'EN TRÁMITE' ? 'bg-blue-100 text-blue-700 ring-blue-500' :
-                                            'bg-red-100 text-red-700 ring-red-500'
-                                )}
+                                    className={clsx(
+                                        "appearance-none cursor-pointer pl-3 pr-8 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border-0 focus:ring-2 focus:ring-offset-1 transition-all",
+                                        currentParte.status === 'ABIERTO' ? 'bg-green-100 text-green-700 ring-green-500' :
+                                            currentParte.status === 'EN TRÁMITE' ? 'bg-blue-100 text-blue-700 ring-blue-500' :
+                                                'bg-red-100 text-red-700 ring-red-500'
+                                    )}
+                                >
+                                    <option value="ABIERTO">ABIERTO</option>
+                                    <option value="EN TRÁMITE">EN TRÁMITE</option>
+                                    <option value="CERRADO">CERRADO</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-current opacity-50">
+                                    <svg className="h-3 w-3 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* NEW CONTROLS: Search and Paginator */}
+                    {!isNew && (
+                        <div className="flex items-center gap-3">
+                            <button 
+                                className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors shadow-sm"
+                                onClick={() => setCommandPaletteOpen(true)}
+                                type="button"
                             >
-                                <option value="ABIERTO">ABIERTO</option>
-                                <option value="EN TRÁMITE">EN TRÁMITE</option>
-                                <option value="CERRADO">CERRADO</option>
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-current opacity-50">
-                                <svg className="h-3 w-3 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                                </svg>
+                                <Search className="w-4 h-4" />
+                                <span className="hidden sm:inline">Buscar...</span>
+                                <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold ml-1">⌘K</kbd>
+                            </button>
+                            
+                            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
+                                <button
+                                    onClick={handlePrevParte}
+                                    disabled={currentIndex === -1 || currentIndex >= partes.length - 1}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 border-r border-slate-200 dark:border-slate-700 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                    title="Parte anterior"
+                                    type="button"
+                                >
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={handleNextParte}
+                                    disabled={currentIndex <= 0}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                    title="Parte siguiente"
+                                    type="button"
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
                             </div>
                         </div>
                     )}
                 </div>
-
-                {/* NEW CONTROLS: Search and Paginator */}
-                {!isNew && (
-                    <div className="flex items-center gap-3">
-                        {/* Search Bar */}
-                        <button 
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors shadow-sm"
-                            onClick={() => setCommandPaletteOpen(true)}
-                            type="button"
-                        >
-                            <Search className="w-4 h-4" />
-                            <span className="hidden sm:inline">Buscar...</span>
-                            <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold ml-1">⌘K</kbd>
-                        </button>
-                        
-                        {/* Paginator */}
-                        <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
-                            <button
-                                onClick={handlePrevParte}
-                                disabled={currentIndex === -1 || currentIndex >= partes.length - 1} // Oldest (left visually represents going back in time)
-                                className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 border-r border-slate-200 dark:border-slate-700 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                title="Parte anterior"
-                                type="button"
-                            >
-                                <ChevronLeft className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={handleNextParte}
-                                disabled={currentIndex <= 0} // Newest
-                                className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                title="Parte siguiente"
-                                type="button"
-                            >
-                                <ChevronRight className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-                )}
             </div>
-        </div>
 
-        {/* Main Form Layout - Refactored to Vertical Stack (90% Width) */}
             <div className="flex flex-col items-center w-full gap-8 pb-20">
 
                 {/* 2. Actuaciones (Only if !isNew) */}
