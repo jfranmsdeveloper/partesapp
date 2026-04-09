@@ -10,7 +10,7 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files, Zap, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
