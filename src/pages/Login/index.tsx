@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAppStore } from '../../store/useAppStore';
 import { supabase } from '../../utils/supabase';
+import { Loader2 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 
 export default function Login() {
@@ -194,7 +195,7 @@ export default function Login() {
                                             type="button"
                                             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-all text-sm font-semibold bg-slate-50/50"
                                         >
-                                            {isImporting ? <loader2 className="w-5 h-5 animate-spin" /> : (
+                                            {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                                 </svg>
