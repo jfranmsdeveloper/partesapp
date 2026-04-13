@@ -141,7 +141,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             set({ isLoading: false, error: error.message });
             return false;
         }
-
+        if (data.user) {
             set({
                 currentUser: {
                     id: data.user.id,
