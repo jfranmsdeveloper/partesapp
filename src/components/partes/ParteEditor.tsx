@@ -682,7 +682,7 @@ export const ParteEditor = () => {
                                 />
                             </div>
 
-                            {!showAddActuacion && currentParte.actuaciones.length > 3 && (
+                            {!showAddActuacion && (
                                 <div className="flex justify-center mt-2 mb-6">
                                     <Button 
                                         onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} 

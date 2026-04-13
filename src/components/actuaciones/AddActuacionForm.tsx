@@ -51,12 +51,14 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         }
     }, [transcript]);
 
-    const quickButtons = currentUser?.quickButtons || [
-        "Reparación finalizada con éxito.",
-        "Pendiente de recibir pieza.",
-        "Revisión preventiva sin novedad.",
-        "Cliente ausente."
-    ];
+    const quickButtons = (currentUser?.quickButtons && currentUser.quickButtons.length > 0) 
+        ? currentUser.quickButtons 
+        : [
+            "Reparación finalizada con éxito.",
+            "Pendiente de recibir pieza.",
+            "Revisión preventiva sin novedad.",
+            "Cliente ausente."
+        ];
 
     const filteredSnippets = useMemo(() => {
         if (!type) return snippets;
