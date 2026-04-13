@@ -180,6 +180,9 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     {isSelected && (
                                         <div className={clsx("absolute top-3 right-3 w-2 h-2 rounded-full", activeBg)} />
                                     )}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Quick Action Buttons (Configurable) */}

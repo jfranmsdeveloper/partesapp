@@ -133,12 +133,6 @@ export default function Profile() {
                 <User className="w-6 h-6 text-blue-600" />
                 Mi Perfil
             </h1>
-            {/* ... avatar card ... */}
-            {/* Note: I'm skipping actual replacement for the whole file to stay concise, but in a real tool I'd replace the relevant block */}
-            {/* For brevity in THIS thought, I'll provide the exact block to replace in the next tool call properly */}
-        </div>
-    );
-}
 
             {/* Avatar Card */}
             <Card>
