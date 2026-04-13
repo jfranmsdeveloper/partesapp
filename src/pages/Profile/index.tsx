@@ -3,11 +3,11 @@ import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
-import { User, Lock, Save, Upload, Plus, Trash2, Edit2, FileText } from 'lucide-react';
+import { User, Lock, Save, Upload, Plus, Trash2, Edit2, FileText, Settings2 } from 'lucide-react';
 import type { Snippet } from '../../types';
 
 export default function Profile() {
-    const { currentUser, updateUserProfile, changePassword, uploadAvatar, snippets, addSnippet, updateSnippet, deleteSnippet } = useAppStore();
+    const { currentUser, updateUserProfile, changePassword, uploadAvatar, snippets, addSnippet, updateSnippet, deleteSnippet, updateQuickButtons } = useAppStore();
 
     // Personal Info State
     const [name, setName] = useState(currentUser?.name || '');
@@ -252,6 +252,41 @@ export default function Profile() {
                         </Button>
                     </div>
                 </form>
+            </Card>
+
+            {/* Quick Buttons Card */}
+            <Card>
+                <h2 className="text-lg font-semibold mb-4 text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <Settings2 className="w-5 h-5 text-slate-500" />
+                    Botones de Resumen Rápido
+                </h2>
+                <p className="text-xs text-slate-500 mb-6">
+                    Configura las 4 frases que aparecerán en el formulario de actuaciones para rellenar notas rápidamente.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(currentUser?.quickButtons || [
+                        "Reparación finalizada con éxito.",
+                        "Pendiente de recibir pieza.",
+                        "Revisión preventiva sin novedad.",
+                        "Cliente ausente."
+                    ]).map((btn, idx) => (
+                        <div key={idx}>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Botón {idx + 1}</label>
+                            <input
+                                className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                                value={btn}
+                                onChange={(e) => {
+                                    const currentBtns = currentUser?.quickButtons && currentUser.quickButtons.length > 0 
+                                        ? [...currentUser.quickButtons] 
+                                        : ["Reparación finalizada con éxito.", "Pendiente de recibir pieza.", "Revisión preventiva sin novedad.", "Cliente ausente."];
+                                    currentBtns[idx] = e.target.value;
+                                    updateQuickButtons(currentBtns);
+                                }}
+                                placeholder={`Frase del botón ${idx + 1}`}
+                            />
+                        </div>
+                    ))}
+                </div>
             </Card>
 
 
