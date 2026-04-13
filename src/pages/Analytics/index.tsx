@@ -348,7 +348,7 @@ export default function Analytics() {
                             </div>
                             <Clock className="w-6 h-6 text-slate-300" />
                         </div>
-                        <div className="flex-1 min-h-0">
+                        <div className="h-[350px] w-full mt-4">
                             {analyticsData.timePerClient.length > 0 ? (
                                 <TimePerClientChart data={analyticsData.timePerClient} />
                             ) : (
@@ -369,26 +369,26 @@ export default function Analytics() {
                              <div className="mb-4 relative z-10 flex justify-between items-start">
                                 <div>
                                     <h3 className="text-xl font-black tracking-tight">Tendencia</h3>
-                                    <p className="text-orange-100/70 text-xs font-bold uppercase tracking-widest">{range} DÍAS</p>
+                                    <p className="text-orange-100/70 text-xs font-bold uppercase tracking-widest">{range === 0 ? "HISTÓRICO" : `${range} DÍAS`}</p>
                                 </div>
                                 <Activity className="w-5 h-5 text-orange-200/50" />
                             </div>
-                            <div className="flex-1 min-h-0 relative z-10">
+                            <div className="h-[120px] w-full relative z-10">
                                 <TrendChart data={analyticsData.trendData} />
                             </div>
                         </Card>
                     </motion.div>
 
                     <motion.div variants={itemVariants}>
-                        <Card className="p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl h-[226px] flex flex-col group">
-                             <div className="mb-4 flex justify-between items-start">
+                        <Card className="p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl h-[240px] flex flex-col group">
+                            <div className="mb-4 flex justify-between items-start">
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Categorías</h3>
                                     <p className="text-slate-500 text-xs">Distribución de tipos</p>
                                 </div>
                                 <BarChart3 className="w-5 h-5 text-slate-300" />
                             </div>
-                            <div className="flex-1 min-h-0">
+                            <div className="h-[130px] w-full">
                                 <ActivityTypeChart data={analyticsData.activityData} />
                             </div>
                         </Card>
