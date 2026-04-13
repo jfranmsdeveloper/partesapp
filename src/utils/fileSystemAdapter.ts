@@ -5,6 +5,7 @@ export const SESSION_FILE_NAME = 'session.json';
 export const IDB_STORE = 'PartesAppStore';
 export const IDB_KEY = 'rootDirectoryHandle';
 export const IDB_FILE_KEY = 'databaseFileHandle';
+export const IDB_STATE_KEY = 'databaseState';
 
 // ---------------------------------------------------------------------------
 // IndexedDB helpers — persist the root folder or file handle across sessions
@@ -117,6 +118,44 @@ export async function getFileFromIDB(path: string): Promise<Blob | null> {
     });
 }
 
+export async function saveStateToIDB(state: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open('PartesAppDB', 1);
+        req.onupgradeneeded = () => {
+            req.result.createObjectStore(IDB_STORE);
+        };
+        req.onsuccess = () => {
+            const db = req.result;
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put(state, IDB_STATE_KEY);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        };
+        req.onerror = () => reject(req.error);
+    });
+}
+
+export async function getStateFromIDB(): Promise<any | null> {
+    return new Promise((resolve) => {
+        const req = indexedDB.open('PartesAppDB', 1);
+        req.onupgradeneeded = () => {
+            req.result.createObjectStore(IDB_STORE);
+        };
+        req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                resolve(null); return;
+            }
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const store = tx.objectStore(IDB_STORE);
+            const getReq = store.get(IDB_STATE_KEY);
+            getReq.onsuccess = () => resolve(getReq.result || null);
+            getReq.onerror = () => resolve(null);
+        };
+        req.onerror = () => resolve(null);
+    });
+}
+
 // ---------------------------------------------------------------------------
 // DB schema
 // ---------------------------------------------------------------------------
@@ -196,6 +235,7 @@ class FileSystemAdapter {
     private state: DBState = JSON.parse(JSON.stringify(DEFAULT_DB));
     public isInitialized = false;
     public isSingleFileMode = false;
+    public isLegacyMode = false;
     /** True when IndexedDB has a stored handle but the browser needs a user gesture to re-grant permission */
     public hasPendingHandle = false;
     private activeSessionUser: any = null;
@@ -213,7 +253,17 @@ class FileSystemAdapter {
         const hasFilePicker = 'showOpenFilePicker' in window;
 
         if (!hasDirectoryPicker && !hasFilePicker) {
-            alert('Tu navegador es demasiado antiguo. Usa una versión moderna de Safari, Chrome o Edge.');
+            console.warn('FSA: APIs de File System no soportadas. Entrando en Modo Legacy (IDB).');
+            this.isLegacyMode = true;
+            // In legacy mode, we can still initialize if we have a state in IDB
+            const storedState = await getStateFromIDB();
+            if (storedState) {
+                this.state = storedState;
+                this.isInitialized = true;
+                // Try to restore user from state if possible
+                // (Since we don't have session.json, we rely on the app store checking the session)
+                return true;
+            }
             return false;
         }
 
@@ -408,8 +458,6 @@ class FileSystemAdapter {
     // -----------------------------------------------------------------------
 
     private async loadDatabase(force = false) {
-        if (!this.handle && !this.fileHandle) return;
-        
         // Simple throttle: don't reload if we just loaded in the last 500ms (unless forced)
         const now = Date.now();
         if (!force && now - this.lastLoadTime < 500) return;
@@ -420,9 +468,18 @@ class FileSystemAdapter {
                 const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
                 const file = await fileHandle.getFile();
                 text = await file.text();
-            } else {
-                const file = await this.fileHandle!.getFile();
+            } else if (this.fileHandle) {
+                const file = await this.fileHandle.getFile();
                 text = await file.text();
+            } else {
+                // Legacy Mode: Try IDB
+                const stored = await getStateFromIDB();
+                if (stored) {
+                    this.state = stored;
+                    console.log('FSA: Base de datos cargada desde IndexedDB (Modo Legacy).');
+                    return;
+                }
+                text = "";
             }
             this.lastLoadTime = Date.now();
 
@@ -561,7 +618,10 @@ class FileSystemAdapter {
     }
 
     private async saveDatabase(): Promise<boolean> {
-        if (!this.handle && !this.fileHandle) return false;
+        // ALWAYS save to IDB as backup (essential for Legacy Mode)
+        await saveStateToIDB(this.state);
+
+        if (!this.handle && !this.fileHandle && !this.isLegacyMode) return false;
         try {
             console.log('FSA: Guardando base de datos...');
             if (this.handle) {
@@ -569,11 +629,12 @@ class FileSystemAdapter {
                 const writable = await fileHandle.createWritable();
                 await writable.write(JSON.stringify(this.state, null, 2));
                 await writable.close();
-            } else {
+            } else if (this.fileHandle) {
                 const writable = await (this.fileHandle as any).createWritable();
                 await writable.write(JSON.stringify(this.state, null, 2));
                 await writable.close();
             }
+            // If in Legacy mode, we already saved to IDB above.
             console.log('FSA: Base de datos guardada con éxito.');
             return true;
         } catch (e) {
@@ -1079,6 +1140,25 @@ class FileSystemAdapter {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Legacy initialization from manual file upload
+     */
+    async importDatabaseFromText(text: string): Promise<boolean> {
+        try {
+            const newState = JSON.parse(text);
+            if (newState && newState.users) {
+                this.state = newState;
+                await this.saveDatabase();
+                this.isInitialized = true;
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error('Error importing JSON:', e);
+            return false;
+        }
     }
 }
 

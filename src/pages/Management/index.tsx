@@ -20,7 +20,7 @@ export default function Management() {
     const { 
         partes, addParte, fixLegacyAuthorship, currentUser, 
         deletePartes, upsertClientFromPDF, isSingleFileMode, 
-        importFiles, exportDatabase 
+        isLegacyMode, importFiles, exportDatabase 
     } = useUserStore();
     const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -203,27 +203,34 @@ export default function Management() {
                 </h1>
                 <div className="flex flex-wrap gap-2">
                     {/* iCloud Sync Controls (Safari/iOS only) */}
-                    {isSingleFileMode && (
-                        <div className="flex gap-2 mr-2 pr-4 border-r border-slate-200 dark:border-slate-700">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => icloudFilesRef.current?.click()}
-                                disabled={isSyncingFiles}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                            >
-                                {isSyncingFiles ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudDownload className="w-4 h-4 mr-2" />}
-                                Sincronizar Adjuntos iCloud
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={exportDatabase}
-                                className="text-green-600 border-green-200 hover:bg-green-50"
-                            >
-                                <CloudUpload className="w-4 h-4 mr-2" />
-                                Guardar cambios en iCloud
-                            </Button>
+                    {(isSingleFileMode || isLegacyMode) && (
+                        <div className="flex flex-col gap-1 mr-2 pr-4 border-r border-slate-200 dark:border-slate-700">
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => icloudFilesRef.current?.click()}
+                                    disabled={isSyncingFiles}
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                >
+                                    {isSyncingFiles ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudDownload className="w-4 h-4 mr-2" />}
+                                    Sincronizar Adjuntos
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={exportDatabase}
+                                    className="text-green-600 border-green-200 hover:bg-green-50"
+                                >
+                                    <CloudUpload className="w-4 h-4 mr-2" />
+                                    {isLegacyMode ? 'Guardar Cambios (iCloud)' : 'Guardar en iCloud'}
+                                </Button>
+                            </div>
+                            {isLegacyMode && (
+                                <p className="text-[10px] text-orange-500 font-medium animate-pulse">
+                                    ⚠️ Pulsa "Guardar" para sincronizar con otros equipos
+                                </p>
+                            )}
                             <input
                                 type="file"
                                 {...({

@@ -16,6 +16,7 @@ interface AppState {
     currentUser: User | null;
     hasPendingHandle: boolean;
     isSingleFileMode: boolean;
+    isLegacyMode: boolean;
     checkSession: () => Promise<void>;
     loginUser: (email: string, pass: string) => Promise<boolean>;
     registerUser: (user: User) => Promise<boolean>;
@@ -71,6 +72,7 @@ interface AppState {
     // iCloud / Single File Mode Actions
     importFiles: (files: FileList | File[]) => Promise<{success: number, total: number}>;
     exportDatabase: () => void;
+    importDatabase: (file: File) => Promise<boolean>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -86,6 +88,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     currentUser: null,
     hasPendingHandle: false,
     isSingleFileMode: false,
+    isLegacyMode: false,
     partes: [],
     clients: [],
     users: [],
@@ -117,7 +120,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                     partes: [], 
                     clients: [], 
                     hasPendingHandle: (supabase as any).hasPendingHandle || false,
-                    isSingleFileMode: (supabase as any).isSingleFileMode || false
+                    isSingleFileMode: (supabase as any).isSingleFileMode || false,
+                    isLegacyMode: (supabase as any).isLegacyMode || false
                 });
             }
         } catch (error) {
@@ -150,7 +154,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                     password: '',
                     role: data.user.role || data.user.user_metadata?.role || 'user'
                 },
-                isSingleFileMode: (supabase as any).isSingleFileMode || false
+                isSingleFileMode: (supabase as any).isSingleFileMode || false,
+                isLegacyMode: (supabase as any).isLegacyMode || false
             });
             await get().fetchData();
         }
@@ -726,6 +731,28 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     exportDatabase: () => {
         (supabase as any).exportDatabase();
+    },
+
+    importDatabase: async (file: File) => {
+        const text = await file.text();
+        const success = await (supabase as any).importDatabaseFromText(text);
+        if (success) {
+            await get().fetchData();
+            // Re-check session to log in if possible
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                set({
+                    currentUser: {
+                        id: session.user.id,
+                        email: session.user.email!,
+                        name: session.user.user_metadata?.full_name || session.user.name || '',
+                        password: '',
+                        role: session.user.role || session.user.user_metadata?.role || 'user'
+                    }
+                });
+            }
+        }
+        return success;
     }
 }));
 

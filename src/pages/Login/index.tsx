@@ -8,13 +8,17 @@ import logo from '../../assets/logo.png';
 
 export default function Login() {
     const navigate = useNavigate();
-    const { loginUser, reconnectSession, hasPendingHandle, error: storeError } = useAppStore();
+    const { 
+        loginUser, reconnectSession, hasPendingHandle, 
+        error: storeError, isLegacyMode, importDatabase 
+    } = useAppStore();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [localError, setLocalError] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [isReconnecting, setIsReconnecting] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
 
     // Email of user whose session.json was found (shown in reconnect banner)
     const pendingEmail = (supabase as any).pendingSessionEmail as string | null;
@@ -47,6 +51,26 @@ export default function Login() {
         }
 
         setIsReconnecting(false);
+    };
+
+    const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsImporting(true);
+        setLocalError('');
+        
+        const success = await importDatabase(file);
+        if (success) {
+            // If the user already exists in the file and we restored a session, 
+            // the store might have set currentUser already.
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 500);
+        } else {
+            setLocalError('El archivo seleccionado no es un database.json válido.');
+        }
+        setIsImporting(false);
     };
 
     const displayError = localError || storeError;
@@ -154,36 +178,49 @@ export default function Login() {
                         {!hasPendingHandle && !(supabase as any).isInitialized && (
                             <div className="pt-4 border-t border-slate-100 mt-4 text-center">
                                 <p className="text-[10px] text-slate-400 mb-3 uppercase tracking-wider font-bold">
-                                    {'showDirectoryPicker' in window ? 'O vincula tu carpeta primero' : 'O vincula tu base de datos de iCloud'}
+                                    {!isLegacyMode ? 'O vincula tu carpeta primero' : 'O carga tu base de datos de iCloud'}
                                 </p>
-                                <button
-                                    type="button"
-                                    onClick={handleReconnect}
-                                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-all text-sm font-semibold bg-slate-50/50"
-                                >
-                                    {'showDirectoryPicker' in window ? (
-                                        <>
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                            </svg>
-                                            Conectar Carpeta de Datos
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            Vincular database.json
-                                        </>
-                                    )}
-                                </button>
+                                
+                                {isLegacyMode ? (
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            accept=".json"
+                                            onChange={handleFileImport}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            disabled={isImporting}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-all text-sm font-semibold bg-slate-50/50"
+                                        >
+                                            {isImporting ? <loader2 className="w-5 h-5 animate-spin" /> : (
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                </svg>
+                                            )}
+                                            {isImporting ? 'Cargando datos...' : 'Seleccionar database.json'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleReconnect}
+                                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-all text-sm font-semibold bg-slate-50/50"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                        </svg>
+                                        Conectar Carpeta de Datos
+                                    </button>
+                                )}
                             </div>
                         )}
 
                         <p className="text-center text-[10px] text-slate-400 pt-2 px-6 leading-relaxed">
-                            {'showDirectoryPicker' in window 
+                            {!isLegacyMode 
                                 ? 'Al iniciar, se te pedirá elegir la carpeta donde guardas tus partes de trabajo.' 
-                                : 'Selecciona el archivo database.json de tu carpeta de iCloud para sincronizar.'}
+                                : 'Selecciona el archivo database.json de iCloud. Tus cambios se guardarán localmente y deberás exportarlos manualmente para sincronizar con otros dispositivos.'}
                         </p>
                     </form>
                 )}
