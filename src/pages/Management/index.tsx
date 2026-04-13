@@ -143,6 +143,58 @@ export default function Management() {
         }
     };
 
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setIsBulkUploading(true);
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const file of files) {
+            try {
+                const data = await parsePartePDF(file);
+                
+                let clientId = undefined;
+                if (data.createdBy) {
+                    clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || undefined;
+                }
+
+                let createdAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                if (data.date) {
+                    const [d, m, y] = data.date.split(/[-/]/);
+                    const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    let timeStr = data.time || '09:00';
+                    createdAt = `${dateStr} ${timeStr}:00`;
+                }
+
+                await addParte({
+                    title: data.title || `Parte importado - ${file.name}`,
+                    status: 'ABIERTO',
+                    createdBy: data.createdBy || 'Sistema',
+                    id: data.id || undefined,
+                    createdAt: createdAt,
+                    pdfFile: data.pdfFile,
+                    clientId: clientId
+                });
+
+                successCount++;
+            } catch (err) {
+                console.error(`Error importing ${file.name}:`, err);
+                errorCount++;
+            }
+        }
+
+        setIsBulkUploading(false);
+        if (e.target) e.target.value = '';
+
+        if (errorCount === 0) {
+            alert(`✅ ¡Éxito! Se han importado ${successCount} partes correctamente.`);
+        } else {
+            alert(`⚠️ Se importaron ${successCount} partes, pero hubo errores en ${errorCount} archivos.`);
+        }
+    };
+
     return (
         <div className="space-y-6 pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -174,8 +226,10 @@ export default function Management() {
                             </Button>
                             <input
                                 type="file"
-                                webkitdirectory=""
-                                directory=""
+                                {...({
+                                    webkitdirectory: "",
+                                    directory: ""
+                                } as any)}
                                 multiple
                                 ref={icloudFilesRef}
                                 className="hidden"
