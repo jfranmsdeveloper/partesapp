@@ -168,10 +168,12 @@ export default function Management() {
                     createdAt = `${dateStr} ${timeStr}:00`;
                 }
 
+                const currentUserName = currentUser?.user_metadata?.full_name || currentUser?.name || 'Sistema';
+
                 await addParte({
                     title: data.title || `Parte importado - ${file.name}`,
                     status: 'ABIERTO',
-                    createdBy: data.createdBy || 'Sistema',
+                    createdBy: currentUserName,
                     id: data.id || undefined,
                     createdAt: createdAt,
                     pdfFile: data.pdfFile,
