@@ -59,7 +59,7 @@ export const TimePerClientChart = ({ data }: TimePerClientChartProps) => {
                         {sortedData.map((_entry, index) => (
                             <Cell 
                                 key={`cell-${index}`} 
-                                fill={index % 2 === 0 ? '#6366f1' : '#818cf8'} 
+                                fill={index % 2 === 0 ? '#f97316' : '#fb923c'} 
                                 fillOpacity={1 - (index * 0.08)}
                             />
                         ))}

@@ -123,6 +123,14 @@ export default function Analytics() {
         const totalActions = filteredPartes.reduce((acc, p) => acc + p.actuaciones.length, 0);
         const totalPartes = filteredPartes.length;
 
+        const totalLlamadas = (activityMap['Llamada Realizada'] || 0) + (activityMap['Llamada Recibida'] || 0);
+        const totalCorreos = (activityMap['Correo Enviado'] || 0) + (activityMap['Correo Recibido'] || 0);
+        
+        const totalTraslados = activityMap['Traslado'] || 0;
+        const totalCerrados = filteredPartes.filter(p => p.status === 'CERRADO').length;
+        const resolucionDirecta = Math.max(0, totalCerrados - totalTraslados);
+        const totalAbiertos = filteredPartes.filter(p => p.status === 'ABIERTO' || p.status === 'EN TRÁMITE').length;
+
         return {
             timePerUser,
             trendData,
@@ -131,7 +139,13 @@ export default function Analytics() {
                 totalDuration,
                 totalActions,
                 totalPartes,
-                avgDuration: totalPartes > 0 ? Math.round(totalDuration / totalPartes) : 0
+                avgDuration: totalPartes > 0 ? Math.round(totalDuration / totalPartes) : 0,
+                totalLlamadas,
+                totalCorreos,
+                totalCerrados,
+                totalAbiertos,
+                resolucionDirecta,
+                totalTraslados
             }
         };
     }, [filteredPartes, range]);
@@ -147,14 +161,14 @@ export default function Analytics() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 py-6">
                 <div className="space-y-3">
                     <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900 dark:bg-slate-800 text-white border border-white/10 shadow-xl">
-                        <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Data Engine v2025</span>
+                        <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">PartesApp Engine</span>
                     </div>
                     <h1 className="text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                        Intelligence <span className="text-indigo-600 dark:text-indigo-400">Hub</span>
+                        Métricas
                     </h1>
                     <p className="text-xl text-slate-500 dark:text-slate-400 font-medium max-w-2xl">
-                        Visualización avanzada de métricas y rendimiento para los últimos {range} días.
+                        Visualización global de rendimiento de los últimos {range} días.
                     </p>
                 </div>
 
@@ -178,105 +192,129 @@ export default function Analytics() {
 
             {/* Bento Grid - Summary Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-6 h-auto md:h-[400px]">
-                {/* Main Hero Card */}
+                {/* Main Hero Card (Liquid Glass style) */}
                 <motion.div 
                     variants={itemVariants}
-                    className="md:col-span-2 md:row-span-2 p-10 rounded-[2.5rem] bg-indigo-600 dark:bg-indigo-500 text-white shadow-2xl relative overflow-hidden flex flex-col justify-between group cursor-default"
+                    className="md:col-span-2 md:row-span-2 p-10 rounded-[2.5rem] bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg relative overflow-hidden flex flex-col justify-between group cursor-default"
                 >
-                    <div className="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-colors duration-700" />
-                    <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-400/20 rounded-full blur-2xl" />
+                    <div className="absolute -right-20 -top-20 w-80 h-80 bg-white/20 rounded-full blur-3xl group-hover:bg-white/30 transition-colors duration-700" />
+                    <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-amber-400/30 rounded-full blur-2xl" />
                     
                     <div className="relative z-10">
                         <div className="flex justify-between items-start">
-                           <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-md border border-white/30">
+                           <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-md border border-white/30 shadow-sm">
                                <Clock className="w-8 h-8 text-white" />
                            </div>
                            <div className="text-right">
-                               <div className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-1">Status</div>
-                               <div className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold backdrop-blur-md">LIVE DATA</div>
+                               <div className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold backdrop-blur-md text-white border border-white/20">LIVE DATA</div>
                            </div>
                         </div>
                         <div className="mt-12">
-                            <p className="text-indigo-100 text-xs font-black uppercase tracking-[0.3em] mb-2">Inversión Total Acumulada</p>
-                            <h3 className="text-8xl font-black tabular-nums tracking-tighter leading-tight">
+                            <p className="text-orange-100/90 text-xs font-black uppercase tracking-[0.3em] mb-2">Inversión Total Acumulada</p>
+                            <h3 className="text-8xl font-black tabular-nums tracking-tighter leading-tight drop-shadow-sm">
                                 {analyticsData.metrics.totalDuration}
-                                <span className="text-2xl font-light opacity-60 ml-3">min</span>
+                                <span className="text-2xl font-light opacity-80 ml-3">min</span>
                             </h3>
                         </div>
                     </div>
 
-                    <div className="relative z-10 flex items-end justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="flex -space-x-3">
-                                {users.slice(0, 3).map((u, i) => (
-                                    <div key={i} className="w-10 h-10 rounded-full bg-indigo-400 border-4 border-indigo-600 flex items-center justify-center font-black text-xs">
-                                        {u.avatar_url ? <img src={u.avatar_url} className="w-full h-full rounded-full object-cover" /> : u.name?.charAt(0)}
-                                    </div>
-                                ))}
+                    <div className="relative z-10 flex items-end justify-between border-t border-white/20 pt-4 mt-8">
+                        <div className="flex items-center justify-between w-full">
+                            <div>
+                                <p className="text-[10px] uppercase font-black tracking-widest text-orange-200">Partes</p>
+                                <p className="text-2xl font-bold">{analyticsData.metrics.totalPartes}</p>
                             </div>
-                            <span className="text-xs font-bold text-indigo-100">Equipos Activos</span>
+                            <div>
+                                <p className="text-[10px] uppercase font-black tracking-widest text-orange-200">Actuaciones</p>
+                                <p className="text-2xl font-bold">{analyticsData.metrics.totalActions}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] uppercase font-black tracking-widest text-orange-200 text-right">Promedio</p>
+                                <p className="text-2xl font-bold text-right">{analyticsData.metrics.avgDuration} <span className="text-sm">min/r</span></p>
+                            </div>
                         </div>
-                        <ArrowUpRight className="w-10 h-10 text-white/40" />
                     </div>
                 </motion.div>
 
-                {/* Second Level Cards */}
+                {/* Status (Abiertos vs Cerrados) */}
                 <motion.div 
                     variants={itemVariants}
-                    className="md:col-span-1 md:row-span-1 p-8 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl flex flex-col justify-between group hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-all duration-300"
+                    className="md:col-span-1 md:row-span-1 p-6 rounded-[2rem] glass-card flex flex-col justify-between group"
                 >
                     <div className="flex justify-between items-start">
-                        <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600">
+                        <div className="p-3 bg-green-50 dark:bg-green-500/10 rounded-xl text-green-500">
                             <Activity className="w-5 h-5" />
                         </div>
-                        <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full">+{range}%</span>
+                        <span className="text-[10px] font-bold text-slate-500">TASA ÉXITO</span>
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Partes Registrados</p>
-                        <h3 className="text-4xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight">
-                            {analyticsData.metrics.totalPartes}
-                        </h3>
-                    </div>
-                </motion.div>
-
-                <motion.div 
-                    variants={itemVariants}
-                    className="md:col-span-1 md:row-span-1 p-8 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl flex flex-col justify-between hover:scale-[1.02] transition-transform duration-300"
-                >
-                    <div className="flex justify-between items-start">
-                        <div className="p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl text-amber-500">
-                            <Zap className="w-5 h-5" />
+                        <div className="flex justify-between items-end mb-1">
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Cerrados</p>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Abiertos</p>
+                        </div>
+                        <div className="flex justify-between items-baseline">
+                            <h3 className="text-4xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight text-green-500">
+                                {analyticsData.metrics.totalCerrados}
+                            </h3>
+                            <h3 className="text-2xl font-medium text-slate-400 tabular-nums">
+                                {analyticsData.metrics.totalAbiertos}
+                            </h3>
                         </div>
                     </div>
+                </motion.div>
+
+                {/* Resoluciones (Directas vs Traslados) */}
+                <motion.div 
+                    variants={itemVariants}
+                    className="md:col-span-1 md:row-span-1 p-6 rounded-[2rem] glass-card flex flex-col justify-between group"
+                >
+                    <div className="flex justify-between items-start">
+                        <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-xl text-purple-500">
+                            <Zap className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500">RESOLUCIÓN</span>
+                    </div>
                     <div>
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Actuaciones</p>
-                        <h3 className="text-4xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight">
-                            {analyticsData.metrics.totalActions}
-                        </h3>
+                        <div className="flex justify-between items-end mb-1">
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Directas</p>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Traslados</p>
+                        </div>
+                        <div className="flex justify-between items-baseline">
+                            <h3 className="text-4xl font-black text-slate-800 dark:text-white tabular-nums tracking-tight">
+                                {analyticsData.metrics.resolucionDirecta}
+                            </h3>
+                            <h3 className="text-2xl font-medium text-slate-400 tabular-nums">
+                                {analyticsData.metrics.totalTraslados}
+                            </h3>
+                        </div>
                     </div>
                 </motion.div>
 
-                {/* Third Level Wide Card */}
+                {/* Comunicaciones (Llamadas vs Correos) */}
                 <motion.div 
                     variants={itemVariants}
-                    className="md:col-span-2 md:row-span-1 p-8 rounded-[2rem] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl flex items-center justify-between overflow-hidden relative"
+                    className="md:col-span-2 md:row-span-1 p-6 rounded-[2rem] glass-panel flex flex-col justify-between relative overflow-hidden"
                 >
-                    <div className="absolute right-0 bottom-0 opacity-10">
-                        <BarChart3 className="w-32 h-32" />
+                    <div className="absolute right-0 bottom-0 opacity-5">
+                        <Users className="w-32 h-32" />
                     </div>
-                    <div className="relative z-10">
-                        <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Promedio por Parte</p>
-                        <h3 className="text-5xl font-black tabular-nums tracking-tight">
-                            {analyticsData.metrics.avgDuration}
-                            <span className="text-xl font-light opacity-60 ml-2">min/reg</span>
-                        </h3>
+                    <div className="relative z-10 flex justify-between items-start mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Comunicaciones Recibidas y Emitidas</span>
                     </div>
-                    <div className="relative z-10 h-16 w-32 bg-slate-800 dark:bg-slate-100 rounded-2xl flex items-center justify-center border border-white/10 dark:border-slate-200">
-                         <div className="flex gap-1.5 items-end">
-                            {[4, 7, 2, 8, 5, 9, 6].map((h, i) => (
-                                <div key={i} className="w-2 bg-indigo-500 rounded-full" style={{ height: `${h * 4}px` }} />
-                            ))}
-                         </div>
+                    <div className="relative z-10 flex justify-around items-end h-full">
+                        <div className="text-center">
+                            <h3 className="text-5xl font-black tabular-nums tracking-tight text-slate-800 dark:text-white">
+                                {analyticsData.metrics.totalLlamadas}
+                            </h3>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Llamadas</p>
+                        </div>
+                        <div className="w-px h-12 bg-slate-200 dark:bg-slate-700"></div>
+                        <div className="text-center">
+                            <h3 className="text-5xl font-black tabular-nums tracking-tight text-slate-800 dark:text-white">
+                                {analyticsData.metrics.totalCorreos}
+                            </h3>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Correos</p>
+                        </div>
                     </div>
                 </motion.div>
             </div>
@@ -309,14 +347,14 @@ export default function Analytics() {
                 {/* 2. Side Panel with Trend and Info */}
                 <div className="lg:col-span-1 space-y-8">
                     <motion.div variants={itemVariants}>
-                        <Card className="p-8 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl border-none h-[242px] flex flex-col relative overflow-hidden group">
+                        <Card className="p-8 rounded-[2.5rem] bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-xl border-none h-[242px] flex flex-col relative overflow-hidden group">
                              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-white/20 transition-all duration-700" />
                              <div className="mb-4 relative z-10 flex justify-between items-start">
                                 <div>
                                     <h3 className="text-xl font-black tracking-tight">Tendencia</h3>
-                                    <p className="text-indigo-100/70 text-xs font-bold uppercase tracking-widest">{range} DÍAS</p>
+                                    <p className="text-orange-100/70 text-xs font-bold uppercase tracking-widest">{range} DÍAS</p>
                                 </div>
-                                <Activity className="w-5 h-5 text-indigo-200/50" />
+                                <Activity className="w-5 h-5 text-orange-200/50" />
                             </div>
                             <div className="flex-1 min-h-0 relative z-10">
                                 <TrendChart data={analyticsData.trendData} />

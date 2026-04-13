@@ -22,7 +22,7 @@ export const ActivityTypeChart = ({ data }: ActivityTypeChartProps) => {
             return (
                 <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-4 border border-white/20 dark:border-white/10 shadow-2xl rounded-2xl text-sm">
                     <p className="font-bold text-slate-800 dark:text-slate-100 mb-1">{label}</p>
-                    <p className="text-indigo-600 dark:text-indigo-400 font-black">
+                    <p className="text-orange-600 dark:text-orange-400 font-black">
                         {payload[0].value} <span className="text-xs font-medium opacity-70 uppercase tracking-tighter ml-1">Registros</span>
                     </p>
                 </div>
@@ -41,8 +41,8 @@ export const ActivityTypeChart = ({ data }: ActivityTypeChartProps) => {
                 >
                     <defs>
                         <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#8b5cf6" />
+                            <stop offset="0%" stopColor="#f97316" />
+                            <stop offset="100%" stopColor="#fbbf24" />
                         </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} opacity={0.2} />

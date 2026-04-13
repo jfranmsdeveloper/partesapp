@@ -23,7 +23,7 @@ export const TrendChart = ({ data }: TrendChartProps) => {
                     <p className="font-bold text-slate-800 dark:text-slate-100 mb-1">
                         {format(new Date(label), "d MMM yyyy", { locale: es })}
                     </p>
-                    <p className="text-indigo-600 dark:text-indigo-400 font-black">
+                    <p className="text-orange-600 dark:text-orange-400 font-black">
                         {payload[0].value} <span className="text-xs font-medium opacity-70 uppercase tracking-tighter ml-1">Actuaciones</span>
                     </p>
                 </div>
