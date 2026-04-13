@@ -68,10 +68,6 @@ export default function Analytics() {
                 if (isNaN(date.getTime())) return false;
 
                 const isInRange = isWithinInterval(date, { start, end });
-                
-                // If admin, show all. If user, show only theirs.
-                if (isAdmin) return isInRange;
-
                 const userMatch = selectedUserId && (
                     String(p.userId) === String(selectedUserId) || 
                     p.createdBy === currentUser?.email ||
@@ -87,12 +83,12 @@ export default function Analytics() {
 
     // Data Mapping for Charts
     const analyticsData = useMemo(() => {
-        const userMap: Record<string, number> = {};
+        const clientMap: Record<string, number> = {};
         filteredPartes.forEach(p => {
-            const userName = p.createdBy || 'Sistema';
-            userMap[userName] = (userMap[userName] || 0) + p.totalTime;
+            const clientName = p.clientName || p.clientId || 'Cliente No Asignado';
+            clientMap[clientName] = (clientMap[clientName] || 0) + p.totalTime;
         });
-        const timePerUser = Object.entries(userMap)
+        const timePerClient = Object.entries(clientMap)
             .map(([name, duration]) => ({ name, duration }))
             .sort((a, b) => b.duration - a.duration);
 
@@ -132,7 +128,7 @@ export default function Analytics() {
         const totalAbiertos = filteredPartes.filter(p => p.status === 'ABIERTO' || p.status === 'EN TRÁMITE').length;
 
         return {
-            timePerUser,
+            timePerClient,
             trendData,
             activityData,
             metrics: {
@@ -326,18 +322,18 @@ export default function Analytics() {
                     <Card className="p-10 rounded-[3rem] border-none shadow-2xl bg-white dark:bg-slate-900 overflow-hidden relative h-[500px] flex flex-col">
                         <div className="flex justify-between items-center mb-10">
                             <div className="space-y-1">
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Rendimiento por Técnico</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Inversión de tiempo acumulada por usuario</p>
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Inversión por Cliente</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Distribución del tiempo de trabajo total</p>
                             </div>
-                            <Users className="w-6 h-6 text-slate-300" />
+                            <Clock className="w-6 h-6 text-slate-300" />
                         </div>
                         <div className="flex-1 min-h-0">
-                            {analyticsData.timePerUser.length > 0 ? (
-                                <TimePerClientChart data={analyticsData.timePerUser} />
+                            {analyticsData.timePerClient.length > 0 ? (
+                                <TimePerClientChart data={analyticsData.timePerClient} />
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 bg-slate-50/50 dark:bg-slate-800/50 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 transition-all duration-300">
-                                    <Users className="w-16 h-16 mb-4 opacity-10" />
-                                    <p className="text-sm font-bold tracking-tight opacity-50">No hay datos de técnicos para este periodo</p>
+                                    <Clock className="w-16 h-16 mb-4 opacity-10" />
+                                    <p className="text-sm font-bold tracking-tight opacity-50">No hay datos de clientes para este periodo</p>
                                 </div>
                             )}
                         </div>
