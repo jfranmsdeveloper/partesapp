@@ -45,21 +45,21 @@ export default function Analytics() {
 
     // Filter logic
     const filteredPartes = useMemo(() => {
-        const start = startOfDay(subDays(new Date(), range));
-        const end = endOfDay(new Date());
-        const userRole = currentUser?.role || currentUser?.user_metadata?.role;
-        const isAdmin = userRole === 'admin';
+        const now = new Date();
+        const start = range > 0 ? startOfDay(subDays(now, range)) : new Date(0); // 0 means All Time
+        const end = endOfDay(now);
+        
+        const userEmail = currentUser?.email?.toLowerCase();
+        const userName = (currentUser?.user_metadata?.full_name || currentUser?.name || '')?.toLowerCase();
 
         return partes.filter(p => {
             if (!p.createdAt) return false;
             try {
-                // Better date parsing handling multiple formats
                 let date: Date;
                 const raw = p.createdAt;
                 if (raw.includes('T')) {
                     date = parseISO(raw);
                 } else if (raw.includes('-')) {
-                    // YYYY-MM-DD HH:MM:SS
                     date = new Date(raw.replace(' ', 'T'));
                 } else {
                     date = new Date(raw);
@@ -68,18 +68,22 @@ export default function Analytics() {
                 if (isNaN(date.getTime())) return false;
 
                 const isInRange = isWithinInterval(date, { start, end });
-                const userMatch = selectedUserId && (
-                    String(p.userId) === String(selectedUserId) || 
-                    p.createdBy === currentUser?.email ||
-                    p.createdBy === (currentUser?.user_metadata?.full_name || currentUser?.name)
-                );
                 
-                return isInRange && userMatch;
+                // Flexible matching for individual view
+                const partUser = String(p.userId || '').toLowerCase();
+                const partCreator = (p.createdBy || '').toLowerCase();
+                
+                const isMyPart = 
+                    (userEmail && (partUser === userEmail || partCreator === userEmail)) ||
+                    (userName && partCreator.includes(userName)) ||
+                    (partCreator === 'usuario actual'); // Common fallback in local mode
+                
+                return isInRange && isMyPart;
             } catch (e) {
                 return false;
             }
         });
-    }, [partes, range, selectedUserId, currentUser]);
+    }, [partes, range, currentUser]);
 
     // Data Mapping for Charts
     const analyticsData = useMemo(() => {
@@ -97,6 +101,18 @@ export default function Analytics() {
             const d = format(subDays(new Date(), i), 'yyyy-MM-dd');
             trendMap[d] = 0;
         }
+        
+        // If range is 0 (All Time), we need to populate the trend map with actual dates from parts
+        if (range === 0 && filteredPartes.length > 0) {
+            filteredPartes.forEach(p => {
+                const date = p.createdAt.includes('T') ? parseISO(p.createdAt) : new Date(p.createdAt.replace(' ', 'T'));
+                if (!isNaN(date.getTime())) {
+                    const d = format(date, 'yyyy-MM-dd');
+                    trendMap[d] = 0;
+                }
+            });
+        }
+
         filteredPartes.forEach(p => {
             const raw = p.createdAt;
             const date = raw.includes('T') ? parseISO(raw) : new Date(raw.replace(' ', 'T'));
@@ -105,7 +121,12 @@ export default function Analytics() {
                 if (trendMap[d] !== undefined) trendMap[d] += 1;
             }
         });
-        const trendData = Object.entries(trendMap).map(([date, count]) => ({ date, count }));
+        const trendData = Object.entries(trendMap)
+            .map(([date, count]) => ({ date, count }))
+            .sort((a, b) => a.date.localeCompare(b.date));
+        
+        // Limit trend data points for "All time" to not crash the chart
+        const finalTrendData = trendData.length > 90 ? trendData.slice(-90) : trendData;
 
         const activityMap: Record<string, number> = {};
         filteredPartes.forEach(p => {
@@ -129,7 +150,7 @@ export default function Analytics() {
 
         return {
             timePerClient,
-            trendData,
+            trendData: finalTrendData,
             activityData,
             metrics: {
                 totalDuration,
@@ -169,7 +190,7 @@ export default function Analytics() {
                 </div>
 
                 <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200 dark:border-white/5 backdrop-blur-xl">
-                    {[7, 30, 90].map(d => (
+                    {[7, 30, 90, 0].map(d => (
                         <button
                             key={d}
                             onClick={() => setRange(d)}
@@ -180,7 +201,7 @@ export default function Analytics() {
                                     : "text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50"
                             )}
                         >
-                            {d}D
+                            {d === 0 ? "TODO" : `${d}D`}
                         </button>
                     ))}
                 </div>
