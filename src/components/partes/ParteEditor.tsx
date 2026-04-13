@@ -740,6 +740,20 @@ export const ParteEditor = () => {
                 )}
 
 
+                {/* Quick Add Button between Summary and General Data */}
+                {!isNew && !showAddActuacion && (
+                    <div className="w-[90%] max-w-7xl">
+                        <Button 
+                            onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} 
+                            className="w-full bg-blue-50/50 hover:bg-blue-50 text-blue-600 border border-dashed border-blue-200 hover:border-blue-400 transition-all font-bold group py-4 h-auto rounded-2xl"
+                        >
+                            <Plus className="w-5 h-5 mr-2 group-hover:scale-125 transition-transform" />
+                            Nueva Actuación
+                        </Button>
+                    </div>
+                )}
+
+
                 {/* 1. Datos Generales (Always Visible) */}
                 <div className="w-[90%] max-w-7xl">
                     <Card>
