@@ -155,20 +155,20 @@
 
 @layer utilities {
 
-  /* Fluent / Acrylic Materials */
+  /* Apple Liquid Glass Effects */
   .glass {
-    @apply backdrop-blur-2xl bg-white/70 dark:bg-slate-900/70 border border-white/50 dark:border-white/10 shadow-sm;
+    @apply backdrop-blur-2xl bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
   }
 
   .glass-card {
-    @apply backdrop-blur-xl bg-white/80 dark:bg-slate-800/80 border border-white/40 dark:border-white/10;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    /* Softer, more diffuse shadow */
+    @apply backdrop-blur-2xl bg-white/70 dark:bg-[#1A1A1A]/60 border border-white/50 dark:border-white/10;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
   }
 
-  .glass-panel {
-    @apply backdrop-blur-3xl bg-white/60 dark:bg-slate-900/60 border border-white/40 dark:border-white/10;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+  .glass-panel, .glass-liquid {
+    @apply backdrop-blur-3xl bg-white/40 dark:bg-black/30 border border-white/30 dark:border-white/10;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
   }
 
   /* Minimalist / Flat Gradients */

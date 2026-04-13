@@ -38,8 +38,8 @@ export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: Part
         <div
             onClick={handleCardClick}
             className={clsx(
-                "p-5 rounded-[2rem] bg-white dark:bg-dark-card border shadow-sm transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-md group relative overflow-hidden",
-                isSelected ? "border-orange-500 ring-2 ring-orange-500/20" : "border-slate-200 dark:border-dark-border dark:hover:border-slate-700/50"
+                "p-5 rounded-[2rem] glass-card transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-lg group relative overflow-hidden",
+                isSelected ? "border-orange-500 ring-2 ring-orange-500/20" : "hover:border-white/70 dark:hover:border-white/20"
             )}
         >
             {/* Selection Checkbox Overlay */}

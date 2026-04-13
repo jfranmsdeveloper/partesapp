@@ -36,7 +36,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
             <aside
                 className={clsx(
-                    "fixed top-4 bottom-4 left-4 w-64 bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border shadow-sm z-40 transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) flex flex-col overflow-hidden",
+                    "fixed top-4 bottom-4 left-4 w-64 glass-panel rounded-[2rem] z-40 transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) flex flex-col overflow-hidden",
                     {
                         "translate-x-0": isOpen,
                         "-translate-x-[110%]": !isOpen,
@@ -44,7 +44,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     }
                 )}
             >
-                <div className="flex h-24 items-center justify-between px-8 border-b border-slate-100 dark:border-dark-border bg-transparent">
+                <div className="flex h-24 items-center justify-between px-8 border-b border-slate-200/50 dark:border-white/10 bg-transparent">
                     <Link to="/" className="flex items-center gap-3" onClick={onClose}>
                         <div className="relative">
                             <img
@@ -88,7 +88,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     ))}
                 </nav>
 
-                <div className="p-4 bg-transparent border-t border-slate-100 dark:border-dark-border mt-auto">
+                <div className="p-4 bg-transparent border-t border-slate-200/50 dark:border-white/10 mt-auto">
                     <div className="flex justify-center mb-6 w-full px-4">
                         <button
                             onClick={toggleTheme}
