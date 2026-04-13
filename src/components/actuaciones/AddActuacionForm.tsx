@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import type { ActuacionType } from '../../types';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import { Button } from '../ui/Button';
@@ -7,7 +8,7 @@ import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
 import { NotionEditor } from '../ui/NotionEditor';
-import { FileText, Plus, X } from 'lucide-react';
+import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 
 interface AddActuacionFormProps {
@@ -18,7 +19,8 @@ interface AddActuacionFormProps {
 }
 
 export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp }: AddActuacionFormProps) => {
-    const { users, currentUser, snippets } = useAppStore();
+    const { users, currentUser, snippets, updateQuickButtons } = useAppStore();
+    const { isListening, transcript, start, stop } = useSpeechRecognition();
 
     const [type, setType] = useState<ActuacionType | null>(initialData?.type || null);
     const [duration, setDuration] = useState<string>(initialData?.duration.toString() || '');
@@ -26,12 +28,40 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     const [priority, setPriority] = useState<'BAJA' | 'MEDIA' | 'ALTA'>(initialData?.priority || 'MEDIA');
     const [tagInput, setTagInput] = useState(initialData?.tags?.join(', ') || '');
     const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
+    const [isConfiguringQuickButtons, setIsConfiguringQuickButtons] = useState(false);
 
     const [customTimestamp, setCustomTimestamp] = useState(() => {
         if (initialData?.timestamp) return toLocalISOString(new Date(initialData.timestamp));
         if (defaultTimestamp) return toLocalISOString(new Date(defaultTimestamp));
         return toLocalISOString(new Date());
     });
+
+    // Voice to notes sync
+    useEffect(() => {
+        if (transcript) {
+            setNotes(prev => {
+                const cleanTranscript = transcript.trim();
+                if (!cleanTranscript) return prev;
+                // Append to existing HTML if present
+                if (prev.endsWith('</p>')) {
+                    return prev.replace(/<\/p>$/, ` ${cleanTranscript}</p>`);
+                }
+                return prev + `<p>${cleanTranscript}</p>`;
+            });
+        }
+    }, [transcript]);
+
+    const quickButtons = currentUser?.quickButtons || [
+        "Reparación finalizada con éxito.",
+        "Pendiente de recibir pieza.",
+        "Revisión preventiva sin novedad.",
+        "Cliente ausente."
+    ];
+
+    const filteredSnippets = useMemo(() => {
+        if (!type) return snippets;
+        return snippets.filter(s => !s.type || s.type === type);
+    }, [snippets, type]);
 
 
     useEffect(() => {
@@ -150,20 +180,69 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     {isSelected && (
                                         <div className={clsx("absolute top-3 right-3 w-2 h-2 rounded-full", activeBg)} />
                                     )}
-                                </button>
-                            );
-                        })}
                     </div>
 
-                    {/* Snippets / Templates Section */}
-                    {snippets.length > 0 && (
-                        <div className="mt-8 pt-6 border-t border-slate-100">
+                    {/* Quick Action Buttons (Configurable) */}
+                    <div className="mt-8 pt-6 border-t border-slate-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 text-slate-500">
+                                <Sparkles className="w-4 h-4 text-orange-400" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Resumen Rápido</span>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setIsConfiguringQuickButtons(!isConfiguringQuickButtons)}
+                                className="text-[10px] font-bold text-blue-500 hover:text-blue-700 flex items-center gap-1"
+                            >
+                                <Settings2 className="w-3 h-3" />
+                                {isConfiguringQuickButtons ? 'Cerrar' : 'Configurar'}
+                            </button>
+                        </div>
+                        
+                        {isConfiguringQuickButtons ? (
+                            <div className="space-y-3 bg-white/50 p-4 rounded-2xl border border-dashed border-slate-200">
+                                <p className="text-[10px] text-slate-500 mb-2 font-medium">Define tus 4 botones de acceso rápido:</p>
+                                {quickButtons.map((btn, idx) => (
+                                    <input 
+                                        key={idx}
+                                        className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:border-orange-500 outline-none"
+                                        value={btn}
+                                        onChange={(e) => {
+                                            const newBtns = [...quickButtons];
+                                            newBtns[idx] = e.target.value;
+                                            updateQuickButtons(newBtns);
+                                        }}
+                                        placeholder={`Botón ${idx + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {quickButtons.map((btn, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setNotes(prev => prev + (prev && prev !== '<p></p>' ? ' ' : '') + btn)}
+                                        className="px-4 py-2 rounded-xl bg-orange-50/50 hover:bg-orange-50 border border-orange-100/50 hover:border-orange-300 text-[11px] font-bold text-orange-800 transition-all shadow-sm active:scale-95"
+                                    >
+                                        {btn}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Snippets / Templates Section (Smart Filtered) */}
+                    {filteredSnippets.length > 0 && (
+                        <div className="mt-6 pt-6 border-t border-slate-100">
                             <div className="flex items-center gap-2 mb-4 text-slate-500">
                                 <FileText className="w-4 h-4" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Mis Plantillas</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    {type ? `Plantillas para ${type}` : 'Otras Plantillas'}
+                                </span>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                {snippets.map(snippet => (
+                                {filteredSnippets.map(snippet => (
                                     <button
                                         key={snippet.id}
                                         type="button"
@@ -171,9 +250,9 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                             const cleanContent = snippet.content.replace(/\n/g, '<br/>');
                                             setNotes(prev => prev + (prev && prev !== '<p></p>' ? '<br/>' : '') + cleanContent);
                                         }}
-                                        className="px-4 py-2 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 hover:border-orange-300 text-[11px] font-bold text-slate-600 hover:text-orange-700 transition-all shadow-sm flex items-center gap-2"
+                                        className="px-4 py-2 rounded-xl bg-blue-50/50 hover:bg-blue-50 border border-blue-100/50 hover:border-blue-300 text-[11px] font-bold text-blue-800 transition-all shadow-sm flex items-center gap-2"
                                     >
-                                        <Plus className="w-3 h-3 text-orange-500" />
+                                        <Plus className="w-3 h-3 text-blue-500" />
                                         {snippet.title}
                                     </button>
                                 ))}
@@ -271,17 +350,47 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 <div className="space-y-4">
                     <div className="flex justify-between items-center px-1">
                         <label className="text-sm font-medium text-slate-700">Descripción detallada</label>
+                        <button
+                            type="button"
+                            onClick={isListening ? stop : start}
+                            className={clsx(
+                                "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                                isListening 
+                                    ? "bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
+                                    : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                            )}
+                        >
+                            {isListening ? (
+                                <>
+                                    <MicOff className="w-3 h-3" />
+                                    Detener Dictado
+                                </>
+                            ) : (
+                                <>
+                                    <Mic className="w-3 h-3 text-blue-500" />
+                                    Dictado por Voz
+                                </>
+                            )}
+                        </button>
                     </div>
                     <NotionEditor
                         initialContent={notes}
                         onChange={handleNotesChange}
-                        placeholder="Escribe aquí los detalles..."
+                        placeholder={isListening ? "Escuchando..." : "Escribe aquí los detalles o usa el dictado por voz..."}
                     />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                    <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
-                    <Button type="submit" disabled={!type || !duration} variant="primary">
+                {/* Navigation & One-Hand Mode Optimization for Mobile */}
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100 sm:relative sticky bottom-0 bg-white/80 sm:bg-transparent backdrop-blur-md p-4 -mx-6 sm:mx-0 -mb-6 sm:mb-0 z-50">
+                    <Button type="button" variant="ghost" onClick={onCancel} className="w-full sm:w-auto h-12 sm:h-auto order-2 sm:order-1 font-bold">
+                        Cancelar
+                    </Button>
+                    <Button 
+                        type="submit" 
+                        disabled={!type || !duration} 
+                        variant="primary" 
+                        className="w-full sm:w-auto h-12 sm:h-auto order-1 sm:order-2 shadow-lg shadow-blue-500/20 font-black text-xs uppercase tracking-widest"
+                    >
                         {initialData ? 'Actualizar Actuación' : 'Añadir Actuación'}
                     </Button>
                 </div>

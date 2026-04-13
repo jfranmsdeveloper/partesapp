@@ -682,6 +682,18 @@ export const ParteEditor = () => {
                                 />
                             </div>
 
+                            {!showAddActuacion && currentParte.actuaciones.length > 3 && (
+                                <div className="flex justify-center mt-2 mb-6">
+                                    <Button 
+                                        onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} 
+                                        className="w-full sm:w-auto bg-slate-50 hover:bg-white text-slate-600 border border-dashed border-slate-300 hover:border-blue-400 hover:text-blue-600 transition-all font-bold group"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2 group-hover:scale-125 transition-transform" />
+                                        Nueva Actuación
+                                    </Button>
+                                </div>
+                            )}
+
                             {showAddActuacion && (
                                 <div className="mt-4 pt-6 border-t border-slate-100 dark:border-slate-800">
                                     <AddActuacionForm

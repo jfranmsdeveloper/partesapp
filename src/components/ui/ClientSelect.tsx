@@ -28,11 +28,16 @@ export function ClientSelect({ value, onChange, label, placeholder = "Buscar o c
         [clients, value]);
 
     // Filter clients based on search
-    const filteredClients = useMemo(() =>
-        clients.filter(c =>
-            c.name.toLowerCase().includes(searchTerm.toLowerCase())
-        ),
-        [clients, searchTerm]);
+    const filteredClients = useMemo(() => {
+        const term = searchTerm.toLowerCase().trim();
+        if (!term) return clients.slice(0, 100); // Show first 100 if empty
+        
+        const terms = term.split(/\s+/);
+        return clients.filter(c => {
+            const name = c.name.toLowerCase();
+            return terms.every(t => name.includes(t));
+        }).slice(0, 100); // Cap at 100 for performance
+    }, [clients, searchTerm]);
 
     // Handle clicking outside to close
     useEffect(() => {

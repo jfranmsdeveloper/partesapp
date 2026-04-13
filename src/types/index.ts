@@ -66,6 +66,7 @@ export interface User {
     name?: string;
     role?: string;
     avatar_url?: string;
+    quickButtons?: string[];
     user_metadata?: {
         full_name?: string;
         avatar_url?: string;
@@ -79,4 +80,5 @@ export interface Snippet {
     title: string;
     content: string;
     userId: string;
+    type?: ActuacionType;
 }

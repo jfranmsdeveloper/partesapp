@@ -52,6 +52,7 @@ interface AppState {
 
     getParte: (id: number | string) => Parte | undefined;
     updateUserProfile: (email: string, data: Partial<User>) => Promise<void>;
+    updateQuickButtons: (buttons: string[]) => Promise<void>;
     changePassword: (email: string, oldPass: string, newPass: string) => Promise<boolean>;
 
     // New Actions
@@ -110,7 +111,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                         email: session.user.email!,
                         name: session.user.user_metadata?.full_name || session.user.name || '',
                         password: '',
-                        role: session.user.role || session.user.user_metadata?.role || 'user'
+                        role: session.user.role || session.user.user_metadata?.role || 'user',
+                        quickButtons: session.user.quickButtons || []
                     }
                 });
                 await get().fetchData();
@@ -265,7 +267,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                                 ...state.currentUser,
                                 avatar_url: freshUser.avatar_url,
                                 name: freshUser.user_metadata?.full_name || state.currentUser.name,
-                                role: freshUser.role || state.currentUser.role // Sync role
+                                role: freshUser.role || state.currentUser.role, // Sync role
+                                quickButtons: freshUser.quickButtons || []
                             } : null
                         }));
                     }
@@ -483,8 +486,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     getParte: (id: number | string) => get().partes.find(p => String(p.id) === String(id)),
 
     updateUserProfile: async (_email, data) => {
+        const { currentUser } = get();
+        if (!currentUser) return;
         await supabase.auth.updateUser({ data: { full_name: data.name } });
+        // Also update in users table
+        await supabase.from('users').update({ name: data.name }).eq('id', currentUser.id);
         get().checkSession();
+    },
+
+    updateQuickButtons: async (buttons) => {
+        const { currentUser } = get();
+        if (!currentUser?.id) return;
+        
+        const { error } = await supabase.from('users').update({ quickButtons: buttons }).eq('id', currentUser.id);
+        if (!error) {
+            set(state => ({
+                currentUser: state.currentUser ? { ...state.currentUser, quickButtons: buttons } : null
+            }));
+        }
     },
 
     changePassword: async (_email, _oldPass, newPass) => {
