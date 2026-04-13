@@ -242,6 +242,7 @@ class FileSystemAdapter {
     /** The username inferred from the last session file found (used to speed up reconnect) */
     private pendingUsername: string | null = null;
     private lastLoadTime: number = 0;
+    private dbQueue: Promise<any> = Promise.resolve();
 
     // -----------------------------------------------------------------------
     // init — restore or acquire the root folder handle (or file handle in Safari)
@@ -454,10 +455,28 @@ class FileSystemAdapter {
     }
 
     // -----------------------------------------------------------------------
-    // Database load / save
+    // Database load / save (QUEUED)
     // -----------------------------------------------------------------------
 
+    private async runInQueue<T>(task: () => Promise<T>): Promise<T> {
+        const next = this.dbQueue.then(async () => {
+            try {
+                return await task();
+            } catch (e) {
+                console.error('FSA: Queue task error:', e);
+                throw e;
+            }
+        });
+        // Ensure the queue keeps moving even if one task fails
+        this.dbQueue = next.catch(() => {});
+        return next;
+    }
+
     private async loadDatabase(force = false) {
+        return this.runInQueue(() => this._loadDatabase(force));
+    }
+
+    private async _loadDatabase(force = false) {
         // Simple throttle: don't reload if we just loaded in the last 500ms (unless forced)
         const now = Date.now();
         if (!force && now - this.lastLoadTime < 500) return;
@@ -477,6 +496,7 @@ class FileSystemAdapter {
                 if (stored) {
                     this.state = stored;
                     console.log('FSA: Base de datos cargada desde IndexedDB (Modo Legacy).');
+                    this.lastLoadTime = Date.now();
                     return;
                 }
                 text = "";
@@ -539,12 +559,12 @@ class FileSystemAdapter {
             }
 
             if (modified || migrationModified) {
-                await this.saveDatabase();
+                await this._saveDatabase();
             }
         } catch (e) {
             console.error('Error loading DB:', e);
             this.state = JSON.parse(JSON.stringify(DEFAULT_DB));
-            await this.saveDatabase();
+            await this._saveDatabase();
         }
     }
 
@@ -748,14 +768,18 @@ class FileSystemAdapter {
         let pendingAction: any = null;
 
         const execute = async () => {
-            if (!this.isInitialized) {
-                return { data: null, error: { message: 'Carpeta no inicializada. Por favor, inicia sesión primero.' } };
-            }
+            return this.runInQueue(async () => {
+                if (!this.isInitialized) {
+                    return { data: null, error: { message: 'Carpeta no inicializada. Por favor, inicia sesión primero.' } };
+                }
 
-            if (pendingAction) {
-                // Ensure we have the latest data before any write operation (Read-Modify-Write)
-                await this.loadDatabase(true);
-            }
+                if (pendingAction) {
+                    // Ensure we have the latest data before any write operation (Read-Modify-Write)
+                    await this._loadDatabase(true);
+                } else {
+                    // For select, use standard non-forced load
+                    await this._loadDatabase(false);
+                }
 
             let collection = this.state[table] || [];
 
@@ -774,7 +798,7 @@ class FileSystemAdapter {
                             }
 
                             collection[index] = { ...collection[index], ...pendingAction.body };
-                            const ok = await this.saveDatabase();
+                            const ok = await this._saveDatabase();
                             if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo. Verifica permisos.' } };
                         }
                     } else if (pendingAction.column && pendingAction.inValues) {
@@ -787,7 +811,7 @@ class FileSystemAdapter {
                             }
                         }
                         if (updated) {
-                            const ok = await this.saveDatabase();
+                            const ok = await this._saveDatabase();
                             if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
                         }
                     } else if (pendingAction.column && pendingAction.val) {
@@ -799,7 +823,7 @@ class FileSystemAdapter {
                             }
                         }
                         if (updated) {
-                            const ok = await this.saveDatabase();
+                            const ok = await this._saveDatabase();
                             if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
                         }
                     }
@@ -814,7 +838,7 @@ class FileSystemAdapter {
                     } else if (pendingAction.column && pendingAction.val) {
                         this.state[table] = collection.filter((item: any) => String(item[pendingAction.column]) !== String(pendingAction.val));
                     }
-                    const ok = await this.saveDatabase();
+                    const ok = await this._saveDatabase();
                     if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
                     return { data: null, error: null };
 
@@ -877,7 +901,7 @@ class FileSystemAdapter {
                         inserted.push(newItem);
                     }
 
-                    const ok = await this.saveDatabase();
+                    const ok = await this._saveDatabase();
                     if (!ok) return { data: null, error: { message: 'Error físico al escribir en el archivo.' } };
                     return { data: inserted, error: null };
                 }
@@ -906,6 +930,7 @@ class FileSystemAdapter {
             }
 
             return { data: results, error: null };
+            });
         };
 
         const builder = {
