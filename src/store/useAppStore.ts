@@ -15,6 +15,7 @@ interface AppState {
     // Auth State
     currentUser: User | null;
     hasPendingHandle: boolean;
+    isSingleFileMode: boolean;
     checkSession: () => Promise<void>;
     loginUser: (email: string, pass: string) => Promise<boolean>;
     registerUser: (user: User) => Promise<boolean>;
@@ -66,6 +67,10 @@ interface AppState {
     upsertClientFromPDF: (fullName: string, code?: string) => Promise<string | null>;
     linkPdfToParte: (currentId: number | string, newId: number | string, pdfData: string) => Promise<void>;
     bulkAddActuacion: (parteIds: (number | string)[], actuacion: Omit<Actuacion, 'id' | 'parteId' | 'timestamp'> & { timestamp?: string }, options?: { shouldClose?: boolean }) => Promise<void>;
+    
+    // iCloud / Single File Mode Actions
+    importFiles: (files: FileList | File[]) => Promise<{success: number, total: number}>;
+    exportDatabase: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -80,6 +85,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     currentUser: null,
     hasPendingHandle: false,
+    isSingleFileMode: false,
     partes: [],
     clients: [],
     users: [],
@@ -106,7 +112,13 @@ export const useAppStore = create<AppState>((set, get) => ({
                 });
                 await get().fetchData();
             } else {
-                set({ currentUser: null, partes: [], clients: [], hasPendingHandle: (supabase as any).hasPendingHandle || false });
+                set({ 
+                    currentUser: null, 
+                    partes: [], 
+                    clients: [], 
+                    hasPendingHandle: (supabase as any).hasPendingHandle || false,
+                    isSingleFileMode: (supabase as any).isSingleFileMode || false
+                });
             }
         } catch (error) {
             console.error('Session check failed:', error);
@@ -130,7 +142,6 @@ export const useAppStore = create<AppState>((set, get) => ({
             return false;
         }
 
-        if (data.user) {
             set({
                 currentUser: {
                     id: data.user.id,
@@ -138,7 +149,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                     name: data.user.user_metadata?.full_name || data.user.name || '',
                     password: '',
                     role: data.user.role || data.user.user_metadata?.role || 'user'
-                }
+                },
+                isSingleFileMode: (supabase as any).isSingleFileMode || false
             });
             await get().fetchData();
         }
@@ -704,6 +716,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         console.log('Bulk operations completed successfully. Refreshing data...');
         await get().fetchData();
+    },
+
+    importFiles: async (files) => {
+        const result = await (supabase as any).importFilesFromEntries(files);
+        await get().fetchData();
+        return result;
+    },
+
+    exportDatabase: () => {
+        (supabase as any).exportDatabase();
     }
 }));
 

@@ -153,22 +153,37 @@ export default function Login() {
 
                         {!hasPendingHandle && !(supabase as any).isInitialized && (
                             <div className="pt-4 border-t border-slate-100 mt-4 text-center">
-                                <p className="text-[10px] text-slate-400 mb-3 uppercase tracking-wider font-bold">O vincula tu carpeta primero</p>
+                                <p className="text-[10px] text-slate-400 mb-3 uppercase tracking-wider font-bold">
+                                    {'showDirectoryPicker' in window ? 'O vincula tu carpeta primero' : 'O vincula tu base de datos de iCloud'}
+                                </p>
                                 <button
                                     type="button"
                                     onClick={handleReconnect}
                                     className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-all text-sm font-semibold bg-slate-50/50"
                                 >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                    </svg>
-                                    Conectar Carpeta de Datos
+                                    {'showDirectoryPicker' in window ? (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                            </svg>
+                                            Conectar Carpeta de Datos
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            Vincular database.json
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         )}
 
                         <p className="text-center text-[10px] text-slate-400 pt-2 px-6 leading-relaxed">
-                            Al iniciar, se te pedirá elegir la carpeta donde guardas tus partes de trabajo.
+                            {'showDirectoryPicker' in window 
+                                ? 'Al iniciar, se te pedirá elegir la carpeta donde guardas tus partes de trabajo.' 
+                                : 'Selecciona el archivo database.json de tu carpeta de iCloud para sincronizar.'}
                         </p>
                     </form>
                 )}

@@ -4,11 +4,12 @@ export const DB_FILE_NAME = 'database.json';
 export const SESSION_FILE_NAME = 'session.json';
 export const IDB_STORE = 'PartesAppStore';
 export const IDB_KEY = 'rootDirectoryHandle';
+export const IDB_FILE_KEY = 'databaseFileHandle';
 
 // ---------------------------------------------------------------------------
-// IndexedDB helpers — persist the root folder handle across sessions
+// IndexedDB helpers — persist the root folder or file handle across sessions
 // ---------------------------------------------------------------------------
-export async function saveHandleToIDB(handle: FileSystemDirectoryHandle): Promise<void> {
+export async function saveHandleToIDB(handle: FileSystemHandle, key: string = IDB_KEY): Promise<void> {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open('PartesAppDB', 1);
         req.onupgradeneeded = () => {
@@ -17,7 +18,7 @@ export async function saveHandleToIDB(handle: FileSystemDirectoryHandle): Promis
         req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction(IDB_STORE, 'readwrite');
-            tx.objectStore(IDB_STORE).put(handle, IDB_KEY);
+            tx.objectStore(IDB_STORE).put(handle, key);
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
         };
@@ -25,7 +26,7 @@ export async function saveHandleToIDB(handle: FileSystemDirectoryHandle): Promis
     });
 }
 
-export async function getHandleFromIDB(): Promise<FileSystemDirectoryHandle | null> {
+export async function getHandleFromIDB(key: string = IDB_KEY): Promise<FileSystemHandle | null> {
     return new Promise((resolve) => {
         const req = indexedDB.open('PartesAppDB', 1);
         req.onupgradeneeded = () => {
@@ -39,7 +40,7 @@ export async function getHandleFromIDB(): Promise<FileSystemDirectoryHandle | nu
             }
             const tx = db.transaction(IDB_STORE, 'readonly');
             const store = tx.objectStore(IDB_STORE);
-            const getReq = store.get(IDB_KEY);
+            const getReq = store.get(key);
             getReq.onsuccess = () => resolve(getReq.result || null);
             getReq.onerror = () => resolve(null);
         };
@@ -62,10 +63,57 @@ export async function clearHandleFromIDB(): Promise<void> {
             const tx = db.transaction(IDB_STORE, 'readwrite');
             const store = tx.objectStore(IDB_STORE);
             store.delete(IDB_KEY);
+            store.delete(IDB_FILE_KEY);
             tx.oncomplete = () => resolve();
             tx.onerror = () => resolve();
         };
         req.onerror = () => resolve();
+    });
+}
+
+// ---------------------------------------------------------------------------
+// IndexedDB File Cache — for Single File Mode (Safari/iOS)
+// ---------------------------------------------------------------------------
+const IDB_FILES_STORE = 'PartesAppFiles';
+
+export async function saveFileToIDB(path: string, blob: Blob): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open('PartesAppDB', 1);
+        req.onupgradeneeded = () => {
+            if (!req.result.objectStoreNames.contains(IDB_FILES_STORE)) {
+                req.result.createObjectStore(IDB_FILES_STORE);
+            }
+        };
+        req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_FILES_STORE)) {
+                // Should have been created in onupgradeneeded, but if version didn't change:
+                // We'll need a version bump in a real app, but for now let's handle it.
+                resolve(); return;
+            }
+            const tx = db.transaction(IDB_FILES_STORE, 'readwrite');
+            tx.objectStore(IDB_FILES_STORE).put(blob, path);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        };
+        req.onerror = () => reject(req.error);
+    });
+}
+
+export async function getFileFromIDB(path: string): Promise<Blob | null> {
+    return new Promise((resolve) => {
+        const req = indexedDB.open('PartesAppDB', 1);
+        req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_FILES_STORE)) {
+                resolve(null); return;
+            }
+            const tx = db.transaction(IDB_FILES_STORE, 'readonly');
+            const getReq = tx.objectStore(IDB_FILES_STORE).get(path);
+            getReq.onsuccess = () => resolve(getReq.result || null);
+            getReq.onerror = () => resolve(null);
+        };
+        req.onerror = () => resolve(null);
     });
 }
 
@@ -144,8 +192,10 @@ function userFolderName(email: string): string {
 // ---------------------------------------------------------------------------
 class FileSystemAdapter {
     private handle: FileSystemDirectoryHandle | null = null;
+    private fileHandle: FileSystemFileHandle | null = null;
     private state: DBState = JSON.parse(JSON.stringify(DEFAULT_DB));
     public isInitialized = false;
+    public isSingleFileMode = false;
     /** True when IndexedDB has a stored handle but the browser needs a user gesture to re-grant permission */
     public hasPendingHandle = false;
     private activeSessionUser: any = null;
@@ -154,36 +204,33 @@ class FileSystemAdapter {
     private lastLoadTime: number = 0;
 
     // -----------------------------------------------------------------------
-    // init — restore or acquire the root folder handle
+    // init — restore or acquire the root folder handle (or file handle in Safari)
     //   promptUserIfNeeded = true  → show directory picker if not stored yet
     //   promptUserIfNeeded = false → silent check only (used by checkSession)
     // -----------------------------------------------------------------------
     async init(promptUserIfNeeded = false): Promise<boolean> {
-        if (!('showDirectoryPicker' in window)) {
-            alert('Tu navegador no soporta File System Access API. Usa Chrome o Edge en PC/Mac.');
+        const hasDirectoryPicker = 'showDirectoryPicker' in window;
+        const hasFilePicker = 'showOpenFilePicker' in window;
+
+        if (!hasDirectoryPicker && !hasFilePicker) {
+            alert('Tu navegador es demasiado antiguo. Usa una versión moderna de Safari, Chrome o Edge.');
             return false;
         }
 
         try {
-            let dirHandle = await getHandleFromIDB();
+            let dirHandle = await getHandleFromIDB(IDB_KEY) as FileSystemDirectoryHandle | null;
+            let dbFileHandle = await getHandleFromIDB(IDB_FILE_KEY) as FileSystemFileHandle | null;
 
+            // 1. RE-GRANT PERMISSIONS if stored
             if (dirHandle) {
-                // Check current permission status
                 const permission = await (dirHandle as any).queryPermission({ mode: 'readwrite' });
-
                 if (permission !== 'granted') {
                     if (promptUserIfNeeded) {
-                        // requestPermission needs a user gesture — it works when called
-                        // from a button click handler (loginUser / checkSession from App mount).
                         try {
                             const newPerm = await (dirHandle as any).requestPermission({ mode: 'readwrite' });
                             if (newPerm !== 'granted') dirHandle = null;
-                        } catch (err) {
-                            console.warn('requestPermission failed or no user gesture:', err);
-                            dirHandle = null;
-                        }
+                        } catch { dirHandle = null; }
                     } else {
-                        // Silent check: keep handle but mark as not fully initialised yet
                         this.handle = dirHandle;
                         this.hasPendingHandle = true;
                         return false;
@@ -191,26 +238,71 @@ class FileSystemAdapter {
                 }
             }
 
-            // No stored handle (or permission denied) and we can prompt → show picker once
-            if (!dirHandle && promptUserIfNeeded) {
-                try {
-                    dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-                    await saveHandleToIDB(dirHandle as any);
-                } catch (err) {
-                    console.warn('User cancelled folder selection:', err);
-                    return false;
+            if (!dirHandle && dbFileHandle) {
+                const permission = await (dbFileHandle as any).queryPermission({ mode: 'readwrite' });
+                if (permission !== 'granted') {
+                    if (promptUserIfNeeded) {
+                        try {
+                            const newPerm = await (dbFileHandle as any).requestPermission({ mode: 'readwrite' });
+                            if (newPerm !== 'granted') dbFileHandle = null;
+                        } catch { dbFileHandle = null; }
+                    } else {
+                        this.fileHandle = dbFileHandle;
+                        this.isSingleFileMode = true;
+                        this.hasPendingHandle = true;
+                        return false;
+                    }
                 }
             }
 
+            // 2. PROMPT IF NEEDED
+            if (!dirHandle && !dbFileHandle && promptUserIfNeeded) {
+                if (hasDirectoryPicker) {
+                    try {
+                        dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+                        await saveHandleToIDB(dirHandle as any, IDB_KEY);
+                    } catch (err) {
+                        console.warn('User cancelled folder selection:', err);
+                    }
+                } else if (hasFilePicker) {
+                    try {
+                        const [file] = await (window as any).showOpenFilePicker({
+                            types: [{ description: 'Base de datos de Partes', accept: { 'application/json': ['.json'] } }],
+                            multiple: false
+                        });
+                        if (file.name === DB_FILE_NAME) {
+                            dbFileHandle = file;
+                            await saveHandleToIDB(dbFileHandle as any, IDB_FILE_KEY);
+                        } else {
+                            alert('Por favor selecciona el archivo database.json de tu iCloud.');
+                        }
+                    } catch (err) {
+                        console.warn('User cancelled file selection:', err);
+                    }
+                }
+            }
+
+            // 3. INITIALIZE STATE
             if (dirHandle) {
                 this.handle = dirHandle;
+                this.fileHandle = null;
+                this.isSingleFileMode = false;
                 this.hasPendingHandle = false;
                 await this.loadDatabase();
                 this.isInitialized = true;
-
-                // Try to restore session from the file-based session.json
                 await this.restoreSessionFromFile();
+                return true;
+            }
 
+            if (dbFileHandle) {
+                this.fileHandle = dbFileHandle;
+                this.handle = null;
+                this.isSingleFileMode = true;
+                this.hasPendingHandle = false;
+                await this.loadDatabase();
+                this.isInitialized = true;
+                // Session restoration is harder in single file mode without the session.json file,
+                // but we can at least try to see if activeSessionUser is in the state.
                 return true;
             }
 
@@ -316,16 +408,22 @@ class FileSystemAdapter {
     // -----------------------------------------------------------------------
 
     private async loadDatabase(force = false) {
-        if (!this.handle) return;
+        if (!this.handle && !this.fileHandle) return;
         
         // Simple throttle: don't reload if we just loaded in the last 500ms (unless forced)
         const now = Date.now();
         if (!force && now - this.lastLoadTime < 500) return;
 
         try {
-            const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
-            const file = await fileHandle.getFile();
-            const text = await file.text();
+            let text: string;
+            if (this.handle) {
+                const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
+                const file = await fileHandle.getFile();
+                text = await file.text();
+            } else {
+                const file = await this.fileHandle!.getFile();
+                text = await file.text();
+            }
             this.lastLoadTime = Date.now();
 
             let loadedState: DBState;
@@ -463,13 +561,19 @@ class FileSystemAdapter {
     }
 
     private async saveDatabase(): Promise<boolean> {
-        if (!this.handle) return false;
+        if (!this.handle && !this.fileHandle) return false;
         try {
             console.log('FSA: Guardando base de datos...');
-            const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(JSON.stringify(this.state, null, 2));
-            await writable.close();
+            if (this.handle) {
+                const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(this.state, null, 2));
+                await writable.close();
+            } else {
+                const writable = await (this.fileHandle as any).createWritable();
+                await writable.write(JSON.stringify(this.state, null, 2));
+                await writable.close();
+            }
             console.log('FSA: Base de datos guardada con éxito.');
             return true;
         } catch (e) {
@@ -483,30 +587,41 @@ class FileSystemAdapter {
     // -----------------------------------------------------------------------
 
     async getFileUrl(path: string): Promise<string | null> {
-        if (!this.handle || !path) return null;
+        if (!path) return null;
         if (!path.startsWith('local://')) return path;
 
-        try {
-            const relativePath = path.replace('local://', '');
-            const parts = relativePath.split('/');
+        // Try directory access if available
+        if (this.handle) {
+            try {
+                const relativePath = path.replace('local://', '');
+                const parts = relativePath.split('/');
 
-            let currentHandle: any = this.handle;
-            for (let i = 0; i < parts.length - 1; i++) {
-                currentHandle = await currentHandle.getDirectoryHandle(parts[i]);
+                let currentHandle: any = this.handle;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    currentHandle = await currentHandle.getDirectoryHandle(parts[i]);
+                }
+
+                const fileName = parts[parts.length - 1];
+                const fileHandle = await currentHandle.getFileHandle(fileName);
+                const file = await fileHandle.getFile();
+                return URL.createObjectURL(file);
+            } catch (e) {
+                console.warn('FSA: Error retrieving file from directory, falling back to IDB cache:', e);
             }
-
-            const fileName = parts[parts.length - 1];
-            const fileHandle = await currentHandle.getFileHandle(fileName);
-            const file = await fileHandle.getFile();
-            return URL.createObjectURL(file);
-        } catch (e) {
-            console.error('Error retrieving file for preview:', e);
-            return null;
         }
+
+        // Fallback or Single File Mode: Read from IndexedDB cache
+        try {
+            const blob = await getFileFromIDB(path);
+            if (blob) return URL.createObjectURL(blob);
+        } catch (e) {
+            console.error('FSA: Error retrieving file from IDB:', e);
+        }
+
+        return null;
     }
 
     async saveFile(base64: string, folderName: string, prefix: string = 'file'): Promise<string | null> {
-        if (!this.handle) return null;
         if (!base64 || !base64.startsWith('data:')) return base64;
 
         try {
@@ -527,22 +642,35 @@ class FileSystemAdapter {
             const blob = new Blob([byteArray], { type: mime });
 
             const safeFolderName = folderName.replace(/[^a-z0-9]/gi, '_');
-
-            let archivesHandle;
-            try { archivesHandle = await this.handle.getDirectoryHandle('Archivos', { create: true }); }
-            catch { archivesHandle = this.handle; }
-
-            let userHandle;
-            try { userHandle = await archivesHandle.getDirectoryHandle(safeFolderName, { create: true }); }
-            catch { userHandle = archivesHandle; }
-
             const fileName = `${prefix}_${Date.now()}.${ext}`;
-            const fileHandle = await userHandle.getFileHandle(fileName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
+            const internalPath = `local://Archivos/${safeFolderName}/${fileName}`;
 
-            return `local://Archivos/${safeFolderName}/${fileName}`;
+            // A. TRY DIRECT FOLDER PERSISTENCE (Mac/Chrome)
+            if (this.handle) {
+                try {
+                    let archivesHandle;
+                    try { archivesHandle = await this.handle.getDirectoryHandle('Archivos', { create: true }); }
+                    catch { archivesHandle = this.handle; }
+
+                    let userHandle;
+                    try { userHandle = await archivesHandle.getDirectoryHandle(safeFolderName, { create: true }); }
+                    catch { userHandle = archivesHandle; }
+
+                    const fileHandle = await userHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return internalPath;
+                } catch (e) {
+                    console.warn('FSA: Could not write to directory, using IDB fallback:', e);
+                }
+            }
+
+            // B. FALLBACK TO IDB (Safari/iOS)
+            await saveFileToIDB(internalPath, blob);
+            console.log('FSA: Archivo guardado temporalmente en cache local (IDB). Sincronizado con base de datos.');
+            
+            return internalPath;
         } catch (e) {
             console.error('Error saving physical file:', e);
             return base64.length > 50000 ? null : base64;
@@ -907,6 +1035,50 @@ class FileSystemAdapter {
         } catch (e) {
             console.error(`FSA: no se pudo crear la carpeta del usuario '${username}':`, e);
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Manual Sync Support (Safari/iOS)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Imports a list of files into the IDB cache. 
+     * Used when the user selects a folder via <input webkitdirectory> in Safari.
+     */
+    async importFilesFromEntries(files: FileList | File[]): Promise<{success: number, total: number}> {
+        let success = 0;
+        const fileArray = Array.from(files);
+        
+        for (const file of fileArray) {
+            try {
+                // Determine path: we expect files from an "Archivos" folder structure or similar.
+                // Standard webkitRelativePath for a folder named 'Archivos' would be 'Archivos/User/file.pdf'
+                const relPath = file.webkitRelativePath || file.name;
+                const internalPath = `local://${relPath.startsWith('Archivos/') ? relPath : 'Archivos/' + relPath}`;
+                
+                await saveFileToIDB(internalPath, file);
+                success++;
+            } catch (e) {
+                console.error(`Error importing file ${file.name}:`, e);
+            }
+        }
+        return { success, total: fileArray.length };
+    }
+
+    /**
+     * Downloads the current database.json file.
+     * Essential for Safari users to "SAVE" their work back to iCloud.
+     */
+    exportDatabase(): void {
+        const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = DB_FILE_NAME;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 }
 

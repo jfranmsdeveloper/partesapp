@@ -12,12 +12,16 @@ import type { FilterState } from '../../components/management/ManagementFilters'
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
-import { Square, CheckSquare, Trash2, X, Plus, FileUp, Loader2, Files } from 'lucide-react';
+import { Square, CheckSquare, Trash2, X, Plus, FileUp, Loader2, Files, CloudDownload, CloudUpload } from 'lucide-react';
 import { BulkActuacionModal } from '../../components/management/BulkActuacionModal';
 
 export default function Management() {
     const navigate = useNavigate();
-    const { partes, addParte, fixLegacyAuthorship, currentUser, deletePartes, upsertClientFromPDF } = useUserStore();
+    const { 
+        partes, addParte, fixLegacyAuthorship, currentUser, 
+        deletePartes, upsertClientFromPDF, isSingleFileMode, 
+        importFiles, exportDatabase 
+    } = useUserStore();
     const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -25,6 +29,8 @@ export default function Management() {
     // Bulk Upload State
     const [isBulkUploading, setIsBulkUploading] = useState(false);
     const bulkInputRef = useRef<HTMLInputElement>(null);
+    const icloudFilesRef = useRef<HTMLInputElement>(null);
+    const [isSyncingFiles, setIsSyncingFiles] = useState(false);
 
     // Selection State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -120,55 +126,20 @@ export default function Management() {
         checkAndFix();
     }, [partes.length, currentUser]);
 
-    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (files.length === 0) return;
+    const handleICloudFilesSync = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
 
-        setIsBulkUploading(true);
-        let successCount = 0;
-        let errorCount = 0;
-
-        for (const file of files) {
-            try {
-                const data = await parsePartePDF(file);
-                
-                let clientId = undefined;
-                if (data.createdBy) {
-                    clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode) || undefined;
-                }
-
-                let createdAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
-                if (data.date) {
-                    const [d, m, y] = data.date.split(/[-/]/);
-                    const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-                    let timeStr = data.time || '09:00';
-                    createdAt = `${dateStr} ${timeStr}:00`;
-                }
-
-                await addParte({
-                    title: data.title || `Parte importado - ${file.name}`,
-                    status: 'ABIERTO',
-                    createdBy: data.createdBy || 'Sistema',
-                    id: data.id || undefined,
-                    createdAt: createdAt,
-                    pdfFile: data.pdfFile,
-                    clientId: clientId
-                });
-
-                successCount++;
-            } catch (err) {
-                console.error(`Error importing ${file.name}:`, err);
-                errorCount++;
-            }
-        }
-
-        setIsBulkUploading(false);
-        if (e.target) e.target.value = '';
-
-        if (errorCount === 0) {
-            alert(`✅ ¡Éxito! Se han importado ${successCount} partes correctamente.`);
-        } else {
-            alert(`⚠️ Se importaron ${successCount} partes, pero hubo errores en ${errorCount} archivos.`);
+        setIsSyncingFiles(true);
+        try {
+            const { success, total } = await importFiles(files);
+            alert(`✅ Sincronización completada: ${success} de ${total} archivos cargados en la caché local.`);
+        } catch (err) {
+            console.error('Error syncing iCloud files:', err);
+            alert('❌ Error al sincronizar archivos de iCloud.');
+        } finally {
+            setIsSyncingFiles(false);
+            if (e.target) e.target.value = '';
         }
     };
 
@@ -178,7 +149,41 @@ export default function Management() {
                 <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                     Gestión de Partes
                 </h1>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    {/* iCloud Sync Controls (Safari/iOS only) */}
+                    {isSingleFileMode && (
+                        <div className="flex gap-2 mr-2 pr-4 border-r border-slate-200 dark:border-slate-700">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => icloudFilesRef.current?.click()}
+                                disabled={isSyncingFiles}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            >
+                                {isSyncingFiles ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudDownload className="w-4 h-4 mr-2" />}
+                                Sincronizar Adjuntos iCloud
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={exportDatabase}
+                                className="text-green-600 border-green-200 hover:bg-green-50"
+                            >
+                                <CloudUpload className="w-4 h-4 mr-2" />
+                                Guardar cambios en iCloud
+                            </Button>
+                            <input
+                                type="file"
+                                webkitdirectory=""
+                                directory=""
+                                multiple
+                                ref={icloudFilesRef}
+                                className="hidden"
+                                onChange={handleICloudFilesSync}
+                            />
+                        </div>
+                    )}
+
                     <Button 
                         variant="primary"
                         size="sm"
