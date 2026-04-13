@@ -79,7 +79,7 @@ export default function Profile() {
         const snippetData = { 
             title: snipTitle, 
             content: snipContent, 
-            type: snipType || undefined 
+            type: snipType ? (snipType as any) : undefined 
         };
 
         if (editingSnippetId) {

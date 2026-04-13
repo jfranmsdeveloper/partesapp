@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import type { ActuacionType } from '../../types';
@@ -245,7 +245,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 </span>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                {filteredSnippets.map(snippet => (
+                                {filteredSnippets.map((snippet: any) => (
                                     <button
                                         key={snippet.id}
                                         type="button"
