@@ -638,6 +638,10 @@ class FileSystemAdapter {
     }
 
     private async saveDatabase(): Promise<boolean> {
+        return this.runInQueue(() => this._saveDatabase());
+    }
+
+    private async _saveDatabase(): Promise<boolean> {
         // ALWAYS save to IDB as backup (essential for Legacy Mode)
         await saveStateToIDB(this.state);
 
