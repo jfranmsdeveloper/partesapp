@@ -5,6 +5,11 @@ import { generateWordReport } from '../../utils/wordGenerator';
 import { generatePdfReport } from '../../utils/pdfGenerator';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { StatusDistributionChart } from '../dashboard/StatusDistributionChart';
+import { ActivityTypeChart } from '../dashboard/ActivityTypeChart';
+import { TrendChart } from '../dashboard/TrendChart';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 
 // Custom Web Component wrapper for Calendar
 // @ts-nocheck
@@ -241,7 +246,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
                                                 <label className="block text-xs text-neutral-500 mb-1">Actualización Nóminas</label>
                                                 <Input
                                                     value={bolsaNominas}
-                                                    onChange={(e) => setBolsaNominas(e.target.value)}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBolsaNominas(e.target.value)}
                                                     placeholder="Ej: 10 hrs"
                                                     className="bg-white"
                                                 />
@@ -250,7 +255,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
                                                 <label className="block text-xs text-neutral-500 mb-1">COVID</label>
                                                 <Input
                                                     value={bolsaCovid}
-                                                    onChange={(e) => setBolsaCovid(e.target.value)}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBolsaCovid(e.target.value)}
                                                     placeholder="Ej: 5 hrs"
                                                     className="bg-white"
                                                 />

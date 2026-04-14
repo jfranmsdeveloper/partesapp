@@ -172,7 +172,7 @@ export const generatePdfReport = async (data: ReportData) => {
                 if (data.row.index < 3 && data.section === 'body') {
                     data.cell.styles.fillColor = COLORS.headerSalmon;
                     data.cell.styles.fontStyle = 'bold';
-                } else if (!data.row.raw[0].startsWith('    ')) {
+                } else if (!(data.row.raw as any)[0].startsWith('    ')) {
                     data.cell.styles.fillColor = COLORS.rowGreen;
                 }
             }
