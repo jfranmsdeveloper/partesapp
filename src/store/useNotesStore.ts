@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface NotesState {
+export interface NotesState {
+  /* Forcing file sync */
   noteContent: string;
   isNotesOpen: boolean;
   setNoteContent: (content: string) => void;

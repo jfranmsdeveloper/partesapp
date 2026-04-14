@@ -8,7 +8,8 @@ import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
+/* UI Version: 12:30 Baseline */
 import { NotionEditor } from '../ui/NotionEditor';
 import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote, Clock } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
