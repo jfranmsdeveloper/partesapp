@@ -28,6 +28,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                             className
                         )
                     )}
+                    onWheel={(e) => {
+                        if (props.type === 'number') {
+                            e.currentTarget.blur();
+                        }
+                    }}
                     {...props}
                 />
                 {error && <p className="mt-1.5 text-xs font-medium text-red-500">{error}</p>}
