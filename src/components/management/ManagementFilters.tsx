@@ -1,4 +1,4 @@
-import { Search, Plus, Calendar, Filter, X, Clock, Users, BarChart3, List, Layout } from 'lucide-react';
+import { Search, Plus, Calendar, Filter, X, Clock, Users, BarChart3, List, Layout, ArrowDownAz, ArrowUpAz, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useAppStore } from '../../store/useAppStore';
@@ -13,6 +13,8 @@ export interface FilterState {
     creator: string;
     clientId: string;
     status: string;
+    sortOrder: 'asc' | 'desc';
+    selectedMonth: string; // Format: "YYYY-MM" or empty
 }
 
 interface ManagementFiltersProps {
@@ -36,8 +38,21 @@ export const ManagementFilters = ({
     const [isExpanded, setIsExpanded] = useState(false);
 
     const creators = Array.from(new Set(users.map(u => u.name || u.email)));
+    const activeFiltersCount = Object.entries(filters).filter(([key, val]) => key !== 'globalSearch' && key !== 'sortOrder' && key !== 'selectedMonth' && val !== '').length;
 
-    const activeFiltersCount = Object.entries(filters).filter(([key, val]) => key !== 'globalSearch' && val !== '').length;
+    const currentMonthDate = filters.selectedMonth ? new Date(filters.selectedMonth + '-02') : new Date(); // +02 to avoid TZ issues
+    const formattedMonth = currentMonthDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+
+    const handleMonthChange = (offset: number) => {
+        const date = filters.selectedMonth ? new Date(filters.selectedMonth + '-02') : new Date();
+        date.setMonth(date.getMonth() + offset);
+        const newVal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        onFilterChange('selectedMonth', newVal);
+    };
+
+    const toggleSort = () => {
+        onFilterChange('sortOrder', filters.sortOrder === 'desc' ? 'asc' : 'desc');
+    };
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 mb-6 space-y-4">
@@ -53,14 +68,63 @@ export const ManagementFilters = ({
                     />
                 </div>
 
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-center sm:justify-end">
+                    {/* Monthly Paginator */}
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <button 
+                            onClick={() => handleMonthChange(-1)} 
+                            className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-slate-500 hover:text-blue-600"
+                            title="Mes anterior"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <div className="px-2 min-w-[110px] text-center flex flex-col items-center">
+                            {filters.selectedMonth ? (
+                                <span className="text-[9px] font-black uppercase tracking-tight text-blue-600 leading-none">
+                                    {formattedMonth}
+                                </span>
+                            ) : (
+                                <span className="text-[9px] font-black uppercase tracking-tight text-slate-400 leading-none">
+                                    Todos los meses
+                                </span>
+                            )}
+                        </div>
+                        <button 
+                            onClick={() => handleMonthChange(1)} 
+                            className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-slate-500 hover:text-blue-600"
+                            title="Mes siguiente"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                        {filters.selectedMonth && (
+                            <button 
+                                onClick={() => onFilterChange('selectedMonth', '')}
+                                className="ml-1 p-1 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all text-red-400 hover:text-red-600"
+                                title="Quitar filtro de mes"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Sort Toggle */}
+                    <Button
+                        variant="outline"
+                        onClick={toggleSort}
+                        className={`flex items-center gap-2 h-9 px-3 ${filters.sortOrder === 'asc' ? 'border-blue-200 bg-blue-50 text-blue-700' : ''}`}
+                        title={filters.sortOrder === 'desc' ? "Nuevos primero" : "Antiguos primero"}
+                    >
+                        {filters.sortOrder === 'desc' ? <ArrowDownAz className="w-4 h-4 text-slate-500" /> : <ArrowUpAz className="w-4 h-4 text-blue-600" />}
+                        <span className="text-[10px] font-black uppercase tracking-widest">{filters.sortOrder === 'desc' ? 'Recientes' : 'Antiguos'}</span>
+                    </Button>
+
                     <Button
                         variant="outline"
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className={`flex items-center gap-2 ${isExpanded || activeFiltersCount > 0 ? 'border-orange-200 bg-orange-50 text-orange-700' : ''}`}
+                        className={`flex items-center gap-2 h-9 px-3 ${isExpanded || activeFiltersCount > 0 ? 'border-orange-200 bg-orange-50 text-orange-700' : ''}`}
                     >
                         <Filter className="w-4 h-4" />
-                        Filtros
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Filtros</span>
                         {activeFiltersCount > 0 && (
                             <span className="bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                                 {activeFiltersCount}
@@ -68,7 +132,7 @@ export const ManagementFilters = ({
                         )}
                     </Button>
 
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar flex-nowrap max-w-full sm:max-w-none">
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar flex-nowrap max-w-full sm:max-w-none border border-slate-200 dark:border-slate-700">
                         <button
                             onClick={() => onViewChange('list')}
                             className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'list'

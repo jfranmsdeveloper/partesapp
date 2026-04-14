@@ -43,11 +43,13 @@ export default function Management() {
         parteId: '',
         creator: '',
         clientId: '',
-        status: ''
+        status: '',
+        sortOrder: 'desc',
+        selectedMonth: ''
     });
 
     const filteredPartes = useMemo(() => {
-        return partes.filter((p: Parte) => {
+        let result = partes.filter((p: Parte) => {
             if (filters.globalSearch) {
                 const searchLower = filters.globalSearch.toLowerCase();
                 const matchesGlobal =
@@ -60,17 +62,36 @@ export default function Management() {
             if (filters.status && p.status !== filters.status) return false;
             if (filters.creator && !p.createdBy.includes(filters.creator)) return false;
             if (filters.clientId && p.clientId !== filters.clientId) return false;
-            if (filters.startDate) {
-                const pDate = new Date(p.createdAt).getTime();
-                const fDate = new Date(filters.startDate).setHours(0, 0, 0, 0);
-                if (pDate < fDate) return false;
-            }
-            if (filters.endDate) {
-                const pDate = new Date(p.createdAt).getTime();
-                const fDate = new Date(filters.endDate).setHours(23, 59, 59, 999);
-                if (pDate > fDate) return false;
+            
+            // Monthly Filter (Overrides specific date range if set?) 
+            // Actually, let's make it work together or prioritize it
+            if (filters.selectedMonth) {
+                const pDate = new Date(p.createdAt);
+                const [year, month] = filters.selectedMonth.split('-').map(Number);
+                if (pDate.getFullYear() !== year || pDate.getMonth() + 1 !== month) {
+                    return false;
+                }
+            } else {
+                // Only apply specific date range if NO monthly filter is active
+                if (filters.startDate) {
+                    const pDate = new Date(p.createdAt).getTime();
+                    const fDate = new Date(filters.startDate).setHours(0, 0, 0, 0);
+                    if (pDate < fDate) return false;
+                }
+                if (filters.endDate) {
+                    const pDate = new Date(p.createdAt).getTime();
+                    const fDate = new Date(filters.endDate).setHours(23, 59, 59, 999);
+                    if (pDate > fDate) return false;
+                }
             }
             return true;
+        });
+
+        // Sorting logic
+        return [...result].sort((a, b) => {
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            return filters.sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
         });
     }, [partes, filters]);
 
@@ -86,7 +107,9 @@ export default function Management() {
             parteId: '',
             creator: '',
             clientId: '',
-            status: ''
+            status: '',
+            sortOrder: 'desc',
+            selectedMonth: ''
         });
     };
 
