@@ -38,8 +38,28 @@ export const AIGuideGenerator = ({ actuaciones, parteTitle }: AIGuideGeneratorPr
                 return doc.body.textContent || "";
             };
 
-            const dataDump = actuaciones.map(act => 
-                `- ${act.type} (${act.duration}min) por ${act.user}: ${cleanHtml(act.notes || "")}`
+            // Group consecutive identical actuaciones to avoid prompt bloat and repetition
+            const groupedActuaciones = actuaciones.reduce((acc: any[], current) => {
+                const last = acc[acc.length - 1];
+                const cleanCurrentNotes = cleanHtml(current.notes || "").trim();
+                
+                if (last && last.type === current.type && last.notes === cleanCurrentNotes) {
+                    last.count = (last.count || 1) + 1;
+                    last.duration += current.duration;
+                    return acc;
+                }
+                
+                acc.push({
+                    type: current.type,
+                    notes: cleanCurrentNotes,
+                    duration: current.duration,
+                    count: 1
+                });
+                return acc;
+            }, []);
+
+            const dataDump = groupedActuaciones.map(act => 
+                `- ${act.type}${act.count > 1 ? ` (x${act.count} repeticiones)` : ''} [${act.duration}min total]: ${act.notes || 'Sin descripción adicional'}`
             ).join('\n');
 
             const initProgressCallback = (report: { progress: number, text: string }) => {
@@ -56,20 +76,27 @@ export const AIGuideGenerator = ({ actuaciones, parteTitle }: AIGuideGeneratorPr
             setProgressText('Generando la guía paso a paso...');
 
             const prompt = `
-            Eres un asistente técnico experto redactando guías de trabajo para clientes. 
+            Eres un asistente técnico experto redactando informes ejecutivos para clientes finales. 
             A continuación hay un registro de las actuaciones técnicas realizadas para el parte titulado "${parteTitle}".
-            Por favor, genera una "Guía Rápida de Procedimiento" secuencial (paso a paso) que explique de forma clara y profesional qué se ha hecho en el equipo/instalación.
-            Ignora los nombres de los usuarios en la redacción final, enfócate en la acción técnica realizada.
-            Usa un tono impecable, técnico y directo.
+            
+            OBJETIVO:
+            Genera una "GUÍA RÁPIDA DE PROCEDIMIENTO" que resuma el trabajo realizado de forma profesional.
+            
+            REGLAS CRÍTICAS:
+            1. Máximo 500 palabras en total.
+            2. NO repitas pasos identicos. Si hay tareas repetitivas, resúmelas en un solo paso explicativo (ej: "Se realizaron múltiples llamadas de coordinación...").
+            3. Estilo: Técnico, directo, impecable.
+            4. Idioma: Español.
+            5. Estructura: 
+               - Título: **GUÍA RÁPIDA DE PROCEDIMIENTO**
+               - Breve introducción del servicio.
+               - Puntos clave secuenciales (máximo 10 puntos).
+               - Conclusión del estado actual del servicio.
+            
+            IMPORTANTE: Si el registro tiene muchas acciones similares, tu tarea es SINTETIZAR, no listar una a una.
             
             Registro de actuaciones:
             ${dataDump}
-            
-            Formato: 
-            - Título: GUÍA RÁPIDA DE PROCEDIMIENTO
-            - Lista numerada de pasos secuenciales.
-            - Breve conclusión sobre el estado actual del servicio.
-            - NO menciones que eres una IA.
             `;
 
             const reply = await engine.chat.completions.create({
