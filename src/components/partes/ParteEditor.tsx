@@ -492,13 +492,13 @@ export const ParteEditor = () => {
             {/* Cabecera - Centrada y con controles */}
             <div className="mx-auto w-[90%] max-w-7xl">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="px-2 sm:px-4">
                             <ChevronLeft className="w-5 h-5 mr-1" />
-                            Volver
+                            <span className="hidden sm:inline">Volver</span>
                         </Button>
-                        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                            {isNew ? 'Nuevo Parte de Trabajo' : `Parte #${currentParte?.id}`}
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                            {isNew ? 'Nuevo Parte' : `Parte #${currentParte?.id}`}
                         </h1>
                         {!isNew && currentParte && (
                             <div className="relative">
@@ -535,14 +535,14 @@ export const ParteEditor = () => {
                     {/* NEW CONTROLS: Search and Paginator */}
                     {!isNew && (
                         <div className="flex items-center gap-3">
-                            <button 
+                             <button 
                                 className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors shadow-sm"
                                 onClick={() => setCommandPaletteOpen(true)}
                                 type="button"
                             >
                                 <Search className="w-4 h-4" />
-                                <span className="hidden sm:inline">Buscar...</span>
-                                <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold ml-1">⌘K</kbd>
+                                <span className="hidden md:inline">Buscar...</span>
+                                <kbd className="hidden md:inline-block px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold ml-1">⌘K</kbd>
                             </button>
                             
                             <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
@@ -648,23 +648,25 @@ export const ParteEditor = () => {
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-lg font-semibold">Actuaciones</h2>
                                 {!showAddActuacion && (
-                                    <div className="flex gap-2">
-                                        <Button onClick={handleExportActuaciones} variant="outline" size="sm">
-                                            <Printer className="w-4 h-4 mr-2" />
-                                            Informe
+                                     <div className="flex gap-1.5 sm:gap-2">
+                                        <Button onClick={handleExportActuaciones} variant="outline" size="sm" className="px-2 sm:px-4" title="Informe">
+                                            <Printer className="w-4 h-4 sm:mr-2" />
+                                            <span className="hidden sm:inline">Informe</span>
                                         </Button>
                                         <Button
                                             onClick={handleCopyEmail}
                                             variant="outline"
                                             size="sm"
-                                            className={clsx("transition-all duration-300", showCopied ? "border-green-500 text-green-600 bg-green-50" : "")}
+                                            className={clsx("px-2 sm:px-4 transition-all duration-300", showCopied ? "border-green-500 text-green-600 bg-green-50" : "")}
+                                            title="Copiar Email"
                                         >
-                                            {showCopied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                                            {showCopied ? '¡Copiado!' : 'Copiar Email'}
+                                            {showCopied ? <Check className="w-4 h-4 sm:mr-2" /> : <Copy className="w-4 h-4 sm:mr-2" />}
+                                            <span className="hidden sm:inline">{showCopied ? '¡Copiado!' : 'Email'}</span>
                                         </Button>
-                                        <Button onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} size="sm">
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Nueva Actuación
+                                        <Button onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} size="sm" className="px-3 sm:px-4 bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20">
+                                            <Plus className="w-4 h-4 sm:mr-2" />
+                                            <span className="hidden sm:inline">Nueva Actuación</span>
+                                            <span className="inline sm:hidden">Nueva</span>
                                         </Button>
                                     </div>
                                 )}

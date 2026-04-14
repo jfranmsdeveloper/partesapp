@@ -117,7 +117,7 @@
 }
 
 .dark .notion-editor-container {
-  background-color: #0c0c0c;
+  background-color: #050505;
 }
 
 @theme {
@@ -146,11 +146,11 @@
   --color-primary-900: #7c2d12;
   /* Orange 900 */
 
-  /* UI 2025 Dark Mode Colors */
-  --color-dark-bg: #0F0F0F;
-  --color-dark-card: #1A1A1A;
-  --color-dark-surface: #242424;
-  --color-dark-border: rgba(255, 255, 255, 0.05);
+  /* UI 2025 Dark Mode Colors (OLED Optimized) */
+  --color-dark-bg: #000000;
+  --color-dark-card: #0A0A0A;
+  --color-dark-surface: #121212;
+  --color-dark-border: rgba(255, 255, 255, 0.08);
 }
 
 @layer utilities {
