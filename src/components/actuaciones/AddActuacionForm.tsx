@@ -26,7 +26,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     const activeQuickNote = allQuickNotes[activeNoteIndex]?.content || '';
     const { isListening, interimTranscript, finalSegment, start, stop } = useSpeechRecognition();
     const durationInputRef = useRef<HTMLInputElement>(null);
-    const notesInputRef = useRef<any>(null);
 
     const [type, setType] = useState<ActuacionType | null>(initialData?.type || null);
     const [duration, setDuration] = useState<string>(initialData?.duration.toString() || '');
@@ -464,7 +463,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         </div>
                     </div>
                     <NotionEditor
-                        ref={notesInputRef}
                         initialContent={notes}
                         onChange={handleNotesChange}
                         placeholder={isListening ? "Escuchando..." : "Escribe aquí los detalles o usa el dictado por voz..."}
