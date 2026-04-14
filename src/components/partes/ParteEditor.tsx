@@ -269,7 +269,7 @@ export const ParteEditor = () => {
     };
 
 
-    const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => {
+    const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] }) => {
         if (!currentParte) return;
 
         if (editingActuacion) {

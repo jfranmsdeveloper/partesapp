@@ -7,9 +7,9 @@ import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
-import { clsx } from 'clsx';
+import clsx from 'clsx';
 import { NotionEditor } from '../ui/NotionEditor';
-import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote, History } from 'lucide-react';
+import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 import { ClientHistory } from './ClientHistory';
 
@@ -22,7 +22,7 @@ interface AddActuacionFormProps {
 }
 
 export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp, clientId }: AddActuacionFormProps) => {
-    const { users, currentUser, snippets, updateQuickButtons, partes } = useAppStore();
+    const { users, currentUser, snippets, updateQuickButtons } = useAppStore();
     const { notes: allQuickNotes, activeNoteIndex } = useNotesStore();
     const activeQuickNote = allQuickNotes[activeNoteIndex]?.content || '';
     const { isListening, interimTranscript, finalSegment, start, stop } = useSpeechRecognition();
@@ -42,113 +42,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         return toLocalISOString(new Date());
     });
 
-    // Voice to notes sync - Fixed to avoid progressive duplication
-    useEffect(() => {
-        if (finalSegment) {
-            setNotes((prev: string) => {
-                const cleanSegment = finalSegment.trim();
-                if (!cleanSegment) return prev;
-                // Append to existing HTML if present
-                if (prev.endsWith('</p>')) {
-                    return prev.replace(/<\/p>$/, ` ${cleanSegment}</p>`);
-                }
-                return prev + `<p>${cleanSegment}</p>`;
-            });
-        }
-    }, [finalSegment]);
-
-    // Numeric Shortcuts (Idea 5)
-    useEffect(() => {
-        const handleKeys = (e: KeyboardEvent) => {
-            // Only trigger if no input is focused
-            const isInputFocused = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '');
-            const isEditorFocused = document.activeElement?.getAttribute('role') === 'textbox';
-            
-            if (isInputFocused || isEditorFocused) return;
-
-            const key = parseInt(e.key);
-            if (key >= 1 && key <= 9) {
-                const configKeys = Object.keys(ACTUACION_CONFIG) as ActuacionType[];
-                const targetType = configKeys[key - 1];
-                if (targetType) {
-                    setType(targetType);
-                    const config = ACTUACION_CONFIG[targetType];
-                    setNotes((prev: string) => {
-                       if (!prev || prev === '<p></p>') return `<p><strong>${config.label}:</strong> </p>`;
-                       return prev;
-                    });
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeys);
-        return () => window.removeEventListener('keydown', handleKeys);
-    }, []);
-
-    const quickButtons = (currentUser?.quickButtons && currentUser.quickButtons.length > 0) 
-        ? currentUser.quickButtons 
-        : [
-            "Reparación finalizada con éxito.",
-            "Pendiente de recibir pieza.",
-            "Revisión preventiva sin novedad.",
-            "Cliente ausente."
-        ];
-
-    const filteredSnippets = useMemo(() => {
-        if (!type) return snippets;
-        return snippets.filter(s => !s.type || s.type === type);
-    }, [snippets, type]);
-
-
-    useEffect(() => {
-        if (initialData) {
-            setType(initialData.type);
-            setDuration(initialData.duration.toString());
-            setNotes(initialData.notes);
-            setPriority(initialData.priority || 'MEDIA');
-            setTagInput(initialData.tags?.join(', ') || '');
-            setUser(initialData.user);
-            if (initialData.timestamp) {
-                setCustomTimestamp(toLocalISOString(new Date(initialData.timestamp)));
-            }
-        }
-    }, [initialData]);
-
-    // High Speed Interface: Auto-focus duration input on mount
-    useEffect(() => {
-        // slight delay to let glass effects mount
-        const timer = setTimeout(() => {
-            durationInputRef.current?.focus();
-        }, 300);
-        return () => clearTimeout(timer);
-    }, []);
-
-    const handleSubmit = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!type || !duration) return;
-
-        onAdd({
-            type,
-            duration: parseInt(duration),
-            notes,
-            user,
-            priority,
-            tags: tagInput.split(',').map((t: string) => t.trim()).filter(Boolean),
-            timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : '')
-        });
-    };
-
-    const handleFormKeyDown = (e: React.KeyboardEvent) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-            e.preventDefault();
-            handleSubmit();
-        }
-    };
-
-    const handleNotesChange = useCallback((html: string) => {
-      setNotes(html);
-    }, []);
-
     const scrollRef = useRef<HTMLDivElement>(null);
     const scrollVelocity = useRef(0);
     const requestRef = useRef<number>();
@@ -165,14 +58,12 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         const rect = scrollRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const width = rect.width;
-        const threshold = 120; // Margin in px to start scrolling
+        const threshold = 120;
 
         if (x < threshold) {
-            // Near left edge - speed depends on proximity
             scrollVelocity.current = -((threshold - x) / 5);
             if (!requestRef.current) requestRef.current = requestAnimationFrame(scrollLoop);
         } else if (x > width - threshold) {
-            // Near right edge
             scrollVelocity.current = (x - (width - threshold)) / 5;
             if (!requestRef.current) requestRef.current = requestAnimationFrame(scrollLoop);
         } else {
@@ -192,6 +83,99 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         }
     };
 
+    const handleFormKeyDown = (e: React.KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            handleSubmit();
+        }
+    };
+
+    const handleNotesChange = useCallback((html: string) => {
+        setNotes(html);
+    }, []);
+
+    const handleSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!type || !duration) return;
+
+        onAdd({
+            type,
+            duration: parseInt(duration),
+            notes,
+            user,
+            priority,
+            tags: tagInput.split(',').map((t: string) => t.trim()).filter(Boolean),
+            timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : '')
+        });
+    };
+
+    useEffect(() => {
+        if (finalSegment) {
+            setNotes((prev: string) => {
+                const cleanSegment = finalSegment.trim();
+                if (!cleanSegment) return prev;
+                if (prev.endsWith('</p>')) {
+                    return prev.replace(/<\/p>$/, ` ${cleanSegment}</p>`);
+                }
+                return prev + `<p>${cleanSegment}</p>`;
+            });
+        }
+    }, [finalSegment]);
+
+    useEffect(() => {
+        const handleKeys = (e: KeyboardEvent) => {
+            const isInputFocused = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '');
+            const isEditorFocused = document.activeElement?.getAttribute('role') === 'textbox';
+            if (isInputFocused || isEditorFocused) return;
+
+            const key = parseInt(e.key);
+            if (key >= 1 && key <= 9) {
+                const configKeys = Object.keys(ACTUACION_CONFIG) as ActuacionType[];
+                const targetType = configKeys[key - 1];
+                if (targetType) {
+                    setType(targetType);
+                    const config = ACTUACION_CONFIG[targetType];
+                    setNotes((prev: string) => {
+                        if (!prev || prev === '<p></p>') return `<p><strong>${config.label}:</strong> </p>`;
+                        return prev;
+                    });
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeys);
+        return () => window.removeEventListener('keydown', handleKeys);
+    }, []);
+
+    useEffect(() => {
+        if (initialData) {
+            setType(initialData.type);
+            setDuration(initialData.duration.toString());
+            setNotes(initialData.notes);
+            setPriority(initialData.priority || 'MEDIA');
+            setTagInput(initialData.tags?.join(', ') || '');
+            setUser(initialData.user);
+            if (initialData.timestamp) {
+                setCustomTimestamp(toLocalISOString(new Date(initialData.timestamp)));
+            }
+        }
+    }, [initialData]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            durationInputRef.current?.focus();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const quickButtons = (currentUser?.quickButtons && currentUser.quickButtons.length > 0) 
+        ? currentUser.quickButtons 
+        : ["Reparación finalizada con éxito.", "Pendiente de recibir pieza.", "Revisión preventiva sin novedad.", "Cliente ausente."];
+
+    const filteredSnippets = useMemo(() => {
+        if (!type) return snippets;
+        return snippets.filter(s => !s.type || s.type === type);
+    }, [snippets, type]);
+
     return (
         <div className="rounded-[2.5rem] border border-blue-100 bg-white/40 glass-card p-6 shadow-xl mb-6 relative overflow-hidden transition-all duration-700">
             <div className="flex justify-between items-center mb-6 mt-2">
@@ -199,7 +183,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                     {initialData ? 'Editar Actuación' : 'Registrar Nueva Actuación'}
                     <span className="ml-3 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full hidden sm:inline-block border border-slate-200 dark:border-white/10">Cmd+Enter para guardar</span>
                 </h3>
-                <button onClick={onCancel} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 transition-colors">
+                <button type="button" onClick={onCancel} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 transition-colors">
                     <X className="w-5 h-5" />
                 </button>
             </div>
@@ -214,9 +198,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         </div>
                     </div>
                     
-                    {/* Horizontal Scroll with Edge Auto-scroll */}
                     <div className="relative overflow-hidden rounded-[2.2rem]">
-                        {/* Indicadores de Scroll (Faders) */}
                         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-white/80 dark:from-dark-card/80 via-white/20 dark:via-dark-card/20 to-transparent z-10 pointer-events-none opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-500" />
                         <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-white/80 dark:from-dark-card/80 via-white/20 dark:via-dark-card/20 to-transparent z-10 pointer-events-none opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-500" />
                         
@@ -232,7 +214,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 const Icon = config.icon;
                                 const theme = config.themeColor;
                                 
-                                // Map theme color to specific glass classes
                                 const glassStyles: Record<string, string> = {
                                     blue: isSelected ? 'bg-blue-500/15 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.3)]' : 'hover:border-blue-300/50 hover:bg-blue-50/50',
                                     green: isSelected ? 'bg-green-500/15 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'hover:border-green-300/50 hover:bg-green-50/50',
@@ -250,7 +231,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 };
     
                                 const textColor = `text-${theme}-600 dark:text-${theme}-400`;
-                                const activeBg = `bg-${theme}-500`;
     
                                 return (
                                     <button
@@ -291,7 +271,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         </div>
                     </div>
 
-                    {/* Quick Action Buttons (Configurable) */}
                     <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2 text-slate-500">
@@ -341,7 +320,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         )}
                     </div>
 
-                    {/* Snippets / Templates Section (Smart Filtered) */}
                     {filteredSnippets.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
                             <div className="flex items-center gap-2 mb-3 text-slate-500">
@@ -513,10 +491,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                     )}
                 </div>
 
-                {/* Premium Client History Section */}
                 <ClientHistory clientId={clientId} currentParteId={initialData ? 'editing' : 'new'} />
 
-                {/* Navigation & One-Hand Mode Optimization for Mobile */}
                 <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100 sm:relative sticky bottom-0 bg-white/80 sm:bg-transparent backdrop-blur-md p-4 -mx-6 sm:mx-0 -mb-6 sm:mb-0 z-50">
                     <Button type="button" variant="ghost" onClick={onCancel} className="w-full sm:w-auto h-12 sm:h-auto order-2 sm:order-1 font-bold">
                         Cancelar

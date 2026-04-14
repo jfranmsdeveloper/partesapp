@@ -96,7 +96,7 @@ export default function Management() {
         });
     }, [partes, filters]);
 
-    const handleFilterChange = (key: keyof FilterState, value: string) => {
+    const handleFilterChange = (key: keyof FilterState, value: any) => {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
 
