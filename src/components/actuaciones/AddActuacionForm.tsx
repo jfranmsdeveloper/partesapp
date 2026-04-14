@@ -44,7 +44,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const scrollVelocity = useRef(0);
-    const requestRef = useRef<number>();
+    const requestRef = useRef<number | null>(null);
 
     const scrollLoop = useCallback(() => {
         if (scrollRef.current && scrollVelocity.current !== 0) {
@@ -70,7 +70,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             scrollVelocity.current = 0;
             if (requestRef.current) {
                 cancelAnimationFrame(requestRef.current);
-                requestRef.current = undefined;
+                requestRef.current = null;
             }
         }
     };
@@ -79,7 +79,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         scrollVelocity.current = 0;
         if (requestRef.current) {
             cancelAnimationFrame(requestRef.current);
-            requestRef.current = undefined;
+            requestRef.current = null;
         }
     };
 
