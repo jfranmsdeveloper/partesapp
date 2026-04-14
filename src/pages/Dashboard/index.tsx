@@ -202,7 +202,7 @@ export default function IndicadoresPage() {
 
                 {/* User Filters - Removed as per request (Only show own data) */}
 
-                {/* KPI Grid - Pastel & Glass */}
+                {/* KPI Grid - Staggered Apple Entrance */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10 text-glow">
                     <KPICard
                         title="Total Partes"
@@ -210,28 +210,28 @@ export default function IndicadoresPage() {
                         icon={FileText}
                         color="orange"
                         trend={{ value: 12, isPositive: true }}
-                        className="glass-card border-orange-500/10"
+                        className="glass-card border-orange-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both"
                     />
                     <KPICard
                         title="Tiempo Total"
                         value={`${metrics.totalTime}m`}
                         icon={Clock}
                         color="orange"
-                        className="glass-card border-orange-500/10"
+                        className="glass-card border-orange-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150 fill-mode-both"
                     />
                     <KPICard
                         title="Eficiencia"
                         value={`${metrics.totalPartes > 0 ? Math.round((metrics.closedPartes / metrics.totalPartes) * 100) : 0}%`}
                         icon={TrendingUp}
                         color="green"
-                        className="glass-card border-green-500/10"
+                        className="glass-card border-green-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both"
                     />
                     <KPICard
                         title="Usuarios Activos"
                         value={metrics.activeUsersCount}
                         icon={Users}
                         color="rose"
-                        className="glass-card border-rose-500/10"
+                        className="glass-card border-rose-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 fill-mode-both"
                     />
                 </div>
 
