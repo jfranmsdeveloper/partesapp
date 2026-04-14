@@ -34,17 +34,35 @@
   }
 }
 
+@keyframes liquid-blob {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  33% { border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%; }
+  66% { border-radius: 70% 30% 40% 60% / 70% 40% 60% 30%; }
+}
+
 @keyframes float {
   0% {
-    transform: translateY(0px);
+    transform: translateY(0px) rotate(0deg);
   }
 
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-20px) rotate(5deg);
   }
 
   100% {
-    transform: translateY(0px);
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+@keyframes mesh-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
 
@@ -52,8 +70,23 @@
   animation: blob 7s infinite;
 }
 
+.animate-liquid {
+  animation: liquid-blob 10s ease-in-out infinite;
+}
+
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+.animate-mesh {
+  background: linear-gradient(-45deg, #fef2f2, #fff7ed, #ecfdf5, #eff6ff);
+  background-size: 400% 400%;
+  animation: mesh-gradient 15s ease infinite;
+}
+
+.dark .animate-mesh {
+  background: linear-gradient(-45deg, #000000, #050510, #0a0a0a, #0c0a0c);
+  background-size: 400% 400%;
 }
 
 .animation-delay-2000 {
@@ -163,18 +196,27 @@
 
   /* Apple Liquid Glass Effects */
   .glass {
-    @apply backdrop-blur-2xl bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10;
+    @apply backdrop-blur-2xl bg-white/40 dark:bg-black/40 border border-white/40 dark:border-white/10;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
   }
 
   .glass-card {
-    @apply backdrop-blur-2xl bg-white/70 dark:bg-[#1A1A1A]/60 border border-white/50 dark:border-white/10;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+    @apply backdrop-blur-3xl bg-white/60 dark:bg-black/60 border border-white/50 dark:border-white/10 overflow-hidden relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.2);
   }
 
-  .glass-panel, .glass-liquid {
-    @apply backdrop-blur-3xl bg-white/40 dark:bg-black/30 border border-white/30 dark:border-white/10;
+  .glass-card::before {
+    content: "";
+    @apply absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none;
+  }
+
+  .glass-liquid {
+    @apply backdrop-blur-3xl bg-white/30 dark:bg-white/5 border border-white/30 dark:border-white/10;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  }
+
+  .glass-border {
+    @apply border border-white/40 dark:border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)];
   }
 
   /* Minimalist / Flat Gradients */

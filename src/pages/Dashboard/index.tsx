@@ -15,7 +15,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useRef } from 'react';
 import { parsePartePDF } from '../../utils/pdfParser';
 
-export default function Dashboard() {
+export default function IndicadoresPage() {
     const navigate = useNavigate();
     const { partes, currentUser, addParte, upsertClientFromPDF } = useUserStore();
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -153,11 +153,11 @@ export default function Dashboard() {
                             <Calendar className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-300" />
                             <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{today}</span>
                         </div>
-                        <h1 className="text-6xl md:text-7xl font-display font-medium text-slate-900 dark:text-white tracking-[-0.03em] drop-shadow-sm">
-                            Dashboard
+                        <h1 className="text-6xl md:text-8xl font-display font-black text-slate-900 dark:text-white tracking-[-0.05em] drop-shadow-2xl animate-in fade-in zoom-in-95 duration-1000">
+                            Indicadores
                         </h1>
-                        <p className="text-xl md:text-2xl font-light text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-                            Resumen ejecutivo de tu actividad en <span className="font-semibold text-slate-800 dark:text-slate-200">AppGest</span>
+                        <p className="text-xl md:text-2xl font-light text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed backdrop-blur-sm">
+                            Tu panel ejecutivo de <span className="font-semibold text-brand-gradient">Rendimiento Operativo</span>
                         </p>
                     </div>
 
@@ -203,31 +203,35 @@ export default function Dashboard() {
                 {/* User Filters - Removed as per request (Only show own data) */}
 
                 {/* KPI Grid - Pastel & Glass */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10 text-glow">
                     <KPICard
                         title="Total Partes"
                         value={metrics.totalPartes}
                         icon={FileText}
                         color="orange"
                         trend={{ value: 12, isPositive: true }}
+                        className="glass-card border-orange-500/10"
                     />
                     <KPICard
                         title="Tiempo Total"
                         value={`${metrics.totalTime}m`}
                         icon={Clock}
                         color="orange"
+                        className="glass-card border-orange-500/10"
                     />
                     <KPICard
                         title="Eficiencia"
                         value={`${metrics.totalPartes > 0 ? Math.round((metrics.closedPartes / metrics.totalPartes) * 100) : 0}%`}
                         icon={TrendingUp}
                         color="green"
+                        className="glass-card border-green-500/10"
                     />
                     <KPICard
                         title="Usuarios Activos"
                         value={metrics.activeUsersCount}
                         icon={Users}
                         color="rose"
+                        className="glass-card border-rose-500/10"
                     />
                 </div>
 

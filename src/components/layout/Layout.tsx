@@ -34,7 +34,13 @@ export const Layout = () => {
     }, [isCommandPaletteOpen, setCommandPaletteOpen]);
 
     return (
-        <div className="min-h-screen transition-colors duration-300 bg-[#F4F4F5] dark:bg-dark-bg">
+        <div className="min-h-screen transition-all duration-700 bg-white dark:bg-black animate-mesh relative overflow-hidden">
+            {/* Liquid Background Elements */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-400/20 dark:bg-blue-600/10 rounded-full blur-[120px] animate-blob" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-orange-400/20 dark:bg-orange-600/10 rounded-full blur-[120px] animate-blob animation-delay-2000" />
+                <div className="absolute top-[30%] right-[10%] w-[40%] h-[40%] bg-purple-400/20 dark:bg-purple-600/10 rounded-full blur-[120px] animate-liquid animation-delay-4000" />
+            </div>
             {/* Mobile Header */}
             <div className="md:hidden sticky top-0 z-20 glass rounded-none border-x-0 border-t-0 border-b border-white/30 dark:border-white/10 px-4 py-3 flex items-center justify-between shadow-sm">
                 <button

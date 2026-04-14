@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import Registration from './pages/Registration';
 import Management from './pages/Management'; // We will create this next
-import Dashboard from './pages/Dashboard'; // We will create this later
+import Indicadores from './pages/Dashboard'; // Rebranded from Dashboard to Indicadores
 import Login from './pages/Login';
 import GlobalSearch from './pages/GlobalSearch';
 import Profile from './pages/Profile';

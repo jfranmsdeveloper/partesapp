@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../../hooks/useTheme';
 
 const API_NAV_ITEMS = [
-    { label: 'Panel de Control', icon: LayoutDashboard, to: '/', adminOnly: false },
+    { label: 'Indicadores', icon: LayoutDashboard, to: '/', adminOnly: false },
     { label: 'Analíticas', icon: TrendingUp, to: '/analytics', adminOnly: false },
     { label: 'Calendario', icon: Calendar, to: '/calendar', adminOnly: false },
     { label: 'Gestión de Partes', icon: FileText, to: '/management', adminOnly: false },
