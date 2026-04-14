@@ -10,7 +10,7 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { AIGuideGenerator } from '../actuaciones/AIGuideGenerator';
+import { ClientHistory } from '../actuaciones/ClientHistory';
 import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
@@ -745,11 +745,12 @@ export const ParteEditor = () => {
                                 </div>
                             )}
 
-                            {/* Local AI Guide Generator */}
-                            {!showAddActuacion && currentParte.actuaciones.length > 0 && (
-                                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-                                    <AIGuideGenerator actuaciones={currentParte.actuaciones} parteTitle={currentParte.title} />
-                                </div>
+                            {/* Premium Client History Section */}
+                            {!showAddActuacion && currentParte.clientId && (
+                                <ClientHistory 
+                                    clientId={currentParte.clientId} 
+                                    currentParteId={currentParte.id} 
+                                />
                             )}
                         </Card>
                     </div>
