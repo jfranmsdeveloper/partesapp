@@ -249,7 +249,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     <button
                                         key={idx}
                                         type="button"
-                                        onClick={() => setNotes(prev => prev + (prev && prev !== '<p></p>' ? ' ' : '') + btn)}
+                                        onClick={() => setNotes((prev: string) => prev + (prev && prev !== '<p></p>' ? ' ' : '') + btn)}
                                         className="px-4 py-2 rounded-xl bg-orange-50/50 hover:bg-orange-50 border border-orange-100/50 hover:border-orange-300 text-[11px] font-bold text-orange-800 transition-all shadow-sm active:scale-95"
                                     >
                                         {btn}
@@ -275,7 +275,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                         type="button"
                                         onClick={() => {
                                             const cleanContent = snippet.content.replace(/\n/g, '<br/>');
-                                            setNotes(prev => prev + (prev && prev !== '<p></p>' ? '<br/>' : '') + cleanContent);
+                                            setNotes((prev: string) => prev + (prev && prev !== '<p></p>' ? '<br/>' : '') + cleanContent);
                                         }}
                                         className="px-4 py-2 rounded-xl bg-blue-50/50 hover:bg-blue-50 border border-blue-100/50 hover:border-blue-300 text-[11px] font-bold text-blue-800 transition-all shadow-sm flex items-center gap-2"
                                     >

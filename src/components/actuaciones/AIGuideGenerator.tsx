@@ -3,10 +3,10 @@ import { Sparkles, Loader2, Bot, Check, Copy } from 'lucide-react';
 import { CreateMLCEngine } from '@mlc-ai/web-llm';
 import { Button } from '../ui/Button';
 import { clsx } from 'clsx';
-import type { ActuacionType } from '../../types';
+import type { ActuacionType, Actuacion } from '../../types';
 
 interface AIGuideGeneratorProps {
-    actuaciones: { type: ActuacionType; duration: number; notes?: string; user: string; timestamp: string }[];
+    actuaciones: Actuacion[];
     parteTitle: string;
 }
 
@@ -39,7 +39,7 @@ export const AIGuideGenerator = ({ actuaciones, parteTitle }: AIGuideGeneratorPr
             };
 
             const dataDump = actuaciones.map(act => 
-                `- ${act.type} (${act.duration}min) por ${act.user}: ${cleanHtml(act.notes)}`
+                `- ${act.type} (${act.duration}min) por ${act.user}: ${cleanHtml(act.notes || "")}`
             ).join('\n');
 
             const initProgressCallback = (report: { progress: number, text: string }) => {
