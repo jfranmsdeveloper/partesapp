@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useUserStore } from '../../hooks/useUserStore';
 import { supabase } from '../../utils/supabase';
 import { Button } from '../ui/Button';
@@ -27,7 +27,21 @@ export const ParteEditor = () => {
     const [title, setTitle] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
     const [customId, setCustomId] = useState('');
-    const [customDate, setCustomDate] = useState(toLocalISOString(new Date())); // Default to now (Local)
+    const [searchParams] = useSearchParams();
+    const dateParam = searchParams.get('date');
+
+    const [customDate, setCustomDate] = useState(() => {
+        if (dateParam) {
+            // Ensure format is YYYY-MM-DDTHH:mm
+            const date = new Date(dateParam);
+            if (!isNaN(date.getTime())) {
+                const now = new Date();
+                date.setHours(now.getHours(), now.getMinutes());
+                return toLocalISOString(date);
+            }
+        }
+        return toLocalISOString(new Date());
+    }); // Default to now (Local)
 
 
     // Initialize with current user name if available
