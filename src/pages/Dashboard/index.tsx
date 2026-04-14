@@ -1,3 +1,5 @@
+/* UI Version: 12:30 Baseline */
+/* UI Version: 12:30 Baseline - Sync forced */
 import { useState, useMemo } from 'react';
 import { useUserStore } from '../../hooks/useUserStore';
 import { KPICard } from '../../components/dashboard/KPICard';
@@ -153,11 +155,11 @@ export default function IndicadoresPage() {
                             <Calendar className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-300" />
                             <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{today}</span>
                         </div>
-                        <h1 className="text-6xl md:text-8xl font-display font-black text-slate-900 dark:text-white tracking-[-0.05em] drop-shadow-2xl animate-in fade-in zoom-in-95 duration-1000">
-                            Indicadores
+                        <h1 className="text-6xl md:text-7xl font-display font-medium text-slate-900 dark:text-white tracking-[-0.03em] drop-shadow-sm">
+                            Dashboard
                         </h1>
-                        <p className="text-xl md:text-2xl font-light text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed backdrop-blur-sm">
-                            Tu panel ejecutivo de <span className="font-semibold text-brand-gradient">Rendimiento Operativo</span>
+                        <p className="text-xl md:text-2xl font-light text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+                            Resumen ejecutivo de tu actividad en <span className="font-semibold text-slate-800 dark:text-slate-200">AppGest</span>
                         </p>
                     </div>
 
@@ -202,36 +204,32 @@ export default function IndicadoresPage() {
 
                 {/* User Filters - Removed as per request (Only show own data) */}
 
-                {/* KPI Grid - Staggered Apple Entrance */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10 text-glow">
+                {/* KPI Grid - Pastel & Glass */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <KPICard
                         title="Total Partes"
                         value={metrics.totalPartes}
                         icon={FileText}
                         color="orange"
                         trend={{ value: 12, isPositive: true }}
-                        className="glass-card border-orange-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both"
                     />
                     <KPICard
                         title="Tiempo Total"
                         value={`${metrics.totalTime}m`}
                         icon={Clock}
                         color="orange"
-                        className="glass-card border-orange-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150 fill-mode-both"
                     />
                     <KPICard
                         title="Eficiencia"
                         value={`${metrics.totalPartes > 0 ? Math.round((metrics.closedPartes / metrics.totalPartes) * 100) : 0}%`}
                         icon={TrendingUp}
                         color="green"
-                        className="glass-card border-green-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both"
                     />
                     <KPICard
                         title="Usuarios Activos"
                         value={metrics.activeUsersCount}
                         icon={Users}
                         color="rose"
-                        className="glass-card border-rose-500/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 fill-mode-both"
                     />
                 </div>
 
@@ -272,7 +270,7 @@ export default function IndicadoresPage() {
                     <Card className="p-8 md:p-10">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
                             <div>
-                                <h3 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Actividad Reciente</h3>
+                                <h1 className="text-3xl font-display font-black text-slate-800 dark:text-white mt-1">Indicadores</h1>
                                 <p className="text-slate-500 dark:text-slate-400 mt-1">Últimos movimientos en la plataforma</p>
                             </div>
                             <Button variant="ghost" className="text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full px-6">

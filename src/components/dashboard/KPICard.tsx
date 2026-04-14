@@ -2,7 +2,8 @@
 import clsx from 'clsx';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
-interface KPICardProps {
+export interface KPICardProps {
+/* Forcing file sync */
     title: string;
     value: string | number;
     trend?: {
