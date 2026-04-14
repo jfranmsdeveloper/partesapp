@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { useNotesStore } from '../../store/useNotesStore';
 import { useTimerStore } from '../../store/useTimerStore';
@@ -43,7 +44,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     // Voice to notes sync
     useEffect(() => {
         if (transcript) {
-            setNotes(prev => {
+            setNotes((prev: string) => {
                 const cleanTranscript = transcript.trim();
                 if (!cleanTranscript) return prev;
                 // Append to existing HTML if present
@@ -103,7 +104,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             notes,
             user,
             priority,
-            tags: tagInput.split(',').map(t => t.trim()).filter(Boolean),
+            tags: tagInput.split(',').map((t: string) => t.trim()).filter(Boolean),
             timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : '')
         });
     };
@@ -398,7 +399,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     type="button"
                                     onClick={() => {
                                         const cleanNotes = noteContent.replace(/\n/g, '<br/>');
-                                        setNotes(prev => prev + (prev && prev !== '<p></p>' ? '<br/><br/>' : '') + cleanNotes);
+                                        setNotes((prev: string) => prev + (prev && prev !== '<p></p>' ? '<br/><br/>' : '') + cleanNotes);
                                     }}
                                     className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all border border-amber-200"
                                     title="Añadir desde Nota Rápida"

@@ -6,7 +6,7 @@ import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 
 interface AIGuideGeneratorProps {
-    actuaciones: { type: ActuacionType; duration: number; notes: string; user: string; timestamp: string }[];
+    actuaciones: { type: ActuacionType; duration: number; notes?: string; user: string; timestamp: string }[];
     parteTitle: string;
 }
 
