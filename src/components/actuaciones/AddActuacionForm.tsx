@@ -149,7 +149,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
       setNotes(html);
     }, []);
 
-    return (
     const scrollRef = useRef<HTMLDivElement>(null);
     const scrollVelocity = useRef(0);
     const requestRef = useRef<number>();
