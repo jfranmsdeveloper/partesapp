@@ -66,9 +66,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/login" element={<Login />} />
         <Route element={<AuthGuard><Layout /></AuthGuard>}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Indicadores />} />
           <Route path="/management" element={<Management />} />
           <Route path="/new" element={<Registration />} />
           <Route path="/global" element={<GlobalSearch />} />
