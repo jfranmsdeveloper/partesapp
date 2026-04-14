@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { useNotesStore } from '../../store/useNotesStore';
+import { useTimerStore } from '../../store/useTimerStore';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import type { ActuacionType } from '../../types';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
@@ -8,7 +9,7 @@ import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
 import { NotionEditor } from '../ui/NotionEditor';
-import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles } from 'lucide-react';
+import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote, Clock } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 
 interface AddActuacionFormProps {
@@ -20,7 +21,10 @@ interface AddActuacionFormProps {
 
 export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp }: AddActuacionFormProps) => {
     const { users, currentUser, snippets, updateQuickButtons } = useAppStore();
+    const { noteContent, clearNotes } = useNotesStore();
+    const { elapsedSeconds, resetTimer } = useTimerStore();
     const { isListening, transcript, start, stop } = useSpeechRecognition();
+    const durationInputRef = useRef<HTMLInputElement>(null);
 
     const [type, setType] = useState<ActuacionType | null>(initialData?.type || null);
     const [duration, setDuration] = useState<string>(initialData?.duration.toString() || '');
@@ -80,8 +84,17 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         }
     }, [initialData]);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    // High Speed Interface: Auto-focus duration input on mount
+    useEffect(() => {
+        // slight delay to let glass effects mount
+        const timer = setTimeout(() => {
+            durationInputRef.current?.focus();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const handleSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         if (!type || !duration) return;
 
         onAdd({
@@ -95,6 +108,13 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         });
     };
 
+    const handleFormKeyDown = (e: React.KeyboardEvent) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            handleSubmit();
+        }
+    };
+
     const handleNotesChange = useCallback((html: string) => {
       setNotes(html);
     }, []);
@@ -104,13 +124,14 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             <div className="flex justify-between items-center mb-6 mt-2">
                 <h3 className="text-lg font-semibold text-slate-800">
                     {initialData ? 'Editar Actuación' : 'Registrar Nueva Actuación'}
+                    <span className="ml-3 text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full hidden sm:inline-block">Cmd+Enter para guardar</span>
                 </h3>
                 <button onClick={onCancel} className="p-2 rounded-full hover:bg-white/50 text-slate-400 hover:text-slate-600 transition-colors">
                     <X className="w-5 h-5" />
                 </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-3 ml-1">Selecciona el tipo</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -267,15 +288,31 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Input
-                        type="number"
-                        label="Duración (minutos)"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                        required
-                        min="1"
-                        placeholder="0"
-                    />
+                    <div className="relative">
+                        <Input
+                            ref={durationInputRef}
+                            type="number"
+                            label="Duración (minutos)"
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value)}
+                            required
+                            min="1"
+                            placeholder="0"
+                        />
+                        {elapsedSeconds >= 60 && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setDuration(Math.ceil(elapsedSeconds / 60).toString());
+                                    resetTimer();
+                                }}
+                                className="absolute right-2 top-8 text-[10px] flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2 py-1.5 rounded w-max transition-colors font-bold"
+                            >
+                                <Clock className="w-3 h-3" />
+                                Usar Crono
+                            </button>
+                        )}
+                    </div>
 
                     <div className="flex gap-2">
                         <div className="flex-1">
@@ -355,28 +392,44 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 <div className="space-y-4">
                     <div className="flex justify-between items-center px-1">
                         <label className="text-sm font-medium text-slate-700">Descripción detallada</label>
-                        <button
-                            type="button"
-                            onClick={isListening ? stop : start}
-                            className={clsx(
-                                "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300",
-                                isListening 
-                                    ? "bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
-                                    : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                        <div className="flex gap-2">
+                            {noteContent && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const cleanNotes = noteContent.replace(/\n/g, '<br/>');
+                                        setNotes(prev => prev + (prev && prev !== '<p></p>' ? '<br/><br/>' : '') + cleanNotes);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all border border-amber-200"
+                                    title="Añadir desde Nota Rápida"
+                                >
+                                    <StickyNote className="w-3 h-3 text-amber-600" />
+                                    Importar Nota
+                                </button>
                             )}
-                        >
-                            {isListening ? (
-                                <>
-                                    <MicOff className="w-3 h-3" />
-                                    Detener Dictado
-                                </>
-                            ) : (
-                                <>
-                                    <Mic className="w-3 h-3 text-blue-500" />
-                                    Dictado por Voz
-                                </>
-                            )}
-                        </button>
+                            <button
+                                type="button"
+                                onClick={isListening ? stop : start}
+                                className={clsx(
+                                    "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 border",
+                                    isListening 
+                                        ? "bg-red-500 text-white border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
+                                        : "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                                )}
+                            >
+                                {isListening ? (
+                                    <>
+                                        <MicOff className="w-3 h-3" />
+                                        Detener
+                                    </>
+                                ) : (
+                                    <>
+                                        <Mic className="w-3 h-3 text-blue-500" />
+                                        Voz
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                     <NotionEditor
                         initialContent={notes}
