@@ -21,8 +21,8 @@ interface ManagementFiltersProps {
     filters: FilterState;
     onFilterChange: (key: keyof FilterState, value: string) => void;
     onClearFilters: () => void;
-    view: 'list' | 'kanban' | 'timeline' | 'clients' | 'workload';
-    onViewChange: (val: 'list' | 'kanban' | 'timeline' | 'clients' | 'workload') => void;
+    view: 'list' | 'detailed' | 'kanban' | 'timeline' | 'clients' | 'workload';
+    onViewChange: (val: 'list' | 'detailed' | 'kanban' | 'timeline' | 'clients' | 'workload') => void;
     onAddClient: () => void;
 }
 
@@ -141,7 +141,17 @@ export const ManagementFilters = ({
                                 }`}
                         >
                             <List className="w-3 h-3" />
-                            Lista
+                            Cards
+                        </button>
+                        <button
+                            onClick={() => onViewChange('detailed')}
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'detailed'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                                }`}
+                        >
+                            <Layout className="w-3 h-3 rotate-90" />
+                            Listado
                         </button>
                         <button
                             onClick={() => onViewChange('kanban')}
