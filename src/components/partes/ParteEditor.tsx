@@ -10,8 +10,8 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ClientHistory } from '../actuaciones/ClientHistory';
-import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files, History, ChevronDown } from 'lucide-react';
+import { AIGuideGenerator } from '../actuaciones/AIGuideGenerator';
+import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
@@ -61,8 +61,7 @@ export const ParteEditor = () => {
     }, [currentUser, isNew]);
     const [uploadedPdf, setUploadedPdf] = useState<string | undefined>(undefined);
     const [showAddActuacion, setShowAddActuacion] = useState(false);
-    const [isActuacionesListOpen, setIsActuacionesListOpen] = useState(true);
-    const [editingActuacion, setEditingActuacion] = useState<{ id: string; data: any } | null>(null);
+    const [editingActuacion, setEditingActuacion] = useState<{ id: string, data: any } | null>(null);
     const [showCopied, setShowCopied] = useState(false);
 
 
@@ -270,7 +269,7 @@ export const ParteEditor = () => {
     };
 
 
-    const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] }) => {
+    const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => {
         if (!currentParte) return;
 
         if (editingActuacion) {
@@ -705,41 +704,15 @@ export const ParteEditor = () => {
                             </div>
 
                             <div className="mb-6">
-                                <div 
-                                    className="flex items-center justify-between mb-4 px-2 cursor-pointer group/toggle"
-                                    onClick={() => setIsActuacionesListOpen(!isActuacionesListOpen)}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 group-hover/toggle:text-blue-500 transition-colors">
-                                            <History className="w-4 h-4" />
-                                        </div>
-                                        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Actuaciones Registradas</h2>
-                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-[10px] font-black text-slate-500">
-                                            {currentParte.actuaciones.length}
-                                        </span>
-                                    </div>
-                                    <div className={clsx(
-                                        "p-1 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-all duration-300",
-                                        isActuacionesListOpen ? "rotate-0" : "-rotate-90"
-                                    )}>
-                                        <ChevronDown className="w-5 h-5 text-slate-400" />
-                                    </div>
-                                </div>
-
-                                <div className={clsx(
-                                    "transition-all duration-300 ease-in-out overflow-hidden",
-                                    isActuacionesListOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-                                )}>
-                                    <ActuacionesList
-                                        actuaciones={currentParte.actuaciones}
-                                        onDelete={async (actuacionId) => {
-                                            if (window.confirm('¿Estás seguro de que quieres eliminar esta actuación?')) {
-                                                await deleteActuacion(currentParte.id, actuacionId);
-                                            }
-                                        }}
-                                        onEdit={handleEditClick}
-                                    />
-                                </div>
+                                <ActuacionesList
+                                    actuaciones={currentParte.actuaciones}
+                                    onDelete={async (actuacionId) => {
+                                        if (window.confirm('¿Estás seguro de que quieres eliminar esta actuación?')) {
+                                            await deleteActuacion(currentParte.id, actuacionId);
+                                        }
+                                    }}
+                                    onEdit={handleEditClick}
+                                />
                             </div>
 
                             {!showAddActuacion && (
@@ -760,7 +733,6 @@ export const ParteEditor = () => {
                                         onAdd={handleAddOrUpdateActuacion}
                                         onCancel={handleCancelForm}
                                         initialData={editingActuacion?.data}
-                                        clientId={currentParte.clientId}
                                         defaultTimestamp={(() => {
                                             if (currentParte.actuaciones.length === 0) return currentParte.createdAt;
                                             const lastAct = currentParte.actuaciones[currentParte.actuaciones.length - 1];
@@ -772,12 +744,11 @@ export const ParteEditor = () => {
                                 </div>
                             )}
 
-                            {/* Premium Client History Section */}
-                            {!showAddActuacion && currentParte.clientId && (
-                                <ClientHistory 
-                                    clientId={currentParte.clientId} 
-                                    currentParteId={currentParte.id} 
-                                />
+                            {/* Local AI Guide Generator */}
+                            {!showAddActuacion && currentParte.actuaciones.length > 0 && (
+                                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                    <AIGuideGenerator actuaciones={currentParte.actuaciones} parteTitle={currentParte.title} />
+                                </div>
                             )}
                         </Card>
                     </div>
