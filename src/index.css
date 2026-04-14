@@ -236,12 +236,12 @@
   }
 
   .glass-card {
-    @apply backdrop-blur-[40px] bg-white/60 dark:bg-black/60 border border-white/50 dark:border-white/10 overflow-hidden relative;
+    @apply backdrop-blur-[40px] bg-white/60 dark:bg-black/60 border border-white/40 dark:border-white/5 overflow-hidden relative;
     box-shadow: 
-      0 10px 40px rgba(0, 0, 0, 0.08), 
+      0 10px 40px rgba(0, 0, 0, 0.04), 
       inset 0 1px 1px rgba(255, 255, 255, 0.4),
-      inset 0 -1px 1px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      inset 0 -1px 1px rgba(0, 0, 0, 0.05);
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .glass-card::after {
@@ -271,6 +271,20 @@
     content: "";
     @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent;
     animation: shine 3s infinite linear;
+  }
+
+  .glass-scroll-zone {
+    @apply absolute inset-y-0 w-16 z-20 transition-all duration-500 opacity-0 group-hover/carousel:opacity-100 flex items-center justify-center;
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+  }
+
+  .glass-scroll-zone-left {
+    @apply left-0 bg-gradient-to-r from-white/60 via-white/20 to-transparent dark:from-black/60 dark:via-black/20 dark:to-transparent border-r border-white/10;
+  }
+
+  .glass-scroll-zone-right {
+    @apply right-0 bg-gradient-to-l from-white/60 via-white/20 to-transparent dark:from-black/60 dark:via-black/20 dark:to-transparent border-l border-white/10;
   }
 
   .glass-border {

@@ -53,25 +53,19 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         }
     }, []);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!scrollRef.current) return;
-        const rect = scrollRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const width = rect.width;
-        const threshold = 160; // Increased margin for faster trigger
+    const handleScrollStart = (direction: 'left' | 'right') => {
+        const speed = direction === 'left' ? -15 : 15;
+        scrollVelocity.current = speed;
+        if (!requestRef.current) {
+            requestRef.current = requestAnimationFrame(scrollLoop);
+        }
+    };
 
-        if (x < threshold) {
-            scrollVelocity.current = -((threshold - x) / 3.5); // Faster scrolling (lower divisor)
-            if (!requestRef.current) requestRef.current = requestAnimationFrame(scrollLoop);
-        } else if (x > width - threshold) {
-            scrollVelocity.current = (x - (width - threshold)) / 3.5; // Faster scrolling
-            if (!requestRef.current) requestRef.current = requestAnimationFrame(scrollLoop);
-        } else {
-            scrollVelocity.current = 0;
-            if (requestRef.current) {
-                cancelAnimationFrame(requestRef.current);
-                requestRef.current = null;
-            }
+    const handleScrollStop = () => {
+        scrollVelocity.current = 0;
+        if (requestRef.current) {
+            cancelAnimationFrame(requestRef.current);
+            requestRef.current = null;
         }
     };
 
@@ -177,7 +171,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     }, [snippets, type]);
 
     return (
-        <div className="rounded-[2.5rem] border border-blue-100 bg-white/40 glass-card p-6 shadow-xl mb-6 relative overflow-hidden transition-all duration-700">
+        <div className="rounded-[2.5rem] border border-slate-200/50 dark:border-white/10 bg-white/40 dark:bg-black/40 glass-card p-6 shadow-2xl mb-6 relative overflow-hidden transition-all duration-700">
             <div className="flex justify-between items-center mb-6 mt-2">
                 <h3 className="text-xl font-display font-black tracking-tight text-slate-800 dark:text-white/90">
                     {initialData ? 'Editar Actuación' : 'Registrar Nueva Actuación'}
@@ -198,15 +192,27 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         </div>
                     </div>
                     
-                    <div className="relative overflow-hidden rounded-[2.2rem]">
-                        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-white/80 dark:from-dark-card/80 via-white/20 dark:via-dark-card/20 to-transparent z-10 pointer-events-none opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-500" />
-                        <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-white/80 dark:from-dark-card/80 via-white/20 dark:via-dark-card/20 to-transparent z-10 pointer-events-none opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-500" />
-                        
+                    <div className="relative overflow-hidden rounded-[2rem] border border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-black/20">
+                        {/* Glass Edge Scroll Zones */}
+                        <div 
+                            className="glass-scroll-zone glass-scroll-zone-left group/scroll-left"
+                            onMouseEnter={() => handleScrollStart('left')}
+                            onMouseLeave={handleScrollStop}
+                        >
+                            <ChevronLeft className="w-5 h-5 text-slate-400 opacity-0 group-hover/scroll-left:opacity-100 transition-opacity" />
+                        </div>
+
+                        <div 
+                            className="glass-scroll-zone glass-scroll-zone-right group/scroll-right"
+                            onMouseEnter={() => handleScrollStart('right')}
+                            onMouseLeave={handleScrollStop}
+                        >
+                            <ChevronRight className="w-5 h-5 text-slate-400 opacity-0 group-hover/scroll-right:opacity-100 transition-opacity" />
+                        </div>
+
                         <div 
                             ref={scrollRef}
-                            onMouseMove={handleMouseMove}
-                            onMouseLeave={handleMouseLeave}
-                            className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth p-4 -m-4 relative"
+                            className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth p-6 -m-6 relative active:cursor-grabbing"
                         >
                             {(Object.keys(ACTUACION_CONFIG) as ActuacionType[]).map((actionType) => {
                                 const isSelected = type === actionType;
@@ -243,9 +249,9 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                             }
                                         }}
                                         className={clsx(
-                                            "group relative flex flex-col items-center justify-center p-4 rounded-[1.8rem] border-2 transition-all duration-500 backdrop-blur-md shrink-0 w-[140px] h-28",
+                                            "group relative flex flex-col items-center justify-center p-3 rounded-[1.8rem] border-2 transition-all duration-300 backdrop-blur-xl shrink-0 w-[105px] h-28",
                                             glassStyles[theme] || 'border-slate-100 bg-white/40',
-                                            isSelected ? "scale-[1.02] border-opacity-100" : "bg-white/20 border-white/40 hover:scale-[1.01] grayscale-[0.5] hover:grayscale-0 shadow-sm"
+                                            isSelected ? "scale-105 border-opacity-100 z-10" : "bg-white/20 border-white/20 hover:scale-[1.02] grayscale-[0.3] hover:grayscale-0 shadow-sm"
                                         )}
                                     >
                                         <div className="absolute top-2 left-2 w-4 h-4 rounded-lg bg-black/5 dark:bg-white/10 flex items-center justify-center text-[8px] font-black text-slate-400 group-hover:text-blue-500 transition-colors">
@@ -260,7 +266,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                         </div>
                                         
                                         <span className={clsx(
-                                            "text-[9px] font-black uppercase tracking-widest text-center leading-tight relative",
+                                            "text-[8px] font-black uppercase tracking-[0.1em] text-center leading-tight relative mt-1",
                                             isSelected ? textColor : "text-slate-500"
                                         )}>
                                             {config.label}
