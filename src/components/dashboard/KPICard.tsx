@@ -1,3 +1,4 @@
+/* UI Version: 12:30 Baseline */
 import clsx from 'clsx';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
@@ -10,10 +11,9 @@ interface KPICardProps {
     };
     icon?: any;
     color?: 'blue' | 'green' | 'purple' | 'orange' | 'rose' | 'indigo';
-    className?: string;
 }
 
-export const KPICard = ({ title, value, trend, icon: Icon, color = 'blue', className }: KPICardProps) => {
+export const KPICard = ({ title, value, trend, icon: Icon, color = 'blue' }: KPICardProps) => {
     // iOS 26 Pastel Palette configuration
     const styles = {
         blue: {
@@ -57,7 +57,7 @@ export const KPICard = ({ title, value, trend, icon: Icon, color = 'blue', class
     const currentStyle = styles[color as keyof typeof styles] || styles.blue;
 
     return (
-        <div className={clsx("group flex flex-col p-6 rounded-[2rem] transition-all duration-300", className || "bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border shadow-sm hover:shadow-md")}>
+        <div className="group flex flex-col p-6 rounded-[2rem] bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border shadow-sm hover:shadow-md transition-shadow duration-200">
 
             <div className="relative z-10 flex justify-between items-start mb-6">
                 <div className={clsx("p-3.5 rounded-2xl transition-colors duration-300", currentStyle.iconBg)}>

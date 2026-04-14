@@ -1,37 +1,26 @@
+/* UI Version: 12:30 Baseline */
 import { useRef, useEffect } from 'react';
 import { useNotesStore } from '../../store/useNotesStore';
-import { X, StickyNote, Copy, Trash2, Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { X, StickyNote, Copy, Trash2, Check } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 
 export const DailyNotesPanel = () => {
-    const { 
-        isNotesOpen, 
-        setNotesOpen, 
-        notes, 
-        activeNoteIndex, 
-        addNote, 
-        updateActiveNote, 
-        deleteActiveNote, 
-        nextNote, 
-        prevNote 
-    } = useNotesStore();
-    
+    const { isNotesOpen, setNotesOpen, noteContent, setNoteContent, clearNotes } = useNotesStore();
     const [copied, setCopied] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const activeNote = notes[activeNoteIndex] || { content: '' };
 
     // Auto focus when opened if empty
     useEffect(() => {
-        if (isNotesOpen && !activeNote.content && textareaRef.current) {
+        if (isNotesOpen && !noteContent && textareaRef.current) {
             textareaRef.current.focus();
         }
-    }, [isNotesOpen, activeNoteIndex]);
+    }, [isNotesOpen, noteContent]);
 
     const handleCopy = () => {
-        if (activeNote.content) {
-            navigator.clipboard.writeText(activeNote.content);
+        if (noteContent) {
+            navigator.clipboard.writeText(noteContent);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
@@ -41,56 +30,17 @@ export const DailyNotesPanel = () => {
 
     return (
         <div className="fixed inset-y-0 right-0 z-[100] w-full sm:w-[400px] bg-amber-50 dark:bg-amber-950/90 border-l border-amber-200 dark:border-amber-800 shadow-2xl flex flex-col transform transition-transform duration-300 backdrop-blur-xl">
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-amber-200/50 dark:border-amber-800/50 bg-amber-100/50 dark:bg-amber-900/50">
                 <div className="flex items-center gap-2 text-amber-800 dark:text-amber-500 font-bold">
-                    <StickyNote className="w-5 h-5 text-amber-600" />
-                    <span className="text-sm">Nota Rápida del Día</span>
+                    <StickyNote className="w-5 h-5" />
+                    <span>Nota Rápida del Día</span>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button 
-                        onClick={addNote}
-                        className="p-2 rounded-lg text-amber-700 hover:bg-amber-200 dark:text-amber-400 dark:hover:bg-amber-800 transition-colors"
-                        title="Nueva Nota"
-                    >
-                        <Plus className="w-4 h-4" />
-                    </button>
-                    <button 
-                        onClick={() => setNotesOpen(false)}
-                        className="p-2 rounded-lg text-amber-600 hover:bg-amber-200 dark:text-amber-400 dark:hover:bg-amber-800 transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
-
-            {/* Pagination / Controls Bar */}
-            <div className="px-4 py-2 border-b border-amber-200/30 dark:border-amber-800/30 bg-amber-50/50 dark:bg-slate-900/40 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={prevNote}
-                        disabled={activeNoteIndex === 0}
-                        className="p-1 rounded-full hover:bg-amber-200 disabled:opacity-20 text-amber-800 dark:text-amber-400 transition-colors"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    
-                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-500">
-                        Página {activeNoteIndex + 1} / {notes.length}
-                    </span>
-
-                    <button 
-                        onClick={nextNote}
-                        disabled={activeNoteIndex === notes.length - 1}
-                        className="p-1 rounded-full hover:bg-amber-200 disabled:opacity-20 text-amber-800 dark:text-amber-400 transition-colors"
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
-
-                <div className="text-[9px] font-medium text-amber-600/60 dark:text-amber-500/40 italic">
-                    {activeNote.createdAt ? new Date(activeNote.createdAt).toLocaleDateString() : ''}
-                </div>
+                <button 
+                    onClick={() => setNotesOpen(false)}
+                    className="p-1 rounded-md text-amber-600 hover:bg-amber-200 dark:text-amber-400 dark:hover:bg-amber-800 transition-colors"
+                >
+                    <X className="w-5 h-5" />
+                </button>
             </div>
 
             <div className="flex-1 p-4 flex flex-col overflow-hidden relative">
@@ -99,8 +49,8 @@ export const DailyNotesPanel = () => {
                 
                 <textarea
                     ref={textareaRef}
-                    value={activeNote.content}
-                    onChange={(e) => updateActiveNote(e.target.value)}
+                    value={noteContent}
+                    onChange={(e) => setNoteContent(e.target.value)}
                     placeholder="Anota aquí detalles de llamadas, recordatorios rápidos, IDs parciales... Todo se guarda automáticamente para cuando lo necesites."
                     className="flex-1 w-full relative z-10 bg-transparent border-0 outline-none resize-none pt-2 px-1 text-amber-900 dark:text-amber-100 placeholder-amber-700/50 dark:placeholder-amber-400/50 leading-8 text-[15px] font-medium font-sans"
                     spellCheck="false"
@@ -112,10 +62,11 @@ export const DailyNotesPanel = () => {
                     variant="ghost" 
                     size="sm" 
                     onClick={() => {
-                        if (window.confirm('¿Borrar esta nota permanentemente?')) deleteActiveNote();
+                        if (window.confirm('¿Borrar todas las notas?')) clearNotes();
                     }}
                     className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 px-2"
-                    title="Eliminar esta nota"
+                    title="Borrar todo"
+                   disabled={!noteContent}
                 >
                     <Trash2 className="w-4 h-4" />
                 </Button>
@@ -126,13 +77,13 @@ export const DailyNotesPanel = () => {
                         size="sm" 
                         onClick={handleCopy}
                         className={clsx(
-                            "border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-800/50 h-9 px-4",
+                            "border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-800/50",
                             copied && "bg-green-100 border-green-300 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300"
                         )}
-                        disabled={!activeNote.content}
+                        disabled={!noteContent}
                     >
                         {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                        {copied ? 'Copiado!' : 'Copiar'}
+                        {copied ? 'Copiado!' : 'Copiar todo'}
                     </Button>
                 </div>
             </div>

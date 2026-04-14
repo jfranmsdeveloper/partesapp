@@ -1,10 +1,9 @@
+/* UI Version: 12:30 Baseline */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface UseSpeechRecognitionReturn {
     isListening: boolean;
-    transcript: string; // The full current session transcript
-    interimTranscript: string; // Just what is currently being processed
-    finalSegment: string; // The last confirmed segment
+    transcript: string;
     error: string | null;
     start: () => void;
     stop: () => void;
@@ -14,8 +13,6 @@ interface UseSpeechRecognitionReturn {
 export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
-    const [interimTranscript, setInterimTranscript] = useState('');
-    const [finalSegment, setFinalSegment] = useState('');
     const [error, setError] = useState<string | null>(null);
     const recognitionRef = useRef<any>(null);
 
@@ -33,11 +30,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
         recognition.lang = 'es-ES';
 
         recognition.onstart = () => setIsListening(true);
-        recognition.onend = () => {
-            setIsListening(false);
-            setInterimTranscript('');
-        };
-        
+        recognition.onend = () => setIsListening(false);
         recognition.onerror = (event: any) => {
             console.error('Speech recognition error:', event.error);
             setError(`Error: ${event.error}`);
@@ -45,20 +38,11 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
         };
 
         recognition.onresult = (event: any) => {
-            let interimText = '';
-            let lastFinalText = '';
-
+            let currentTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const result = event.results[i];
-                if (result.isFinal) {
-                    lastFinalText = result[0].transcript;
-                    setFinalSegment(lastFinalText);
-                    setTranscript(prev => prev + lastFinalText + ' ');
-                } else {
-                    interimText += result[0].transcript;
-                }
+                currentTranscript += event.results[i][0].transcript;
             }
-            setInterimTranscript(interimText);
+            setTranscript(currentTranscript);
         };
 
         recognitionRef.current = recognition;
@@ -67,8 +51,6 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
     const start = useCallback(() => {
         if (!recognitionRef.current) return;
         setTranscript('');
-        setInterimTranscript('');
-        setFinalSegment('');
         setError(null);
         try {
             recognitionRef.current.start();
@@ -84,15 +66,11 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
 
     const reset = useCallback(() => {
         setTranscript('');
-        setInterimTranscript('');
-        setFinalSegment('');
     }, []);
 
     return {
         isListening,
         transcript,
-        interimTranscript,
-        finalSegment,
         error,
         start,
         stop,

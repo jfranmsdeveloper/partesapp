@@ -1,3 +1,4 @@
+/* UI Version: 12:30 Baseline */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { useNotesStore } from '../../store/useNotesStore';

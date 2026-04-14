@@ -1,3 +1,4 @@
+/* UI Version: 12:30 Baseline */
 import type { HTMLAttributes } from 'react';
 import { forwardRef } from 'react';
 import { twMerge } from 'tailwind-merge';
@@ -8,7 +9,7 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
             <div
                 ref={ref}
                 className={twMerge(
-                    'glass-card rounded-[2.5rem] p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1',
+                    'group relative bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-[2rem] p-8 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700/50',
                     className
                 )}
                 {...props}

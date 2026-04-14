@@ -1,3 +1,4 @@
+/* UI Version: 12:30 Baseline */
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../hooks/useUserStore';
@@ -14,7 +15,6 @@ import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
 import { Square, CheckSquare, Trash2, X, Plus, FileUp, Loader2, Files, CloudDownload, CloudUpload } from 'lucide-react';
 import { BulkActuacionModal } from '../../components/management/BulkActuacionModal';
-import { DetailedListView } from '../../components/management/DetailedListView';
 
 export default function Management() {
     const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function Management() {
         deletePartes, upsertClientFromPDF, isSingleFileMode, 
         isLegacyMode, importFiles, exportDatabase 
     } = useUserStore();
-    const [view, setView] = useState<'list' | 'detailed' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
+    const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
@@ -96,7 +96,7 @@ export default function Management() {
         });
     }, [partes, filters]);
 
-    const handleFilterChange = (key: keyof FilterState, value: any) => {
+    const handleFilterChange = (key: keyof FilterState, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
 
@@ -351,8 +351,6 @@ export default function Management() {
                     <TimelineView partes={filteredPartes} />
                 ) : view === 'clients' ? (
                     <ClientsView onFilterChange={handleFilterChange} onViewChange={setView} />
-                ) : view === 'detailed' ? (
-                    <DetailedListView partes={filteredPartes} />
                 ) : (
                     <WorkloadView partes={filteredPartes} />
                 )}
