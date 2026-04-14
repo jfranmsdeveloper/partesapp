@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { useNotesStore } from '../../store/useNotesStore';
-import { useTimerStore } from '../../store/useTimerStore';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import type { ActuacionType } from '../../types';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
@@ -10,7 +9,7 @@ import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
 import { NotionEditor } from '../ui/NotionEditor';
-import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote, Clock } from 'lucide-react';
+import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 
 interface AddActuacionFormProps {
@@ -22,8 +21,8 @@ interface AddActuacionFormProps {
 
 export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp }: AddActuacionFormProps) => {
     const { users, currentUser, snippets, updateQuickButtons } = useAppStore();
-    const { noteContent, clearNotes } = useNotesStore();
-    const { elapsedSeconds, resetTimer } = useTimerStore();
+    const { notes: allQuickNotes, activeNoteIndex } = useNotesStore();
+    const activeQuickNote = allQuickNotes[activeNoteIndex]?.content || '';
     const { isListening, transcript, start, stop } = useSpeechRecognition();
     const durationInputRef = useRef<HTMLInputElement>(null);
 
@@ -300,19 +299,6 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                             min="1"
                             placeholder="0"
                         />
-                        {elapsedSeconds >= 60 && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setDuration(Math.ceil(elapsedSeconds / 60).toString());
-                                    resetTimer();
-                                }}
-                                className="absolute right-2 top-8 text-[10px] flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2 py-1.5 rounded w-max transition-colors font-bold"
-                            >
-                                <Clock className="w-3 h-3" />
-                                Usar Crono
-                            </button>
-                        )}
                     </div>
 
                     <div className="flex gap-2">
@@ -394,11 +380,11 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                     <div className="flex justify-between items-center px-1">
                         <label className="text-sm font-medium text-slate-700">Descripción detallada</label>
                         <div className="flex gap-2">
-                            {noteContent && (
+                            {activeQuickNote && (
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        const cleanNotes = noteContent.replace(/\n/g, '<br/>');
+                                        const cleanNotes = activeQuickNote.replace(/\n/g, '<br/>');
                                         setNotes((prev: string) => prev + (prev && prev !== '<p></p>' ? '<br/><br/>' : '') + cleanNotes);
                                     }}
                                     className="flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all border border-amber-200"

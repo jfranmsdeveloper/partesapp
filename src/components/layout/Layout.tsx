@@ -7,7 +7,6 @@ import { ToastContainer } from '../ui/Toast';
 import { useAppStore } from '../../store/useAppStore';
 import { useNotesStore } from '../../store/useNotesStore';
 import { DailyNotesPanel } from './DailyNotesPanel';
-import { FloatingTimer } from './FloatingTimer';
 import { StickyNote } from 'lucide-react';
 
 export const Layout = () => {
@@ -64,7 +63,6 @@ export const Layout = () => {
             </main>
             
             <DailyNotesPanel />
-            <FloatingTimer />
             
             {/* Notes Floating Button */}
             <button
