@@ -9,7 +9,7 @@ import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import clsx from 'clsx';
 import { NotionEditor } from '../ui/NotionEditor';
-import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote } from 'lucide-react';
+import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 import { ClientHistory } from './ClientHistory';
 
