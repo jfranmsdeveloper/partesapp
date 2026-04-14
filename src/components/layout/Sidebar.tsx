@@ -73,14 +73,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                     'flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-medium transition-colors duration-200 group relative',
                                     {
                                         'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10': isActive,
-                                        'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-dark-surface hover:text-slate-900 dark:hover:text-slate-200': !isActive,
+                                        'text-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-dark-surface hover:text-slate-900 dark:hover:text-slate-200': !isActive,
                                     }
                                 )
                             }
                         >
                             {({ isActive }) => (
                                 <>
-                                    <item.icon className={clsx("h-5 w-5 transition-transform duration-300", { "text-orange-500": isActive, "text-slate-400 group-hover:scale-110 group-hover:text-orange-400": !isActive })} />
+                                    <item.icon className={clsx("h-5 w-5 transition-transform duration-300", { "text-orange-500": isActive, "text-slate-500 group-hover:scale-110 group-hover:text-orange-400": !isActive })} />
                                     <span className="relative z-10">{item.label}</span>
                                 </>
                             )}

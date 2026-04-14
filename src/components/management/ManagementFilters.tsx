@@ -68,12 +68,12 @@ export const ManagementFilters = ({
                         )}
                     </Button>
 
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar flex-nowrap max-w-full sm:max-w-none">
                         <button
                             onClick={() => onViewChange('list')}
-                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'list'
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'list'
                                 ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
+                                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                                 }`}
                         >
                             <List className="w-3 h-3" />
@@ -81,9 +81,9 @@ export const ManagementFilters = ({
                         </button>
                         <button
                             onClick={() => onViewChange('kanban')}
-                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'kanban'
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'kanban'
                                 ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
+                                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                                 }`}
                         >
                             <Layout className="w-3 h-3" />
@@ -91,9 +91,9 @@ export const ManagementFilters = ({
                         </button>
                         <button
                             onClick={() => onViewChange('timeline')}
-                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'timeline'
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'timeline'
                                 ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
+                                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                                 }`}
                         >
                             <Clock className="w-3 h-3" />
@@ -101,9 +101,9 @@ export const ManagementFilters = ({
                         </button>
                         <button
                             onClick={() => onViewChange('clients')}
-                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'clients'
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'clients'
                                 ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
+                                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                                 }`}
                         >
                             <Users className="w-3 h-3" />
@@ -111,9 +111,9 @@ export const ManagementFilters = ({
                         </button>
                         <button
                             onClick={() => onViewChange('workload')}
-                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${view === 'workload'
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'workload'
                                 ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
+                                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                                 }`}
                         >
                             <BarChart3 className="w-3 h-3" />
