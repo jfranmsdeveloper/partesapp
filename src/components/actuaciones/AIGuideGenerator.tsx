@@ -141,7 +141,7 @@ export const AIGuideGenerator = ({ actuaciones, parteTitle }: AIGuideGeneratorPr
                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                         <div 
                             className="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
-                            style={{ width: \`\${progress}%\` }}
+                            style={{ width: `${progress}%` }}
                         ></div>
                     </div>
                     {progress < 100 && (
