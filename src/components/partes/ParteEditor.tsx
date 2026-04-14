@@ -61,7 +61,8 @@ export const ParteEditor = () => {
     }, [currentUser, isNew]);
     const [uploadedPdf, setUploadedPdf] = useState<string | undefined>(undefined);
     const [showAddActuacion, setShowAddActuacion] = useState(false);
-    const [editingActuacion, setEditingActuacion] = useState<{ id: string, data: any } | null>(null);
+    const [isActuacionesListOpen, setIsActuacionesListOpen] = useState(true);
+    const [editingActuacion, setEditingActuacion] = useState<{ id: string; data: any } | null>(null);
     const [showCopied, setShowCopied] = useState(false);
 
 
@@ -704,15 +705,41 @@ export const ParteEditor = () => {
                             </div>
 
                             <div className="mb-6">
-                                <ActuacionesList
-                                    actuaciones={currentParte.actuaciones}
-                                    onDelete={async (actuacionId) => {
-                                        if (window.confirm('¿Estás seguro de que quieres eliminar esta actuación?')) {
-                                            await deleteActuacion(currentParte.id, actuacionId);
-                                        }
-                                    }}
-                                    onEdit={handleEditClick}
-                                />
+                                <div 
+                                    className="flex items-center justify-between mb-4 px-2 cursor-pointer group/toggle"
+                                    onClick={() => setIsActuacionesListOpen(!isActuacionesListOpen)}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 group-hover/toggle:text-blue-500 transition-colors">
+                                            <History className="w-4 h-4" />
+                                        </div>
+                                        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Actuaciones Registradas</h2>
+                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-[10px] font-black text-slate-500">
+                                            {currentParte.actuaciones.length}
+                                        </span>
+                                    </div>
+                                    <div className={clsx(
+                                        "p-1 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-all duration-300",
+                                        isActuacionesListOpen ? "rotate-0" : "-rotate-90"
+                                    )}>
+                                        <ChevronDown className="w-5 h-5 text-slate-400" />
+                                    </div>
+                                </div>
+
+                                <div className={clsx(
+                                    "transition-all duration-300 ease-in-out overflow-hidden",
+                                    isActuacionesListOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+                                )}>
+                                    <ActuacionesList
+                                        actuaciones={currentParte.actuaciones}
+                                        onDelete={async (actuacionId) => {
+                                            if (window.confirm('¿Estás seguro de que quieres eliminar esta actuación?')) {
+                                                await deleteActuacion(currentParte.id, actuacionId);
+                                            }
+                                        }}
+                                        onEdit={handleEditClick}
+                                    />
+                                </div>
                             </div>
 
                             {!showAddActuacion && (

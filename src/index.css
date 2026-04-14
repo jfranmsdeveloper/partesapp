@@ -232,7 +232,7 @@
   .glass {
     @apply backdrop-blur-2xl bg-white/40 dark:bg-black/40 border border-white/40 dark:border-white/10;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-    transition: all 0.6s cubic-bezier(0.4, 0, 0, 1);
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.6s cubic-bezier(0.4, 0, 0, 1);
   }
 
   .glass-card {
@@ -241,7 +241,7 @@
       0 10px 40px rgba(0, 0, 0, 0.08), 
       inset 0 1px 1px rgba(255, 255, 255, 0.4),
       inset 0 -1px 1px rgba(0, 0, 0, 0.1);
-    transition: all 0.6s cubic-bezier(0.4, 0, 0, 1);
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .glass-card::after {
@@ -315,8 +315,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  @apply font-sans antialiased text-slate-800 dark:text-white/90 bg-[#F4F4f5] dark:bg-dark-bg transition-colors duration-200;
-  /* El dato debe respirar, textos claros en dark, fondo gris puro */
+  @apply font-sans antialiased text-slate-800 dark:text-white/90 bg-[#F4F4f5] dark:bg-dark-bg;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.1s linear;
 }
 
 h1,

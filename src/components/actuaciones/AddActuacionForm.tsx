@@ -58,13 +58,13 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         const rect = scrollRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const width = rect.width;
-        const threshold = 120;
+        const threshold = 160; // Increased margin for faster trigger
 
         if (x < threshold) {
-            scrollVelocity.current = -((threshold - x) / 5);
+            scrollVelocity.current = -((threshold - x) / 3.5); // Faster scrolling (lower divisor)
             if (!requestRef.current) requestRef.current = requestAnimationFrame(scrollLoop);
         } else if (x > width - threshold) {
-            scrollVelocity.current = (x - (width - threshold)) / 5;
+            scrollVelocity.current = (x - (width - threshold)) / 3.5; // Faster scrolling
             if (!requestRef.current) requestRef.current = requestAnimationFrame(scrollLoop);
         } else {
             scrollVelocity.current = 0;

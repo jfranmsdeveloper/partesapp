@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-interface DashboardMetrics {
+interface IndicadoresMetrics {
     totalPartes: number;
     totalTime: number;
     closedPartes: number;
@@ -12,7 +12,7 @@ interface DashboardMetrics {
     activityData: { name: string; count: number }[];
 }
 
-export const generateDashboardPDF = (metrics: DashboardMetrics) => {
+export const generateIndicadoresPDF = (metrics: IndicadoresMetrics) => {
     const doc = new jsPDF();
     const today = format(new Date(), "d 'de' MMMM, yyyy", { locale: es });
 
