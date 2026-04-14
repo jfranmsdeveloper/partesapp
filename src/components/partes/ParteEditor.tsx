@@ -177,7 +177,6 @@ export const ParteEditor = () => {
             }
 
             if (data.createdBy) {
-                setCreatedBy(data.createdBy);
                 const clientId = await upsertClientFromPDF(data.createdBy, data.createdByCode);
                 if (clientId) {
                     setSelectedClientId(clientId);
@@ -222,10 +221,12 @@ export const ParteEditor = () => {
                 }
 
                 // 3. Add Parte
+                const sessionUserName = currentUser?.user_metadata?.full_name || currentUser?.name || currentUser?.email || 'Sistema';
+
                 await addParte({
                     title: data.title || `Parte importado - ${file.name}`,
                     status: 'ABIERTO',
-                    createdBy: data.createdBy || 'Sistema',
+                    createdBy: sessionUserName,
                     id: data.id || undefined,
                     createdAt: createdAt,
                     pdfFile: data.pdfFile,

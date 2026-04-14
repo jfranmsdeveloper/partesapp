@@ -191,7 +191,7 @@ export default function Management() {
                     createdAt = `${dateStr} ${timeStr}:00`;
                 }
 
-                const currentUserName = currentUser?.user_metadata?.full_name || currentUser?.name || 'Sistema';
+                const currentUserName = currentUser?.user_metadata?.full_name || currentUser?.name || currentUser?.email || 'Sistema';
 
                 await addParte({
                     title: data.title || `Parte importado - ${file.name}`,
