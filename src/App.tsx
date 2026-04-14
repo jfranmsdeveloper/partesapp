@@ -12,6 +12,8 @@ import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 
 import { useAppStore } from './store/useAppStore';
+import { useToast } from './components/ui/Toast';
+import { isPast, parseISO, isWithinInterval, subMinutes, addMinutes } from 'date-fns';
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { currentUser, isLoading } = useAppStore();
@@ -24,11 +26,36 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  const { checkSession } = useAppStore();
+  const { checkSession, reminders, updateReminder } = useAppStore();
+  const toast = useToast();
 
   useEffect(() => {
     checkSession();
   }, [checkSession]);
+
+  // Reminder Notification Engine
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = new Date();
+      reminders.forEach(reminder => {
+        if (reminder.completed || reminder.notified) return;
+
+        const dueDate = parseISO(reminder.dueDate);
+        
+        // Notify if it's due now (within a 2-minute window) or past due
+        if (isPast(dueDate) || isWithinInterval(now, {
+            start: subMinutes(dueDate, 1),
+            end: addMinutes(dueDate, 1)
+        })) {
+          toast.warn(`Recordatorio: ${reminder.text}`);
+          updateReminder(reminder.id, { notified: true });
+        }
+      });
+    };
+
+    const interval = setInterval(checkReminders, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, [reminders, toast, updateReminder]);
 
   return (
     <BrowserRouter>

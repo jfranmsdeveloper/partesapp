@@ -10,8 +10,15 @@ import {
     User,
     ArrowRight,
     FileText,
-    Plus
+    Plus,
+    Bell,
+    Trash2,
+    CheckCircle2,
+    CheckCircle,
+    Link2
 } from 'lucide-react';
+import { ReminderModal } from '../../components/reminders/ReminderModal';
+import { useAppStore } from '../../store/useAppStore';
 import { 
     format, 
     addMonths, 
@@ -33,7 +40,8 @@ import type { ActuacionType } from '../../types';
 
 export default function CalendarPage() {
     const navigate = useNavigate();
-    const { partes } = useUserStore();
+    const { partes, reminders, updateReminder, deleteReminder } = useAppStore();
+    const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(() => {
         if (partes.length === 0) return new Date();
         const sorted = [...partes].sort((a, b) => {
@@ -94,8 +102,17 @@ export default function CalendarPage() {
             });
         });
         
+        // Add Reminders
+        reminders.forEach(r => {
+            items.push({
+                ...r,
+                type: 'REMINDER',
+                date: parseISO(r.dueDate)
+            });
+        });
+        
         return items;
-    }, [partes]);
+    }, [partes, reminders]);
 
     // Items for the selected day
     const selectedDayItems = useMemo(() => {
@@ -170,17 +187,29 @@ export default function CalendarPage() {
                                         isSelected && "bg-blue-50/50 dark:bg-blue-500/[0.05]"
                                     )}
                                 >
-                                    {/* Quick Add Button (+) */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigate(`/new?date=${format(day, 'yyyy-MM-dd')}`);
-                                        }}
-                                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-orange-500 text-white opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg z-20"
-                                        title="Nuevo Parte"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedDate(day);
+                                                setIsReminderModalOpen(true);
+                                            }}
+                                            className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-600 hover:bg-orange-200 transition-all shadow-sm"
+                                            title="Nuevo Recordatorio"
+                                        >
+                                            <Bell className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/new?date=${format(day, 'yyyy-MM-dd')}`);
+                                            }}
+                                            className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg"
+                                            title="Nuevo Parte"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
 
                                     <div className="w-full flex justify-between items-start mb-2 relative z-10">
                                         <span className={clsx(
@@ -211,11 +240,13 @@ export default function CalendarPage() {
                                                 {p.title}
                                             </div>
                                         ))}
-                                        {dayPartes.length > 3 && (
-                                            <span className="text-[8px] font-black text-slate-400 px-2 mt-0.5">
-                                                + {dayPartes.length - 3} más
-                                            </span>
-                                        )}
+                                    </div>
+                                    
+                                    {/* Reminders Indicators (Dots) */}
+                                    <div className="flex gap-1 mt-auto">
+                                        {dayItems.filter(i => i.type === 'REMINDER').map((r, i) => (
+                                            <div key={i} className={clsx("w-1.5 h-1.5 rounded-full", r.completed ? "bg-slate-300 dark:bg-slate-600" : "bg-orange-500")} />
+                                        ))}
                                     </div>
 
                                     {isSelected && (
@@ -274,6 +305,61 @@ export default function CalendarPage() {
                                         );
                                     }
 
+                                    if (item.type === 'REMINDER') {
+                                        return (
+                                            <div key={idx} className="relative pl-6 border-l-2 border-orange-200 dark:border-orange-500/20 pb-2 group">
+                                                 <div className={clsx(
+                                                     "absolute left-[-6px] top-1 w-2.5 h-2.5 rounded-full z-10 transition-colors", 
+                                                     item.completed ? "bg-slate-300" : "bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.5)]"
+                                                 )} />
+                                                 <div className={clsx(
+                                                     "p-4 rounded-2xl border transition-all",
+                                                     item.completed 
+                                                        ? "bg-slate-50 dark:bg-white/[0.02] border-slate-100 dark:border-white/5 opacity-60" 
+                                                        : "bg-white dark:bg-white/5 border-orange-100 dark:border-orange-500/20 shadow-sm"
+                                                 )}>
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <button 
+                                                                onClick={() => updateReminder(item.id, { completed: !item.completed })}
+                                                                className={clsx(
+                                                                    "p-1 rounded-md transition-colors",
+                                                                    item.completed ? "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "text-slate-300 hover:text-emerald-500"
+                                                                )}
+                                                            >
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                            </button>
+                                                            <span className={clsx("text-xs font-bold", item.completed ? "text-slate-400 line-through" : "text-slate-800 dark:text-white")}>
+                                                                {item.text}
+                                                            </span>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => deleteReminder(item.id)}
+                                                            className="text-slate-300 hover:text-red-500 transition-colors"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center justify-between mt-2">
+                                                        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                                            <Clock className="w-3 h-3" />
+                                                            {format(parseISO(item.dueDate), 'HH:mm')}
+                                                        </div>
+                                                        {item.parteId && (
+                                                            <button 
+                                                                onClick={() => navigate(`/parte/${item.parteId}`)}
+                                                                className="flex items-center gap-1 text-[9px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-md uppercase"
+                                                            >
+                                                                <Link2 className="w-2.5 h-2.5" /> Ver Parte
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                 </div>
+                                            </div>
+                                        );
+                                    }
+
                                     const itemType = item.type as ActuacionType;
                                     const config = ACTUACION_CONFIG[itemType];
                                     const Icon = config?.icon || CalendarIcon;
@@ -314,6 +400,12 @@ export default function CalendarPage() {
                     </div>
                 </div>
             </div>
+
+            <ReminderModal 
+                isOpen={isReminderModalOpen} 
+                onClose={() => setIsReminderModalOpen(false)} 
+                initialDate={format(selectedDate, 'yyyy-MM-dd')}
+            />
         </div>
     );
 }

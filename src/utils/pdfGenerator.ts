@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { type Parte, type ActuacionType, type User } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import logoUrl from '../assets/logo.png';
+import { ACTUACION_CONFIG } from './actuacionConfig';
 
 interface ReportData {
     startDate: Date;
@@ -17,9 +17,11 @@ interface ReportData {
 }
 
 const COLORS = {
-    headerOrange: [252, 213, 180] as [number, number, number], // #FCD5B4
+    headerSalmon: [244, 176, 132] as [number, number, number], // #F4B084
+    rowGreen: [226, 239, 218] as [number, number, number],    // #E2EFDA
+    borderGray: [204, 204, 204] as [number, number, number],  // #CCCCCC
+    textDark: [45, 62, 80] as [number, number, number],       // #2D3E50
     textBlack: [0, 0, 0] as [number, number, number],
-    borderGray: [100, 100, 100] as [number, number, number],
 };
 
 const formatLabel = (type: ActuacionType) => {
@@ -42,8 +44,6 @@ const MAIN_INDICATORS = [
     { label: "- Número total de correos remitidos", key: 'act_correo_enviado' },
 ];
 
-import { ACTUACION_CONFIG } from './actuacionConfig';
-
 const OTHER_INDICATORS = Object.keys(ACTUACION_CONFIG).filter(type =>
     !['Llamada Realizada', 'Llamada Recibida', 'Correo Enviado', 'Correo Recibido', 'Traslado'].includes(type)
 ) as ActuacionType[];
@@ -55,30 +55,46 @@ export const generatePdfReport = async (data: ReportData) => {
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
 
-    // --- HELPER: LOGO & HEADER ---
-    const addPageHeader = (_title: string, subtitle?: string) => {
-        try {
-            const imgProps = doc.getImageProperties(logoUrl);
-            const ratio = imgProps.width / imgProps.height;
-            const h = 12;
-            const w = h * ratio;
-            doc.addImage(logoUrl, 'PNG', 14, 10, w, h);
-        } catch (e) { /* ignore */ }
+    // Load logo as base64
+    let logoBase64: string | null = null;
+    try {
+        const response = await fetch('/logo.png');
+        if (response.ok) {
+            const blob = await response.blob();
+            logoBase64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load logo for PDF report", e);
+    }
 
+    // --- HELPER: HEADER ---
+    const addPageHeader = (subtitle?: string) => {
+        // Logo and Branding
+        if (logoBase64) {
+            doc.addImage(logoBase64, 'PNG', 14, 10, 10, 10);
+        }
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
+        doc.setFontSize(14);
+        doc.setTextColor(COLORS.textDark[0], COLORS.textDark[1], COLORS.textDark[2]);
+        doc.text("Serglobin S.L.", 28, 17);
+
+        // Horizontal Line
+        doc.setDrawColor(COLORS.borderGray[0], COLORS.borderGray[1], COLORS.borderGray[2]);
+        doc.setLineWidth(0.1);
+        doc.line(14, 22, pageWidth - 14, 22);
+
+        // Titles
+        doc.setFontSize(18);
         doc.setTextColor(0, 0, 0);
-        doc.text("INDICADORES APLICACIONES", pageWidth / 2, 20, { align: 'center' });
+        doc.text("Informe de Indicadores de Gestión", pageWidth / 2, 35, { align: 'center' });
 
         doc.setFontSize(14);
         const periodStr = format(data.startDate, 'MMMM yyyy', { locale: es }).toUpperCase();
-        doc.text(periodStr, pageWidth / 2, 28, { align: 'center' });
-
-        if (subtitle) {
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.text(subtitle, pageWidth - 14, 15, { align: 'right' });
-        }
+        doc.text(subtitle ? `${periodStr} - ${subtitle}` : periodStr, pageWidth / 2, 45, { align: 'center' });
     };
 
     // --- HELPER: CALCULATE METRICS ---
@@ -89,14 +105,11 @@ export const generatePdfReport = async (data: ReportData) => {
         const trasladosCount = countType('Traslado');
         const cerrados = partes.filter(p => p.status === 'CERRADO').length;
         const resueltasDirectas = Math.max(0, cerrados - trasladosCount);
-
-        // Count all partes with clientId (allowing duplicates)
-        // Si un cliente tiene 5 partes, cuenta como 5 usuarios atendidos
         const totalUsersAttended = partes.filter(p => p.clientId).length;
 
         return {
             users: totalUsersAttended,
-            abiertos: partes.filter(p => p.status === 'ABIERTO').length,
+            abiertos: totalUsersAttended,
             cerrados: cerrados,
             resueltas_directas: resueltasDirectas,
             act_traslados: trasladosCount,
@@ -108,7 +121,6 @@ export const generatePdfReport = async (data: ReportData) => {
         };
     };
 
-    // --- 1. ADMIN MATRIX PAGE ---
     const partesByUser: Record<string, Parte[]> = {};
     data.partes.forEach(p => {
         const uid = p.userId || "unknown";
@@ -117,162 +129,149 @@ export const generatePdfReport = async (data: ReportData) => {
     });
     const userIds = Object.keys(partesByUser);
 
-    // Matrix Page Logic
-    if (userIds.length > 0) {
-        addPageHeader("", "Resumen Global");
-
-        const userCols = userIds.map(uid => {
-            const u = data.users.find(usr => usr.id === uid);
-            let name = u?.user_metadata?.full_name || u?.name || u?.email || "Desc.";
-            const parts = name.split(' ');
-            if (parts.length > 1) name = `${parts[0]} ${parts[1]}`;
-            return { name, uid };
-        });
-
-        const headRow = ["Indicadores Por Técnico", ...userCols.map(u => u.name)];
-
-        const bodyRows = MATRIX_ROWS.map(type => {
-            const row = [formatLabel(type)];
-            userCols.forEach(u => {
-                const uPartes = partesByUser[u.uid] || [];
-                const count = uPartes.flatMap(p => p.actuaciones).filter(a => a.type === type).length;
-                row.push(count === 0 ? '' : count.toString());
-            });
-            return row;
-        });
-
-        autoTable(doc, {
-            startY: 40,
-            head: [headRow],
-            body: bodyRows,
-            theme: 'grid',
-            headStyles: {
-                fillColor: COLORS.headerOrange,
-                textColor: COLORS.textBlack,
-                fontStyle: 'bold',
-                halign: 'center',
-                lineWidth: 0.1,
-                lineColor: COLORS.textBlack
-            },
-            styles: {
-                textColor: COLORS.textBlack,
-                lineColor: COLORS.textBlack,
-                lineWidth: 0.1,
-                cellPadding: 3,
-                fontSize: 9
-            },
-            columnStyles: {
-                0: { fontStyle: 'bold', cellWidth: 50 },
-            }
-        });
-
-        // --- BOLSA DE HORAS TABLE (Only if data exists) ---
-        if (data.bolsaHoras && (data.bolsaHoras.nominas || data.bolsaHoras.covid)) {
-            const finalY = (doc as any).lastAutoTable.finalY + 10;
-            const bolsaRows = [];
-
-            if (data.bolsaHoras.nominas) bolsaRows.push(['- Actualización Nóminas', data.bolsaHoras.nominas]);
-            if (data.bolsaHoras.covid) bolsaRows.push(['- COVID', data.bolsaHoras.covid]);
-
-            if (bolsaRows.length > 0) {
-                autoTable(doc, {
-                    startY: finalY,
-                    head: [['Bolsa de hora', '']],
-                    body: bolsaRows,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: COLORS.headerOrange,
-                        textColor: COLORS.textBlack,
-                        fontStyle: 'bold',
-                        halign: 'left',
-                        lineWidth: 0.1,
-                        lineColor: COLORS.textBlack
-                    },
-                    styles: {
-                        textColor: COLORS.textBlack,
-                        lineColor: COLORS.textBlack,
-                        lineWidth: 0.1,
-                        fontSize: 9
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 100 },
-                        1: { cellWidth: 30, halign: 'center' } // value column
-                    }
-                });
-            }
-        }
-    }
-
-    // --- 2. INDIVIDUAL SUMMARY PAGES ---
-    userIds.forEach((userId, _idx) => {
-        doc.addPage();
-
+    // --- GENERATE PAGES ---
+    userIds.forEach((userId, idx) => {
+        if (idx > 0) doc.addPage();
+        
         const uPartes = partesByUser[userId];
         const uData = data.users.find(u => u.id === userId);
         const userName = uData?.user_metadata?.full_name || uData?.name || uData?.email || "Usuario";
-
-        addPageHeader("", userName);
-
         const metrics: any = calculateMetrics(uPartes);
 
+        addPageHeader(userName);
+
+        let currentY = 55;
+
+        // 1. INDICADORES PRINCIPALES
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text("1. Indicadores Principales", 14, currentY);
+        currentY += 5;
+
         const rows1 = MAIN_INDICATORS.map(ind => {
-            return [ind.label, metrics[ind.key]];
+            const isSub = ind.label.startsWith('-');
+            return [isSub ? `    ${ind.label}` : ind.label, metrics[ind.key]];
         });
 
         autoTable(doc, {
-            startY: 40,
+            startY: currentY,
             body: rows1,
-            theme: 'plain',
+            theme: 'grid',
             styles: {
-                lineColor: COLORS.textBlack,
+                fontSize: 9,
+                cellPadding: 3,
+                lineColor: COLORS.borderGray,
                 lineWidth: 0.1,
                 textColor: COLORS.textBlack,
-                fontSize: 10,
-                cellPadding: 4,
             },
             columnStyles: {
-                0: { cellWidth: 150 },
+                0: { cellWidth: 'auto' },
                 1: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }
             },
             didParseCell: (data) => {
                 if (data.row.index < 3 && data.section === 'body') {
-                    data.cell.styles.fillColor = COLORS.headerOrange;
+                    data.cell.styles.fillColor = COLORS.headerSalmon;
+                    data.cell.styles.fontStyle = 'bold';
+                } else if (!data.row.raw[0].startsWith('    ')) {
+                    data.cell.styles.fillColor = COLORS.rowGreen;
                 }
             }
         });
 
-        const otherSum = OTHER_INDICATORS.reduce((acc, t) => acc + (metrics[t] || 0), 0);
+        currentY = (doc as any).lastAutoTable.finalY + 10;
 
+        // 2. OTROS INDICADORES
+        doc.setFont('helvetica', 'bold');
+        doc.text("2. Otros Indicadores de Gestión", 14, currentY);
+        currentY += 5;
+
+        const otherSum = OTHER_INDICATORS.reduce((acc, t) => acc + (metrics[t] || 0), 0);
         const rows2 = [
-            [{ content: "Número total de otros indicadores", styles: { fillColor: COLORS.headerOrange, fontStyle: 'bold' } }, { content: otherSum, styles: { fillColor: COLORS.headerOrange, fontStyle: 'bold', halign: 'center' } }],
-            ...OTHER_INDICATORS.map(t => [`- ${formatLabel(t)}`, metrics[t] || 0])
+            [{ content: "Total otros indicadores", styles: { fillColor: COLORS.headerSalmon, fontStyle: 'bold' } }, { content: otherSum, styles: { fillColor: COLORS.headerSalmon, fontStyle: 'bold', halign: 'center' } }],
+            ...OTHER_INDICATORS.map(t => [`    - ${formatLabel(t)}`, metrics[t] || 0])
         ];
 
         autoTable(doc, {
-            startY: (doc as any).lastAutoTable.finalY + 15,
+            startY: currentY,
             body: rows2,
-            theme: 'plain',
+            theme: 'grid',
             styles: {
-                lineColor: COLORS.textBlack,
+                fontSize: 9,
+                cellPadding: 3,
+                lineColor: COLORS.borderGray,
                 lineWidth: 0.1,
                 textColor: COLORS.textBlack,
-                fontSize: 10,
-                cellPadding: 4,
             },
             columnStyles: {
-                0: { cellWidth: 150 },
+                0: { cellWidth: 'auto' },
                 1: { cellWidth: 30, halign: 'center' }
             }
         });
+
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+
+        // 3. MATRIX (Only on some pages or if room)
+        if (idx === userIds.length - 1) { // Add Matrix on the last page or dedicated
+            doc.addPage();
+            addPageHeader("Resumen Global");
+            currentY = 55;
+
+            doc.setFont('helvetica', 'bold');
+            doc.text("3. Matriz de Indicadores por Técnico", 14, currentY);
+            currentY += 5;
+
+            const userCols = userIds.map(uid => {
+                const u = data.users.find(usr => usr.id === uid);
+                let name = u?.user_metadata?.full_name || u?.name || u?.email || "Técnico";
+                const parts = name.split(' ');
+                if (parts.length > 1) name = `${parts[0]} ${parts[1].charAt(0)}.`;
+                return { name, uid };
+            });
+
+            const headRow = ["Concepto", ...userCols.map(u => u.name)];
+            const bodyRows = MATRIX_ROWS.map(type => {
+                const row = [formatLabel(type)];
+                userCols.forEach(u => {
+                    const uPartes = partesByUser[u.uid] || [];
+                    const count = uPartes.flatMap(p => p.actuaciones).filter(a => a.type === type).length;
+                    row.push(count === 0 ? '' : count.toString());
+                });
+                return row;
+            });
+
+            autoTable(doc, {
+                startY: currentY,
+                head: [headRow],
+                body: bodyRows,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: COLORS.headerSalmon,
+                    textColor: COLORS.textBlack,
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2,
+                    lineColor: COLORS.borderGray,
+                    lineWidth: 0.1,
+                    textColor: COLORS.textBlack,
+                },
+                columnStyles: {
+                    0: { fontStyle: 'bold', fillColor: COLORS.rowGreen, cellWidth: 50 },
+                }
+            });
+        }
     });
 
+    // --- FOOTER (Paging) ---
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text(`Página ${i} de ${totalPages}`, 195, pageHeight - 10, { align: 'right' });
+        doc.text(`Página ${i} de ${totalPages}`, pageWidth - 25, pageHeight - 10);
     }
 
-    doc.save(`Informe_Corporativo_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
+    doc.save(`informe_indicadores_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
 };

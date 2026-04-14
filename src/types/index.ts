@@ -82,3 +82,14 @@ export interface Snippet {
     userId: string;
     type?: ActuacionType;
 }
+
+export interface Reminder {
+    id: string;
+    text: string;
+    dueDate: string; // ISO date string
+    completed: boolean;
+    notified?: boolean;
+    parteId?: number | string;
+    createdAt: string;
+    userId: string;
+}

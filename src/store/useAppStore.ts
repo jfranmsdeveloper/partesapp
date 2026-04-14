@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../utils/supabase';
-import type { Parte, Actuacion, ParteStatus, Client, User, Snippet } from '../types';
+import type { Parte, Actuacion, ParteStatus, Client, User, Snippet, Reminder } from '../types';
 
 interface AppState {
     // UI State
@@ -25,6 +25,7 @@ interface AppState {
 
     // Data State
     partes: Parte[];
+    reminders: Reminder[];
     clients: Client[];
     users: User[];
     snippets: Snippet[];
@@ -49,6 +50,10 @@ interface AppState {
     addSnippet: (snippet: Omit<Snippet, 'id' | 'userId'>) => Promise<void>;
     updateSnippet: (id: string, data: Partial<Snippet>) => Promise<void>;
     deleteSnippet: (id: string) => Promise<void>;
+
+    addReminder: (reminder: Omit<Reminder, 'id' | 'userId' | 'createdAt' | 'completed'>) => Promise<void>;
+    updateReminder: (id: string, data: Partial<Reminder>) => Promise<void>;
+    deleteReminder: (id: string) => Promise<void>;
 
     getParte: (id: number | string) => Parte | undefined;
     updateUserProfile: (email: string, data: Partial<User>) => Promise<void>;
@@ -91,6 +96,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     isSingleFileMode: false,
     isLegacyMode: false,
     partes: [],
+    reminders: [],
     clients: [],
     users: [],
     snippets: [],
@@ -251,6 +257,10 @@ export const useAppStore = create<AppState>((set, get) => ({
             // 3.5. Fetch Snippets
             const { data: snippetsData } = await supabase.from('snippets').select('*');
             set({ snippets: snippetsData || [] });
+
+            // 3.6. Fetch Reminders
+            const { data: remindersData } = await supabase.from('reminders').select('*');
+            set({ reminders: remindersData || [] });
 
             // 4. Fetch Users (for avatars and roles)
             const { data: usersData } = await supabase.from('users').select('*');
@@ -679,6 +689,43 @@ export const useAppStore = create<AppState>((set, get) => ({
     deleteSnippet: async (id) => {
         const { error } = await supabase
             .from('snippets')
+            .delete()
+            .eq('id', id);
+
+        if (!error) await get().fetchData();
+    },
+
+    addReminder: async (data) => {
+        const { currentUser } = get();
+        if (!currentUser) return;
+
+        const { error } = await supabase
+            .from('reminders')
+            .insert({
+                id: crypto.randomUUID ? crypto.randomUUID() : `rem-${Date.now()}`,
+                text: data.text,
+                dueDate: data.dueDate,
+                completed: false,
+                parteId: data.parteId,
+                createdAt: new Date().toISOString(),
+                userId: currentUser.id
+            });
+
+        if (!error) await get().fetchData();
+    },
+
+    updateReminder: async (id, data) => {
+        const { error } = await supabase
+            .from('reminders')
+            .update(data)
+            .eq('id', id);
+
+        if (!error) await get().fetchData();
+    },
+
+    deleteReminder: async (id) => {
+        const { error } = await supabase
+            .from('reminders')
             .delete()
             .eq('id', id);
 

@@ -1,12 +1,8 @@
 import { useState, useRef } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { X, Download, Loader2, FileText as WordIcon, FileDown as PdfIcon } from 'lucide-react';
 import { generateWordReport } from '../../utils/wordGenerator';
-import { StatusDistributionChart } from '../dashboard/StatusDistributionChart';
-import { ActivityTypeChart } from '../dashboard/ActivityTypeChart';
-import { TrendChart } from '../dashboard/TrendChart';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { X, Download, Loader2, FileText as WordIcon } from 'lucide-react';
+import { generatePdfReport } from '../../utils/pdfGenerator';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -143,7 +139,7 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
-    const handleGenerate = async () => {
+    const handleGenerate = async (type: 'word' | 'pdf' = 'word') => {
         setIsGenerating(true);
         try {
             // Visualize loader
@@ -162,7 +158,11 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
             };
 
             // Generate
-            await generateWordReport(reportData);
+            if (type === 'word') {
+                await generateWordReport(reportData);
+            } else {
+                await generatePdfReport(reportData);
+            }
 
             onClose();
         } catch (error) {
@@ -372,7 +372,15 @@ export const ReportModal = ({ isOpen, onClose }: ReportModalProps) => {
 
                     <div className="flex gap-2">
                         <Button
-                            onClick={() => handleGenerate()}
+                            onClick={() => handleGenerate('pdf')}
+                            disabled={isGenerating}
+                            className="min-w-[150px] bg-emerald-600 hover:bg-emerald-700 text-white border-0 shadow-lg shadow-emerald-500/20"
+                        >
+                            {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PdfIcon className="w-4 h-4 mr-2" />}
+                            Descargar PDF (.pdf)
+                        </Button>
+                        <Button
+                            onClick={() => handleGenerate('word')}
                             disabled={isGenerating}
                             className="min-w-[150px] bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-500/20"
                         >
