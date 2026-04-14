@@ -35,6 +35,8 @@ function App() {
 
   // Reminder Notification Engine
   useEffect(() => {
+    if (!reminders.length) return;
+
     const checkReminders = () => {
       const now = new Date();
       reminders.forEach(reminder => {
@@ -53,7 +55,10 @@ function App() {
       });
     };
 
-    const interval = setInterval(checkReminders, 30000); // Check every 30s
+    // Immediate check
+    checkReminders();
+
+    const interval = setInterval(checkReminders, 10000); // Check every 10s
     return () => clearInterval(interval);
   }, [reminders, toast, updateReminder]);
 

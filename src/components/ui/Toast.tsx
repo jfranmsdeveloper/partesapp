@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, CheckCircle2, AlertCircle, X, Info } from 'lucide-react';
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -32,12 +32,12 @@ export const useToastStore = create<ToastStore>((set) => ({
 
 export const useToast = () => {
     const addToast = useToastStore((state) => state.addToast);
-    return {
+    return useMemo(() => ({
         success: (msg: string) => addToast(msg, 'success'),
         error: (msg: string) => addToast(msg, 'error'),
         info: (msg: string) => addToast(msg, 'info'),
         warn: (msg: string) => addToast(msg, 'warning'),
-    };
+    }), [addToast]);
 };
 
 export const ToastContainer = () => {
