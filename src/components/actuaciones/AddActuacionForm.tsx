@@ -9,7 +9,7 @@ import { Input } from '../ui/Input';
 import { DatePicker } from '../ui/DatePicker';
 import { clsx } from 'clsx';
 import { NotionEditor } from '../ui/NotionEditor';
-import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote } from 'lucide-react';
+import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, StickyNote, History } from 'lucide-react';
 import { toLocalISOString } from '../../utils/dateUtils';
 
 interface AddActuacionFormProps {
@@ -17,14 +17,16 @@ interface AddActuacionFormProps {
     onCancel: () => void;
     initialData?: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] };
     defaultTimestamp?: string;
+    clientId?: string;
 }
 
-export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp }: AddActuacionFormProps) => {
-    const { users, currentUser, snippets, updateQuickButtons } = useAppStore();
+export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestamp, clientId }: AddActuacionFormProps) => {
+    const { users, currentUser, snippets, updateQuickButtons, partes } = useAppStore();
     const { notes: allQuickNotes, activeNoteIndex } = useNotesStore();
     const activeQuickNote = allQuickNotes[activeNoteIndex]?.content || '';
-    const { isListening, transcript, start, stop } = useSpeechRecognition();
+    const { isListening, interimTranscript, finalSegment, start, stop } = useSpeechRecognition();
     const durationInputRef = useRef<HTMLInputElement>(null);
+    const notesInputRef = useRef<any>(null);
 
     const [type, setType] = useState<ActuacionType | null>(initialData?.type || null);
     const [duration, setDuration] = useState<string>(initialData?.duration.toString() || '');
@@ -33,6 +35,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     const [tagInput, setTagInput] = useState(initialData?.tags?.join(', ') || '');
     const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
     const [isConfiguringQuickButtons, setIsConfiguringQuickButtons] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
 
     const [customTimestamp, setCustomTimestamp] = useState(() => {
         if (initialData?.timestamp) return toLocalISOString(new Date(initialData.timestamp));
@@ -40,20 +43,58 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
         return toLocalISOString(new Date());
     });
 
-    // Voice to notes sync
+    // Voice to notes sync - Fixed to avoid progressive duplication
     useEffect(() => {
-        if (transcript) {
+        if (finalSegment) {
             setNotes((prev: string) => {
-                const cleanTranscript = transcript.trim();
-                if (!cleanTranscript) return prev;
+                const cleanSegment = finalSegment.trim();
+                if (!cleanSegment) return prev;
                 // Append to existing HTML if present
                 if (prev.endsWith('</p>')) {
-                    return prev.replace(/<\/p>$/, ` ${cleanTranscript}</p>`);
+                    return prev.replace(/<\/p>$/, ` ${cleanSegment}</p>`);
                 }
-                return prev + `<p>${cleanTranscript}</p>`;
+                return prev + `<p>${cleanSegment}</p>`;
             });
         }
-    }, [transcript]);
+    }, [finalSegment]);
+
+    // Numeric Shortcuts (Idea 5)
+    useEffect(() => {
+        const handleKeys = (e: KeyboardEvent) => {
+            // Only trigger if no input is focused
+            const isInputFocused = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '');
+            const isEditorFocused = document.activeElement?.getAttribute('role') === 'textbox';
+            
+            if (isInputFocused || isEditorFocused) return;
+
+            const key = parseInt(e.key);
+            if (key >= 1 && key <= 9) {
+                const configKeys = Object.keys(ACTUACION_CONFIG) as ActuacionType[];
+                const targetType = configKeys[key - 1];
+                if (targetType) {
+                    setType(targetType);
+                    const config = ACTUACION_CONFIG[targetType];
+                    setNotes((prev: string) => {
+                       if (!prev || prev === '<p></p>') return `<p><strong>${config.label}:</strong> </p>`;
+                       return prev;
+                    });
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeys);
+        return () => window.removeEventListener('keydown', handleKeys);
+    }, []);
+
+    const clientHistory = useMemo(() => {
+        if (!clientId) return [];
+        // Extract all actuaciones for this client across all partes
+        return partes
+            .filter(p => String(p.clientId) === String(clientId))
+            .flatMap(p => p.actuaciones.map(a => ({ ...a, parteTitle: p.title })))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 5);
+    }, [partes, clientId]);
 
     const quickButtons = (currentUser?.quickButtons && currentUser.quickButtons.length > 0) 
         ? currentUser.quickButtons 
@@ -177,6 +218,10 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                         isSelected ? "scale-[1.05] z-10" : "bg-white/40 border-white/40 hover:scale-[1.02] grayscale-[0.8] hover:grayscale-0 shadow-sm"
                                     )}
                                 >
+                                    {/* Numeric Hint */}
+                                    <div className="absolute top-3 left-3 w-4 h-4 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-400 group-hover:text-blue-500 transition-colors border border-slate-200">
+                                        {Object.keys(ACTUACION_CONFIG).indexOf(actionType) + 1}
+                                    </div>
                                     {/* Liquid Background Pulse */}
                                     {isSelected && (
                                         <div className={clsx(
@@ -419,11 +464,50 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         </div>
                     </div>
                     <NotionEditor
+                        ref={notesInputRef}
                         initialContent={notes}
                         onChange={handleNotesChange}
                         placeholder={isListening ? "Escuchando..." : "Escribe aquí los detalles o usa el dictado por voz..."}
                     />
+                    {isListening && interimTranscript && (
+                        <div className="mt-2 p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-[11px] text-blue-600 italic animate-pulse">
+                            {interimTranscript}...
+                        </div>
+                    )}
                 </div>
+
+                {/* Client History (Idea 4) */}
+                {clientId && clientHistory.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 text-slate-500">
+                                <History className="w-4 h-4 text-blue-400" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Historial del Cliente</span>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setShowHistory(!showHistory)}
+                                className="text-[10px] font-bold text-blue-500 hover:text-blue-700"
+                            >
+                                {showHistory ? 'Ocultar' : 'Ver Detalles'}
+                            </button>
+                        </div>
+                        
+                        {showHistory && (
+                            <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                                {clientHistory.map((h, i) => (
+                                    <div key={i} className="flex flex-col gap-1 pb-2 border-b border-slate-100 last:border-0 last:pb-0">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{h.timestamp.split('T')[0]}</span>
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">{h.type}</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-600 line-clamp-2" dangerouslySetInnerHTML={{ __html: h.notes || 'Sin descripción' }} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Navigation & One-Hand Mode Optimization for Mobile */}
                 <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100 sm:relative sticky bottom-0 bg-white/80 sm:bg-transparent backdrop-blur-md p-4 -mx-6 sm:mx-0 -mb-6 sm:mb-0 z-50">

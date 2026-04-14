@@ -733,6 +733,7 @@ export const ParteEditor = () => {
                                         onAdd={handleAddOrUpdateActuacion}
                                         onCancel={handleCancelForm}
                                         initialData={editingActuacion?.data}
+                                        clientId={currentParte.clientId}
                                         defaultTimestamp={(() => {
                                             if (currentParte.actuaciones.length === 0) return currentParte.createdAt;
                                             const lastAct = currentParte.actuaciones[currentParte.actuaciones.length - 1];
