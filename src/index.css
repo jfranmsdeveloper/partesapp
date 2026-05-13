@@ -7,6 +7,9 @@
   html {
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Clear focus rings for keyboard navigation */
@@ -154,28 +157,28 @@
   /* Orange 900 */
 
   /* UI 2025 Dark Mode Colors (OLED Optimized) */
-  --color-dark-bg: #000000;
-  --color-dark-card: #0A0A0A;
-  --color-dark-surface: #121212;
-  --color-dark-border: rgba(255, 255, 255, 0.08);
+  --color-dark-bg: #111111;
+  --color-dark-card: #181818;
+  --color-dark-surface: #202020;
+  --color-dark-border: rgba(255, 255, 255, 0.05);
 }
 
 @layer utilities {
 
-  /* Apple Liquid Glass Effects */
+  /* Fluent Design Acrylic/Glass Effects */
   .glass {
-    @apply backdrop-blur-2xl bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    @apply backdrop-blur-xl bg-white/70 dark:bg-black/50 border border-white/60 dark:border-white/10;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255,255,255,0.4);
   }
 
   .glass-card {
-    @apply backdrop-blur-2xl bg-white/70 dark:bg-[#1A1A1A]/60 border border-white/50 dark:border-white/10;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+    @apply backdrop-blur-2xl bg-white/80 dark:bg-[#1C1C1C]/70 border border-white/60 dark:border-white/10;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255,255,255,0.5);
   }
 
   .glass-panel, .glass-liquid {
-    @apply backdrop-blur-3xl bg-white/40 dark:bg-black/30 border border-white/30 dark:border-white/10;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    @apply backdrop-blur-3xl bg-white/50 dark:bg-[#151515]/60 border border-white/50 dark:border-white/10;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.6);
   }
 
   /* Minimalist / Flat Gradients */
@@ -216,8 +219,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  @apply font-sans antialiased text-slate-800 dark:text-white/90 bg-[#F4F4f5] dark:bg-dark-bg transition-colors duration-200;
-  /* El dato debe respirar, textos claros en dark, fondo gris puro */
+  @apply font-sans antialiased text-slate-800 dark:text-slate-200 bg-[#F8F9FA] dark:bg-dark-bg transition-colors duration-300;
+  /* Fluent background softness */
 }
 
 h1,

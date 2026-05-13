@@ -6,15 +6,10 @@ import { Menu } from 'lucide-react';
 import { CommandPalette } from '../ui/CommandPalette';
 import { ToastContainer } from '../ui/Toast';
 import { useAppStore } from '../../store/useAppStore';
-import { useNotesStore } from '../../store/useNotesStore';
-import { DailyNotesPanel } from './DailyNotesPanel';
-import { FloatingTimer } from './FloatingTimer';
-import { StickyNote } from 'lucide-react';
 
 export const Layout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { isCommandPaletteOpen, setCommandPaletteOpen } = useAppStore();
-    const { toggleNotes } = useNotesStore();
 
     // Auto-check AI availability deleted
 
@@ -24,10 +19,6 @@ export const Layout = () => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
                 setCommandPaletteOpen(!isCommandPaletteOpen);
-            }
-            if (e.altKey && e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                toggleNotes();
             }
         };
 
@@ -64,18 +55,6 @@ export const Layout = () => {
                 </div>
             </main>
             
-            <DailyNotesPanel />
-            <FloatingTimer />
-            
-            {/* Notes Floating Button */}
-            <button
-                onClick={toggleNotes}
-                className="fixed bottom-6 right-6 z-[90] p-4 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-xl hover:shadow-2xl hover:scale-110 active:scale-95 transition-all outline-none md:bottom-8 md:right-8 group"
-                title="Nota Rápida del Día"
-            >
-                <StickyNote className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-            </button>
-
             <ToastContainer />
         </div>
     );
