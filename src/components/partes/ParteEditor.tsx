@@ -270,7 +270,7 @@ export const ParteEditor = () => {
     };
 
 
-    const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }) => {
+    const handleAddOrUpdateActuacion = async (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string }, keepOpen?: boolean) => {
         if (!currentParte) return;
 
         if (editingActuacion) {
@@ -287,7 +287,10 @@ export const ParteEditor = () => {
                 timestamp: actuacion.timestamp || formattedNow
             });
         }
-        setShowAddActuacion(false);
+        
+        if (!keepOpen) {
+            setShowAddActuacion(false);
+        }
     };
 
     const handleDeleteParte = async () => {

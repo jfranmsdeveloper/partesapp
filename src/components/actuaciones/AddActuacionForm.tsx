@@ -14,7 +14,7 @@ import { FileText, Plus, X, Mic, MicOff, Settings2, Sparkles, Clock } from 'luci
 import { toLocalISOString } from '../../utils/dateUtils';
 
 interface AddActuacionFormProps {
-    onAdd: (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] }) => void;
+    onAdd: (actuacion: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] }, keepOpen?: boolean) => void;
     onCancel: () => void;
     initialData?: { type: ActuacionType; duration: number; notes: string; user: string; timestamp?: string; priority?: 'BAJA' | 'MEDIA' | 'ALTA'; tags?: string[] };
     defaultTimestamp?: string;
@@ -32,6 +32,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     const [tagInput, setTagInput] = useState(initialData?.tags?.join(', ') || '');
     const [user, setUser] = useState<string>(initialData?.user || currentUser?.name || currentUser?.user_metadata?.full_name || '');
     const [isConfiguringQuickButtons, setIsConfiguringQuickButtons] = useState(false);
+    const [shouldContinue, setShouldContinue] = useState(false);
 
     const [customTimestamp, setCustomTimestamp] = useState(() => {
         if (initialData?.timestamp) return toLocalISOString(new Date(initialData.timestamp));
@@ -104,7 +105,15 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
             priority,
             tags: tagInput.split(',').map((t: string) => t.trim()).filter(Boolean),
             timestamp: customTimestamp.replace('T', ' ') + (customTimestamp.includes(':') && customTimestamp.split(':').length === 2 ? ':00' : '')
-        });
+        }, shouldContinue);
+
+        if (shouldContinue) {
+            // Reset for next entry
+            setDuration('');
+            setNotes('');
+            // Focus duration for speed
+            setTimeout(() => durationInputRef.current?.focus(), 100);
+        }
     };
 
     const handleFormKeyDown = (e: React.KeyboardEvent) => {
@@ -411,10 +420,24 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 </div>
 
                 {/* Navigation & One-Hand Mode Optimization for Mobile */}
-                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100 dark:border-white/10 sm:relative sticky bottom-0 bg-white/80 dark:bg-dark-bg/80 sm:bg-transparent backdrop-blur-md p-4 -mx-6 sm:mx-0 -mb-6 sm:mb-0 z-50">
-                    <Button type="button" variant="ghost" onClick={onCancel} className="w-full sm:w-auto h-12 sm:h-auto order-2 sm:order-1 font-bold dark:text-slate-300 dark:hover:bg-white/10">
-                        Cancelar
-                    </Button>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-white/10 sm:relative sticky bottom-0 bg-white/80 dark:bg-dark-bg/80 sm:bg-transparent backdrop-blur-md p-4 -mx-6 sm:mx-0 -mb-6 sm:mb-0 z-50">
+                    <div className="flex items-center gap-2 mr-auto">
+                        <label className="relative inline-flex items-center cursor-pointer group">
+                            <input 
+                                type="checkbox" 
+                                className="sr-only peer" 
+                                checked={shouldContinue}
+                                onChange={(e) => setShouldContinue(e.target.checked)}
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            <span className="ms-3 text-xs font-bold text-slate-500 dark:text-slate-400 group-hover:text-blue-500 transition-colors">Añadir y seguir</span>
+                        </label>
+                    </div>
+                    
+                    <div className="flex gap-3 w-full sm:w-auto">
+                        <Button type="button" variant="ghost" onClick={onCancel} className="flex-1 sm:flex-none h-12 sm:h-auto font-bold dark:text-slate-300 dark:hover:bg-white/10">
+                            Cancelar
+                        </Button>
                     <Button 
                         type="submit" 
                         disabled={!type || !duration} 
@@ -424,7 +447,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         {initialData ? 'Actualizar Actuación' : 'Añadir Actuación'}
                     </Button>
                 </div>
-            </form>
+            </div>
+        </form>
         </div>
     );
 };
