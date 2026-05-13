@@ -1084,24 +1084,19 @@ class FileSystemAdapter {
             
             if (attempts.lockUntil > now) {
                 const wait = Math.ceil((attempts.lockUntil - now) / 60000);
-                return { data: { user: null }, error: { message: `Demasiados intentos fallidos. Reintenta en ${wait} minutos.` } };
+                return { data: { user: null }, error: { message: `Demasiados intentos fallidos. Reintenta en ${wait} min.` } };
+            }
+
+            // ALWAYS force folder selection on login as requested by user
+            console.log('FSA: Forzando selección de carpeta en login...');
+            const ready = await this.init(true);
+            if (!ready) {
+                return { data: { user: null }, error: { message: 'Es obligatorio seleccionar la carpeta de datos para entrar.' } };
             }
 
             const inputHash = hashPassword(password);
             
-            // Step 1: Validate credentials against the in-memory DEFAULT_DB first
-            const defaultUser = DEFAULT_DB.users.find(u => u.email === email && (u.password === password || u.password === inputHash));
-            
-            if (!defaultUser) {
-                if (!this.isInitialized) {
-                    const ready = await this.init(true);
-                    if (!ready) {
-                        return { data: { user: null }, error: { message: 'Inicia sesión o selecciona la carpeta donde están tus datos.' } };
-                    }
-                }
-            }
-
-            // Step 2: Final check against loaded state
+            // Final check against loaded state (now guaranteed to be loaded via init(true))
             const user = this.state.users.find((u: any) => u.email === email && (u.password === inputHash || u.password === password));
             
             if (!user) {
@@ -1115,12 +1110,12 @@ class FileSystemAdapter {
             localStorage.removeItem(`login_attempts_${email}`);
             
             const uname = userFolderName(email);
-            const expiresAt = now + 24 * 60 * 60 * 1000; // 24 hours
+            const expiresAt = now + 24 * 60 * 60 * 1000; 
             await this.ensureUserFolder(uname);
             await this.writeSessionFile(uname, { userId: user.id, email: user.email, expiresAt });
 
             this.activeSessionUser = user;
-            console.log(`FSA: sesión iniciada y guardada en ${uname}/session.json`);
+            console.log(`FSA: Login exitoso. Sesión guardada.`);
 
             return { data: { user }, error: null };
         },

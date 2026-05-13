@@ -39,16 +39,26 @@ export default function Login() {
     };
 
     // Called from the reconnect banner — needs user gesture, restores session from file
+    const [localSuccess, setLocalSuccess] = useState('');
+
+    // Called from the reconnect banner — needs user gesture, restores session from file
     const handleReconnect = async () => {
         setLocalError('');
+        setLocalSuccess('');
         setIsReconnecting(true);
 
         const ok = await reconnectSession();
 
         if (ok) {
-            navigate('/dashboard');
+            // Check if we actually have a session now
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                navigate('/dashboard');
+            } else {
+                setLocalSuccess('Carpeta conectada correctamente. Ya puedes introducir tus credenciales.');
+            }
         } else {
-            setLocalError('No se pudo restaurar la sesión. Por favor inicia sesión con tus credenciales.');
+            setLocalError('No se pudo acceder a la carpeta seleccionada.');
         }
 
         setIsReconnecting(false);
@@ -108,6 +118,15 @@ export default function Login() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         {displayError}
+                    </div>
+                )}
+
+                {localSuccess && (
+                    <div className="mb-6 bg-green-50/80 backdrop-blur-sm text-green-700 p-4 rounded-xl text-sm border border-green-200 shadow-sm flex items-center gap-2 animate-fade-in">
+                        <svg className="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {localSuccess}
                     </div>
                 )}
 
@@ -220,7 +239,7 @@ export default function Login() {
 
                         <p className="text-center text-[10px] text-slate-400 pt-2 px-6 leading-relaxed">
                             {!isLegacyMode 
-                                ? 'Al iniciar, se te pedirá elegir la carpeta donde guardas tus partes de trabajo.' 
+                                ? 'Nota: Al pulsar Iniciar Sesión, el sistema te pedirá que elijas tu carpeta de partes para garantizar la seguridad de tus datos cifrados.' 
                                 : 'Selecciona el archivo database.json de iCloud. Tus cambios se guardarán localmente y deberás exportarlos manualmente para sincronizar con otros dispositivos.'}
                         </p>
                     </form>
