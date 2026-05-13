@@ -127,7 +127,19 @@
 }
 
 .dark .notion-editor-container {
-  background-color: #050505;
+  background-color: var(--color-dark-card);
+}
+
+.dark .notion-editor-container [data-color-scheme="dark"],
+.dark .notion-editor-container .bn-editor {
+  --bn-colors-editor-background: transparent !important;
+  --bn-colors-editor-text: #f8f8f8 !important;
+  color: #f8f8f8 !important;
+  background-color: transparent !important;
+}
+
+.dark .notion-editor-container .bn-editor p {
+  color: #f8f8f8 !important;
 }
 
 @theme {
