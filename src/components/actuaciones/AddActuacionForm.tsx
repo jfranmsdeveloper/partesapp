@@ -119,11 +119,11 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
     }, []);
 
     return (
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/30 p-6 shadow-sm mb-6 relative overflow-hidden transition-all duration-300">
+        <div className="rounded-2xl border border-blue-100 dark:border-white/10 bg-blue-50/30 dark:bg-dark-card p-6 shadow-sm mb-6 relative overflow-hidden transition-all duration-300">
             <div className="flex justify-between items-center mb-6 mt-2">
-                <h3 className="text-lg font-semibold text-slate-800">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
                     {initialData ? 'Editar Actuación' : 'Registrar Nueva Actuación'}
-                    <span className="ml-3 text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full hidden sm:inline-block">Cmd+Enter para guardar</span>
+                    <span className="ml-3 text-[10px] font-normal text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full hidden sm:inline-block">Cmd+Enter para guardar</span>
                 </h3>
                 <button onClick={onCancel} className="p-2 rounded-full hover:bg-white/50 text-slate-400 hover:text-slate-600 transition-colors">
                     <X className="w-5 h-5" />
@@ -132,7 +132,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
             <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-3 ml-1">Selecciona el tipo</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 ml-1">Selecciona el tipo</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {(Object.keys(ACTUACION_CONFIG) as ActuacionType[]).map((actionType) => {
                             const isSelected = type === actionType;
@@ -172,8 +172,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     }}
                                     className={clsx(
                                         "group relative flex flex-col items-center justify-center p-5 rounded-[2rem] border-2 transition-all duration-500 backdrop-blur-md overflow-hidden h-32",
-                                        glassStyles[theme] || 'border-slate-100 bg-white/40',
-                                        isSelected ? "scale-[1.05] z-10" : "bg-white/40 border-white/40 hover:scale-[1.02] grayscale-[0.8] hover:grayscale-0 shadow-sm"
+                                        glassStyles[theme] || 'border-slate-100 dark:border-white/10 bg-white/40 dark:bg-dark-surface/40',
+                                        isSelected ? "scale-[1.05] z-10" : "bg-white/40 dark:bg-dark-surface/40 border-white/40 dark:border-white/5 hover:scale-[1.02] grayscale-[0.8] hover:grayscale-0 shadow-sm"
                                     )}
                                 >
                                     {/* Liquid Background Pulse */}
@@ -186,7 +186,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
                                     <div className={clsx(
                                         "p-3.5 rounded-2xl transition-all duration-500 mb-2 relative",
-                                        isSelected ? "bg-white shadow-lg ring-1 ring-white/50" : "bg-white/50 group-hover:bg-white"
+                                        isSelected ? "bg-white dark:bg-slate-800 shadow-lg ring-1 ring-white/50 dark:ring-white/10" : "bg-white/50 dark:bg-slate-800/50 group-hover:bg-white dark:group-hover:bg-slate-800"
                                     )}>
                                         <Icon className={clsx("w-6 h-6", isSelected ? textColor : "text-slate-400 group-hover:scale-110 transition-transform")} />
                                     </div>
@@ -208,9 +208,9 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                     </div>
 
                     {/* Quick Action Buttons (Configurable) */}
-                    <div className="mt-8 pt-6 border-t border-slate-100">
+                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5">
                         <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2 text-slate-500">
+                            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                                 <Sparkles className="w-4 h-4 text-orange-400" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Resumen Rápido</span>
                             </div>
@@ -225,8 +225,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                         </div>
                         
                         {isConfiguringQuickButtons ? (
-                            <div className="space-y-3 bg-white/50 p-4 rounded-2xl border border-dashed border-slate-200">
-                                <p className="text-[10px] text-slate-500 mb-2 font-medium">Define tus 4 botones de acceso rápido:</p>
+                            <div className="space-y-3 bg-white/50 dark:bg-slate-800/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 font-medium">Define tus 4 botones de acceso rápido:</p>
                                 {quickButtons.map((btn, idx) => (
                                     <input 
                                         key={idx}
@@ -248,7 +248,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                         key={idx}
                                         type="button"
                                         onClick={() => setNotes((prev: string) => prev + (prev && prev !== '<p></p>' ? ' ' : '') + btn)}
-                                        className="px-4 py-2 rounded-xl bg-orange-50/50 hover:bg-orange-50 border border-orange-100/50 hover:border-orange-300 text-[11px] font-bold text-orange-800 transition-all shadow-sm active:scale-95"
+                                        className="px-4 py-2 rounded-xl bg-orange-50/50 dark:bg-orange-900/20 hover:bg-orange-50 dark:hover:bg-orange-900/40 border border-orange-100/50 dark:border-orange-500/20 hover:border-orange-300 dark:hover:border-orange-500/40 text-[11px] font-bold text-orange-800 dark:text-orange-400 transition-all shadow-sm active:scale-95"
                                     >
                                         {btn}
                                     </button>
@@ -259,8 +259,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
                     {/* Snippets / Templates Section (Smart Filtered) */}
                     {filteredSnippets.length > 0 && (
-                        <div className="mt-6 pt-6 border-t border-slate-100">
-                            <div className="flex items-center gap-2 mb-4 text-slate-500">
+                        <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5">
+                            <div className="flex items-center gap-2 mb-4 text-slate-500 dark:text-slate-400">
                                 <FileText className="w-4 h-4" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">
                                     {type ? `Plantillas para ${type}` : 'Otras Plantillas'}
@@ -275,7 +275,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                             const cleanContent = snippet.content.replace(/\n/g, '<br/>');
                                             setNotes((prev: string) => prev + (prev && prev !== '<p></p>' ? '<br/>' : '') + cleanContent);
                                         }}
-                                        className="px-4 py-2 rounded-xl bg-blue-50/50 hover:bg-blue-50 border border-blue-100/50 hover:border-blue-300 text-[11px] font-bold text-blue-800 transition-all shadow-sm flex items-center gap-2"
+                                        className="px-4 py-2 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/40 border border-blue-100/50 dark:border-blue-500/20 hover:border-blue-300 dark:hover:border-blue-500/40 text-[11px] font-bold text-blue-800 dark:text-blue-400 transition-all shadow-sm flex items-center gap-2"
                                     >
                                         <Plus className="w-3 h-3 text-blue-500" />
                                         {snippet.title}
@@ -328,11 +328,11 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                     </div>
 
                     <div className="w-full">
-                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Realizado por</label>
+                        <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Realizado por</label>
                         <select
                             value={user}
                             onChange={(e) => setUser(e.target.value)}
-                            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                            className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                         >
                             <option value="" disabled>Selecciona un usuario</option>
                             {users.map((u) => {
@@ -343,7 +343,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-3 ml-1">Prioridad</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 ml-1">Prioridad</label>
                         <div className="flex gap-2">
                             {(['BAJA', 'MEDIA', 'ALTA'] as const).map((p) => (
                                 <button
@@ -353,10 +353,10 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     className={clsx(
                                         "flex-1 py-2 px-3 rounded-xl border text-[10px] font-black transition-all duration-200",
                                         priority === p
-                                            ? p === 'ALTA' ? "bg-red-50 border-red-200 text-red-600 ring-1 ring-red-500" :
-                                              p === 'MEDIA' ? "bg-orange-50 border-orange-200 text-orange-600 ring-1 ring-orange-500" :
-                                              "bg-blue-50 border-blue-200 text-blue-600 ring-1 ring-blue-500"
-                                            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                            ? p === 'ALTA' ? "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/50 text-red-600 dark:text-red-400 ring-1 ring-red-500" :
+                                              p === 'MEDIA' ? "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/50 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500" :
+                                              "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/50 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500"
+                                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
                                     )}
                                 >
                                     {p}
@@ -377,7 +377,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
 
                 <div className="space-y-4">
                     <div className="flex justify-between items-center px-1">
-                        <label className="text-sm font-medium text-slate-700">Descripción detallada</label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Descripción detallada</label>
                         <div className="flex gap-2">
                             <button
                                 type="button"
@@ -386,7 +386,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                     "flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 border",
                                     isListening 
                                         ? "bg-red-500 text-white border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
-                                        : "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                                        : "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 hover:bg-blue-100 dark:hover:bg-blue-500/20"
                                 )}
                             >
                                 {isListening ? (
@@ -411,8 +411,8 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                 </div>
 
                 {/* Navigation & One-Hand Mode Optimization for Mobile */}
-                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100 sm:relative sticky bottom-0 bg-white/80 sm:bg-transparent backdrop-blur-md p-4 -mx-6 sm:mx-0 -mb-6 sm:mb-0 z-50">
-                    <Button type="button" variant="ghost" onClick={onCancel} className="w-full sm:w-auto h-12 sm:h-auto order-2 sm:order-1 font-bold">
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100 dark:border-white/10 sm:relative sticky bottom-0 bg-white/80 dark:bg-dark-bg/80 sm:bg-transparent backdrop-blur-md p-4 -mx-6 sm:mx-0 -mb-6 sm:mb-0 z-50">
+                    <Button type="button" variant="ghost" onClick={onCancel} className="w-full sm:w-auto h-12 sm:h-auto order-2 sm:order-1 font-bold dark:text-slate-300 dark:hover:bg-white/10">
                         Cancelar
                     </Button>
                     <Button 
