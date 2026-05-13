@@ -157,7 +157,7 @@ export const AddActuacionForm = ({ onAdd, onCancel, initialData, defaultTimestam
                                 teal: isSelected ? 'bg-teal-500/10 border-teal-500/50 shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'hover:border-teal-300/50 hover:bg-teal-50/50',
                             };
 
-                            const textColor = `text-${theme}-600`;
+                            const textColor = `text-${theme}-600 dark:text-${theme}-400`;
                             const activeBg = `bg-${theme}-500`;
 
                             return (

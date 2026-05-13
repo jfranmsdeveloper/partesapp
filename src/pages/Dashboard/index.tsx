@@ -342,11 +342,11 @@ export default function IndicadoresPage() {
                         </div>
 
                         {/* Efficiency Card */}
-                        <div className="rounded-[2rem] bg-orange-500 text-white p-10 relative overflow-hidden shadow-sm">
+                        <div className="rounded-[2rem] bg-orange-500 text-white p-10 relative overflow-hidden shadow-md">
                             <div className="relative z-10 flex flex-col h-full justify-between">
                                 <div>
                                     <h3 className="text-2xl font-bold mb-2">Rendimiento</h3>
-                                    <p className="text-slate-400">Tasa de resolución semanal</p>
+                                    <p className="text-orange-100 font-medium">Tasa de resolución semanal</p>
                                 </div>
 
                                 <div className="mt-8 flex items-end gap-4">
@@ -354,7 +354,7 @@ export default function IndicadoresPage() {
                                         {metrics.totalPartes > 0 ? Math.round((metrics.closedPartes / metrics.totalPartes) * 100) : 0}%
                                     </span>
                                     <div className="mb-4 flex flex-col items-start">
-                                        <span className="text-emerald-400 font-bold flex items-center text-sm bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                                        <span className="text-white font-bold flex items-center text-sm bg-white/20 px-3 py-1 rounded-full border border-white/30 backdrop-blur-sm">
                                             <ArrowRight className="w-4 h-4 mr-1" />
                                             Óptimo
                                         </span>
