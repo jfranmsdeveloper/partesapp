@@ -1,5 +1,27 @@
 // Using native crypto.randomUUID instead of external uuid library
+import CryptoJS from 'crypto-js';
 
+// Internal secret for database obfuscation (Security by obscurity against non-developers)
+const INTERNAL_SECRET = 'partes-app-v2-secure-salt-2026';
+
+/** Hashing utility for passwords */
+const hashPassword = (password: string) => CryptoJS.SHA256(password).toString();
+
+/** Encryption/Decryption utilities for the database file */
+const encryptData = (data: any) => {
+    const text = JSON.stringify(data);
+    return CryptoJS.AES.encrypt(text, INTERNAL_SECRET).toString();
+};
+
+const decryptData = (ciphertext: string) => {
+    try {
+        const bytes = CryptoJS.AES.decrypt(ciphertext, INTERNAL_SECRET);
+        const originalText = bytes.toString(CryptoJS.enc.Utf8);
+        return JSON.parse(originalText);
+    } catch (e) {
+        return null;
+    }
+};
 export const DB_FILE_NAME = 'database.json';
 export const SESSION_FILE_NAME = 'session.json';
 export const IDB_STORE = 'PartesAppStore';
@@ -423,6 +445,14 @@ class FileSystemAdapter {
             const uname = userFolderName(user.email);
             const session = await this.readSessionFile(uname);
             if (session && session.userId) {
+                // Validate expiration
+                const now = Date.now();
+                if (session.expiresAt && session.expiresAt < now) {
+                    console.warn(`FSA: Sesión expirada para ${user.email}. Borrando...`);
+                    await this.deleteSessionFile(uname);
+                    continue;
+                }
+
                 // Validate against DB
                 const dbUser = this.state.users.find(u => u.id === session.userId);
                 if (dbUser) {
@@ -484,89 +514,78 @@ class FileSystemAdapter {
         if (!force && now - this.lastLoadTime < 500) return;
 
         try {
-            let text: string;
+            let content: string;
             if (this.handle) {
                 const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
                 const file = await fileHandle.getFile();
-                text = await file.text();
+                content = await file.text();
             } else if (this.fileHandle) {
                 const file = await this.fileHandle.getFile();
-                text = await file.text();
+                content = await file.text();
             } else {
                 // Legacy Mode: Try IDB
                 const stored = await getStateFromIDB();
                 if (stored) {
-                    this.state = stored;
+                    this.state = typeof stored === 'string' ? (decryptData(stored) || JSON.parse(stored)) : stored;
                     console.log('FSA: Base de datos cargada desde IndexedDB (Modo Legacy).');
                     this.lastLoadTime = Date.now();
                     return;
                 }
-                text = "";
+                content = "";
             }
             this.lastLoadTime = Date.now();
 
-            let loadedState: DBState;
-            if (text && text.trim().startsWith('{')) {
-                try {
-                    loadedState = JSON.parse(text);
-                    if (!loadedState.users) loadedState.users = [];
-                    if (!loadedState.partes) loadedState.partes = [];
-                    if (!loadedState.actuaciones) loadedState.actuaciones = [];
-                    if (!loadedState.clients) loadedState.clients = [];
-                    if (!loadedState.snippets) loadedState.snippets = [];
-                    if (!loadedState.reminders) loadedState.reminders = [];
-                } catch (e) {
-                    console.error('Malformed JSON in database.json, resetting to default.', e);
-                    loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
+            let loadedState: DBState | null = null;
+            
+            if (content && content.trim()) {
+                // Try decryption first
+                loadedState = decryptData(content);
+                
+                // If decryption failed, try parsing as raw JSON (MIGRATION)
+                if (!loadedState && content.trim().startsWith('{')) {
+                    try {
+                        loadedState = JSON.parse(content);
+                        console.log('FSA: Detectada base de datos en texto plano. Iniciando migración a cifrado...');
+                        // Ensure existing users' passwords are hashed if they aren't already
+                        if (loadedState && loadedState.users) {
+                            loadedState.users = loadedState.users.map(u => ({
+                                ...u,
+                                password: u.password.length === 64 ? u.password : hashPassword(u.password)
+                            }));
+                        }
+                    } catch (e) {
+                        console.error('Malformed JSON in database.json', e);
+                    }
                 }
-            } else {
+            }
+
+            if (!loadedState) {
                 loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
+                // Hash default passwords
+                loadedState!.users = loadedState!.users.map(u => ({ ...u, password: hashPassword(u.password) }));
             }
 
-            console.log('FSA: Base de datos cargada. Usuarios:', loadedState.users.map(u => u.email));
-
-            // Upsert predefined users
-            let modified = !text;
-            DEFAULT_DB.users.forEach(defUser => {
-                const existingIndex = loadedState.users.findIndex(u => u.email === defUser.email);
-                if (existingIndex === -1) {
-                    loadedState.users.push(defUser);
-                    modified = true;
-                }
-            });
-
-            // Remove old default admin
-            const oldAdmin = loadedState.users.findIndex(u => u.id === 'admin-id' || u.email === 'admin@admin.com');
-            if (oldAdmin > -1) {
-                loadedState.users.splice(oldAdmin, 1);
-                modified = true;
-            }
-
-            this.state = loadedState;
+            this.state = loadedState!;
 
             // Run migrations
             let migrationModified = false;
             
             // 1. Migrate base64 to files
             const migrationCount = await this.migrateBase64ToFiles();
-            if (migrationCount > 0) {
-                console.log(`FSA: Migrados ${migrationCount} archivos base64 a archivos físicos.`);
-                migrationModified = true;
-            }
+            if (migrationCount > 0) migrationModified = true;
 
             // 2. Migrate missing IDs for legacy data
             const idMigrationCount = this.migrateMissingIds();
-            if (idMigrationCount > 0) {
-                console.log(`FSA: Migrados ${idMigrationCount} registros con IDs faltantes.`);
-                migrationModified = true;
-            }
+            if (idMigrationCount > 0) migrationModified = true;
 
-            if (modified || migrationModified) {
+            // Save immediately if we migrated from plain text or other changes
+            if (!content || (content.trim().startsWith('{')) || migrationModified) {
                 await this._saveDatabase();
             }
         } catch (e) {
             console.error('Error loading DB:', e);
             this.state = JSON.parse(JSON.stringify(DEFAULT_DB));
+            this.state.users = this.state.users.map(u => ({ ...u, password: hashPassword(u.password) }));
             await this._saveDatabase();
         }
     }
@@ -649,24 +668,26 @@ class FileSystemAdapter {
     }
 
     private async _saveDatabase(): Promise<boolean> {
+        if (!this.state) return false;
+        
+        // Encrypt data before saving
+        const encrypted = encryptData(this.state);
+
         // ALWAYS save to IDB as backup (essential for Legacy Mode)
-        await saveStateToIDB(this.state);
+        await saveStateToIDB(encrypted);
 
         if (!this.handle && !this.fileHandle && !this.isLegacyMode) return false;
         try {
-            console.log('FSA: Guardando base de datos...');
             if (this.handle) {
                 const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
                 const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(this.state, null, 2));
+                await writable.write(encrypted);
                 await writable.close();
             } else if (this.fileHandle) {
                 const writable = await (this.fileHandle as any).createWritable();
-                await writable.write(JSON.stringify(this.state, null, 2));
+                await writable.write(encrypted);
                 await writable.close();
             }
-            // If in Legacy mode, we already saved to IDB above.
-            console.log('FSA: Base de datos guardada con éxito.');
             return true;
         } catch (e) {
             console.error('Error saving DB:', e);
@@ -918,8 +939,23 @@ class FileSystemAdapter {
                 }
             }
 
-            // SELECT
+            // SELECT with Simulated RLS
             let results = [...collection];
+            
+            // Apply RLS if not admin
+            if (this.activeSessionUser && this.activeSessionUser.role !== 'admin') {
+                const uid = this.activeSessionUser.id;
+                if (table === 'partes') {
+                    results = results.filter((p: any) => String(p.user_id) === String(uid));
+                } else if (table === 'actuaciones') {
+                    // Actuaciones are filtered by their parent parte later or via this check if they have a userId (some might not)
+                    // But usually they are fetched per parte. For a global list:
+                    const myPartes = this.state.partes.filter((p: any) => String(p.user_id) === String(uid)).map(p => String(p.id));
+                    results = results.filter((a: any) => myPartes.includes(String(a.parte_id)));
+                } else if (['clients', 'snippets', 'reminders'].includes(table)) {
+                    results = results.filter((item: any) => String(item.userId || item.user_id) === String(uid));
+                }
+            }
 
             for (const key of Object.keys(queryParams)) {
                 if (key === 'order' || key === 'select' || key === 'inValues') continue;
@@ -1004,44 +1040,46 @@ class FileSystemAdapter {
         },
 
         signInWithPassword: async ({ email, password }: any) => {
+            // Brute force protection check
+            const now = Date.now();
+            const attempts = JSON.parse(localStorage.getItem(`login_attempts_${email}`) || '{"count":0,"lockUntil":0}');
+            
+            if (attempts.lockUntil > now) {
+                const wait = Math.ceil((attempts.lockUntil - now) / 60000);
+                return { data: { user: null }, error: { message: `Demasiados intentos fallidos. Reintenta en ${wait} minutos.` } };
+            }
+
+            const inputHash = hashPassword(password);
+            
             // Step 1: Validate credentials against the in-memory DEFAULT_DB first
-            // (database might not be loaded yet if folder wasn't selected before)
-            const defaultUser = DEFAULT_DB.users.find(u => u.email === email && u.password === password);
+            const defaultUser = DEFAULT_DB.users.find(u => u.email === email && (u.password === password || u.password === inputHash));
+            
             if (!defaultUser) {
-                // Not a predefined user. We MUST have the folder to check the DB.
                 if (!this.isInitialized) {
-                    console.log('FSA: Usuario no es predefinido, solicitando carpeta...');
                     const ready = await this.init(true);
                     if (!ready) {
                         return { data: { user: null }, error: { message: 'Inicia sesión o selecciona la carpeta donde están tus datos.' } };
                     }
                 }
-                
-                // Now check in the (newly) loaded state
-                const user = this.state.users.find((u: any) => u.email === email && u.password === password);
-                if (!user) {
-                    return { data: { user: null }, error: { message: 'Credenciales incorrectas' } };
-                }
             }
 
-            // Step 2: Ensure folder is accessible for predefined users too
-            if (!this.isInitialized) {
-                const ready = await this.init(true);
-                if (!ready) {
-                    return { data: { user: null }, error: { message: 'Es necesario seleccionar la carpeta de datos para continuar.' } };
-                }
-            }
-
-            // Step 3: Find user in the now-loaded database
-            const user = this.state.users.find((u: any) => u.email === email && u.password === password);
+            // Step 2: Final check against loaded state
+            const user = this.state.users.find((u: any) => u.email === email && (u.password === inputHash || u.password === password));
+            
             if (!user) {
+                const newCount = attempts.count + 1;
+                const newLockUntil = newCount >= 5 ? now + 15 * 60000 : 0;
+                localStorage.setItem(`login_attempts_${email}`, JSON.stringify({ count: newCount, lockUntil: newLockUntil }));
                 return { data: { user: null }, error: { message: 'Credenciales incorrectas' } };
             }
 
-            // Step 4: Create the user's personal subfolder and save session
+            // Success: Reset attempts
+            localStorage.removeItem(`login_attempts_${email}`);
+            
             const uname = userFolderName(email);
+            const expiresAt = now + 24 * 60 * 60 * 1000; // 24 hours
             await this.ensureUserFolder(uname);
-            await this.writeSessionFile(uname, { userId: user.id, email: user.email, loginAt: new Date().toISOString() });
+            await this.writeSessionFile(uname, { userId: user.id, email: user.email, expiresAt });
 
             this.activeSessionUser = user;
             console.log(`FSA: sesión iniciada y guardada en ${uname}/session.json`);
@@ -1060,7 +1098,7 @@ class FileSystemAdapter {
             const newUser = {
                 id: crypto.randomUUID ? crypto.randomUUID() : `usr-${Date.now()}`,
                 email,
-                password,
+                password: hashPassword(password),
                 role: options?.data?.role || 'user',
                 user_metadata: options?.data || {},
                 created_at: new Date().toISOString()

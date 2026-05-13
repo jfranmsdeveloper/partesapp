@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { History, Calendar, Clock, User as UserIcon, Tag, ChevronDown } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { clsx } from 'clsx';
+import DOMPurify from 'dompurify';
 
 interface ClientHistoryProps {
     clientId?: string;
@@ -92,7 +93,7 @@ export const ClientHistory = ({ clientId, currentParteId }: ClientHistoryProps) 
                             <div className="mb-3">
                                 <p 
                                     className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed"
-                                    dangerouslySetInnerHTML={{ __html: item.notes || 'Sin descripción' }} 
+                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.notes || 'Sin descripción') }} 
                                 />
                             </div>
 
