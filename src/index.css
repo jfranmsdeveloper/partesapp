@@ -170,15 +170,19 @@
     -webkit-backdrop-filter: blur(16px);
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1);
   }
 
   .glass-card {
-    @apply backdrop-blur-[32px] bg-white/50 dark:bg-[#1C1C1C]/40 border border-white/50 dark:border-white/10;
-    -webkit-backdrop-filter: blur(32px);
+    @apply backdrop-blur-2xl bg-white/50 dark:bg-[#1C1C1C]/40 border border-white/50 dark:border-white/10;
+    -webkit-backdrop-filter: blur(24px);
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.15);
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+    box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.2);
   }
 
   .glass-panel, .glass-liquid {
@@ -186,7 +190,9 @@
     -webkit-backdrop-filter: blur(40px);
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.2);
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+    box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.2);
   }
 
   /* Minimalist / Flat Gradients */
