@@ -58,7 +58,7 @@ export const KPICard = ({ title, value, trend, icon: Icon, color = 'blue' }: KPI
     const currentStyle = styles[color as keyof typeof styles] || styles.blue;
 
     return (
-        <div className="group flex flex-col p-6 rounded-[2rem] bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border shadow-sm hover:shadow-md transition-shadow duration-200">
+        <div className="group flex flex-col p-6 rounded-[2rem] glass-card transition-shadow duration-200 hover:shadow-lg">
 
             <div className="relative z-10 flex justify-between items-start mb-6">
                 <div className={clsx("p-3.5 rounded-2xl transition-colors duration-300", currentStyle.iconBg)}>

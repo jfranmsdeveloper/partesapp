@@ -27,7 +27,7 @@ export const Layout = () => {
     }, [isCommandPaletteOpen, setCommandPaletteOpen]);
 
     return (
-        <div className="min-h-screen transition-colors duration-300 bg-[#F4F4F5] dark:bg-dark-bg">
+        <div className="min-h-screen transition-colors duration-300 bg-transparent">
             {/* Mobile Header */}
             <div className="md:hidden sticky top-0 z-20 glass rounded-none border-x-0 border-t-0 border-b border-white/30 dark:border-white/10 px-4 py-3 flex items-center justify-between shadow-sm">
                 <button

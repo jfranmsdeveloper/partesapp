@@ -234,7 +234,7 @@ export default function IndicadoresPage() {
                 </div>
 
                 {/* Hero Section: Bento Solid Graph */}
-                <section className="relative rounded-[2rem] bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border p-8 md:p-12 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <section className="relative rounded-[2rem] glass-panel p-8 md:p-12 shadow-md transition-shadow duration-300 hover:shadow-lg">
                     <div className="flex flex-col lg:flex-row gap-16 items-center">
                         <div className="lg:w-1/3 space-y-8 relative z-10">
                             <div className="space-y-4">
@@ -246,7 +246,7 @@ export default function IndicadoresPage() {
 
                             <div className="grid grid-cols-1 gap-4">
                                 {metrics.statusData.map((item) => (
-                                    <div key={item.name} className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 dark:bg-dark-surface border border-slate-200 dark:border-dark-border hover:bg-slate-100 dark:hover:border-slate-600 transition-colors duration-200">
+                                    <div key={item.name} className="flex items-center justify-between p-5 rounded-2xl glass hover:bg-white/50 dark:hover:bg-white/10 transition-colors duration-200">
                                         <div className="flex items-center gap-4">
                                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                                             <span className="font-semibold text-slate-700 dark:text-slate-300 tracking-wide">{item.name}</span>
@@ -327,8 +327,8 @@ export default function IndicadoresPage() {
                                 const colorClass = colors[idx % colors.length];
 
                                 return (
-                                    <div key={act.name} className={`relative p-8 rounded-[2rem] bg-slate-50 dark:bg-dark-surface border border-slate-200 dark:border-dark-border shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-[240px]`}>
-                                        <div className="bg-white dark:bg-dark-card w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm mb-4 border border-slate-100 dark:border-dark-border">
+                                    <div key={act.name} className={`relative p-8 rounded-[2rem] glass-card shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-[240px]`}>
+                                        <div className="glass w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm mb-4">
                                             <span className={`font-bold text-lg ${colorClass}`}>{idx + 1}</span>
                                         </div>
                                         <div>
