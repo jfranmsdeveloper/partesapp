@@ -438,33 +438,38 @@ class FileSystemAdapter {
      * This replaces the old localStorage-based restore.
      */
     private async restoreSessionFromFile(): Promise<void> {
-        if (!this.handle) return;
+        if (!this.handle || !this.state.users) return;
+
+        console.log('FSA: Intentando restaurar sesión desde archivos...');
 
         // We iterate over known users to find whose session.json exists and is valid
         for (const user of this.state.users) {
             const uname = userFolderName(user.email);
             const session = await this.readSessionFile(uname);
-            if (session && session.userId) {
-                // Validate expiration
+            
+            if (session && (session.userId || session.id)) {
+                const sid = session.userId || session.id;
+                
+                // Validate expiration (if present)
                 const now = Date.now();
                 if (session.expiresAt && session.expiresAt < now) {
-                    console.warn(`FSA: Sesión expirada para ${user.email}. Borrando...`);
+                    console.warn(`FSA: Sesión expirada para ${user.email}.`);
                     await this.deleteSessionFile(uname);
                     continue;
                 }
 
                 // Validate against DB
-                const dbUser = this.state.users.find(u => u.id === session.userId);
+                const dbUser = this.state.users.find(u => String(u.id) === String(sid));
                 if (dbUser) {
                     this.activeSessionUser = dbUser;
                     this.pendingUsername = uname;
-                    console.log(`FSA: sesión restaurada para ${dbUser.email}`);
+                    console.log(`FSA: Sesión restaurada con éxito para ${dbUser.email}`);
                     return;
                 }
             }
         }
 
-        // No valid session found
+        console.log('FSA: No se encontró ninguna sesión válida activa.');
         this.activeSessionUser = null;
         this.pendingUsername = null;
     }
@@ -514,24 +519,34 @@ class FileSystemAdapter {
         if (!force && now - this.lastLoadTime < 500) return;
 
         try {
-            let content: string;
+            let content: string = "";
             if (this.handle) {
-                const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
-                const file = await fileHandle.getFile();
-                content = await file.text();
+                try {
+                    const fileHandle = await this.handle.getFileHandle(DB_FILE_NAME, { create: true });
+                    const file = await fileHandle.getFile();
+                    content = await file.text();
+                } catch (e) { console.warn("FSA: Could not read DB_FILE_NAME from handle", e); }
             } else if (this.fileHandle) {
-                const file = await this.fileHandle.getFile();
-                content = await file.text();
+                try {
+                    const file = await this.fileHandle.getFile();
+                    content = await file.text();
+                } catch (e) { console.warn("FSA: Could not read DB_FILE_NAME from fileHandle", e); }
             } else {
                 // Legacy Mode: Try IDB
                 const stored = await getStateFromIDB();
                 if (stored) {
-                    this.state = typeof stored === 'string' ? (decryptData(stored) || JSON.parse(stored)) : stored;
+                    const decrypted = typeof stored === 'string' ? decryptData(stored) : null;
+                    if (decrypted) {
+                        this.state = decrypted;
+                    } else {
+                        // Fallback to raw JSON if it looks like JSON
+                        try { this.state = typeof stored === 'string' ? JSON.parse(stored) : stored; }
+                        catch { /* use current state */ }
+                    }
                     console.log('FSA: Base de datos cargada desde IndexedDB (Modo Legacy).');
                     this.lastLoadTime = Date.now();
                     return;
                 }
-                content = "";
             }
             this.lastLoadTime = Date.now();
 
@@ -542,24 +557,42 @@ class FileSystemAdapter {
                 loadedState = decryptData(content);
                 
                 // If decryption failed, try parsing as raw JSON (MIGRATION)
-                if (!loadedState && content.trim().startsWith('{')) {
+                if (!loadedState && (content.trim().startsWith('{') || content.trim().startsWith('['))) {
                     try {
-                        loadedState = JSON.parse(content);
-                        console.log('FSA: Detectada base de datos en texto plano. Iniciando migración a cifrado...');
-                        // Ensure existing users' passwords are hashed if they aren't already
-                        if (loadedState && loadedState.users) {
-                            loadedState.users = loadedState.users.map(u => ({
+                        const parsed = JSON.parse(content);
+                        // Validation: Must have at least one of the expected keys to be considered a valid DB
+                        if (parsed && (parsed.partes || parsed.users || parsed.clients)) {
+                            loadedState = parsed;
+                            console.log('FSA: Detectada base de datos en texto plano. Iniciando migración a cifrado...');
+                            
+                            // Initialize missing collections
+                            if (!loadedState!.users) loadedState!.users = [];
+                            if (!loadedState!.partes) loadedState!.partes = [];
+                            if (!loadedState!.actuaciones) loadedState!.actuaciones = [];
+                            if (!loadedState!.clients) loadedState!.clients = [];
+                            if (!loadedState!.snippets) loadedState!.snippets = [];
+                            if (!loadedState!.reminders) loadedState!.reminders = [];
+
+                            // Ensure existing users' passwords are hashed if they aren't already
+                            loadedState!.users = loadedState!.users.map(u => ({
                                 ...u,
-                                password: u.password.length === 64 ? u.password : hashPassword(u.password)
+                                password: (u.password && u.password.length === 64) ? u.password : hashPassword(u.password || '1234')
                             }));
                         }
                     } catch (e) {
-                        console.error('Malformed JSON in database.json', e);
+                        console.error('FSA: Error parsing plain text database as JSON', e);
                     }
                 }
             }
 
             if (!loadedState) {
+                // If we have content but couldn't parse it, STOP to avoid overwriting with empty defaults
+                if (content && content.trim()) {
+                    console.error('FSA: Database content exists but could not be decrypted or parsed. Aborting load to prevent data loss.');
+                    return;
+                }
+                
+                console.log('FSA: No database found, initializing with defaults.');
                 loadedState = JSON.parse(JSON.stringify(DEFAULT_DB));
                 // Hash default passwords
                 loadedState!.users = loadedState!.users.map(u => ({ ...u, password: hashPassword(u.password) }));
@@ -571,22 +604,27 @@ class FileSystemAdapter {
             let migrationModified = false;
             
             // 1. Migrate base64 to files
-            const migrationCount = await this.migrateBase64ToFiles();
-            if (migrationCount > 0) migrationModified = true;
+            try {
+                const migrationCount = await this.migrateBase64ToFiles();
+                if (migrationCount > 0) migrationModified = true;
+            } catch (e) { console.warn("FSA: Migration base64 error", e); }
 
             // 2. Migrate missing IDs for legacy data
             const idMigrationCount = this.migrateMissingIds();
             if (idMigrationCount > 0) migrationModified = true;
 
             // Save immediately if we migrated from plain text or other changes
-            if (!content || (content.trim().startsWith('{')) || migrationModified) {
+            const isPlainText = content && content.trim().startsWith('{');
+            if (!content || isPlainText || migrationModified) {
                 await this._saveDatabase();
             }
         } catch (e) {
-            console.error('Error loading DB:', e);
-            this.state = JSON.parse(JSON.stringify(DEFAULT_DB));
-            this.state.users = this.state.users.map(u => ({ ...u, password: hashPassword(u.password) }));
-            await this._saveDatabase();
+            console.error('Error in _loadDatabase:', e);
+            // DO NOT overwrite this.state with defaults here unless it was already empty
+            if (!this.state || !this.state.users || this.state.users.length === 0) {
+                this.state = JSON.parse(JSON.stringify(DEFAULT_DB));
+                this.state.users = this.state.users.map(u => ({ ...u, password: hashPassword(u.password) }));
+            }
         }
     }
 
