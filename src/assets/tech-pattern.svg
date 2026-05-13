@@ -1,0 +1,32 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.05">
+    <!-- Code brackets -->
+    <path d="M40 30 l-15 15 l15 15" />
+    <path d="M60 30 l15 15 l-15 15" />
+    
+    <!-- Database -->
+    <ellipse cx="140" cy="40" rx="15" ry="6" />
+    <path d="M125 40 v15 a15 6 0 0 0 30 0 v-15" />
+    <path d="M125 48 a15 6 0 0 0 30 0" />
+    
+    <!-- Curly Braces -->
+    <path d="M30 130 c-10 0 -15 10 -15 15 c0 5 -5 5 -5 5 c5 0 5 0 5 5 c0 5 5 15 15 15" />
+    <path d="M50 130 c10 0 15 10 15 15 c0 5 5 5 5 5 c-5 0 -5 0 -5 5 c0 5 -5 15 -15 15" />
+    
+    <!-- Network Node -->
+    <circle cx="150" cy="140" r="4" />
+    <circle cx="170" cy="120" r="4" />
+    <circle cx="130" cy="120" r="4" />
+    <circle cx="150" cy="160" r="4" />
+    <path d="M150 144 v12" />
+    <path d="M147 137 l-14 -14" />
+    <path d="M153 137 l14 -14" />
+
+    <!-- Terminal Prompt -->
+    <path d="M80 80 l10 10 l-10 10" />
+    <line x1="95" y1="100" x2="110" y2="100" />
+    
+    <!-- Cloud -->
+    <path d="M180 80 a 8 8 0 0 0 -15 -4 a 10 10 0 0 0 -18 6 a 8 8 0 0 0 10 12 h20 a 7 7 0 0 0 3 -14 z" />
+  </g>
+</svg>

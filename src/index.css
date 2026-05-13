@@ -165,20 +165,20 @@
 
 @layer utilities {
 
-  /* Fluent Design Acrylic/Glass Effects */
+  /* Hybrid Fluent + Liquid Glass Effects */
   .glass {
-    @apply backdrop-blur-xl bg-white/70 dark:bg-black/50 border border-white/60 dark:border-white/10;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255,255,255,0.4);
+    @apply backdrop-blur-2xl bg-white/40 dark:bg-black/30 border border-white/40 dark:border-white/10;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1);
   }
 
   .glass-card {
-    @apply backdrop-blur-2xl bg-white/80 dark:bg-[#1C1C1C]/70 border border-white/60 dark:border-white/10;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255,255,255,0.5);
+    @apply backdrop-blur-[32px] bg-white/50 dark:bg-[#1C1C1C]/40 border border-white/50 dark:border-white/10;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.15);
   }
 
   .glass-panel, .glass-liquid {
-    @apply backdrop-blur-3xl bg-white/50 dark:bg-[#151515]/60 border border-white/50 dark:border-white/10;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.6);
+    @apply backdrop-blur-[40px] bg-white/30 dark:bg-[#151515]/30 border border-white/40 dark:border-white/10;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.2);
   }
 
   /* Minimalist / Flat Gradients */
@@ -219,8 +219,14 @@
 body {
   margin: 0;
   min-height: 100vh;
-  @apply font-sans antialiased text-slate-800 dark:text-slate-200 bg-[#F8F9FA] dark:bg-dark-bg transition-colors duration-300;
-  /* Fluent background softness */
+  @apply font-sans antialiased text-slate-800 dark:text-slate-200 bg-[#F4F5F7] dark:bg-dark-bg transition-colors duration-300;
+  /* Tech Background Pattern */
+  background-image: url("data:image/svg+xml,%3Csvg width='240' height='240' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='0.07'%3E%3Cpath d='M40 30 l-15 15 l15 15' /%3E%3Cpath d='M60 30 l15 15 l-15 15' /%3E%3Cellipse cx='140' cy='40' rx='15' ry='6' /%3E%3Cpath d='M125 40 v15 a15 6 0 0 0 30 0 v-15' /%3E%3Cpath d='M125 48 a15 6 0 0 0 30 0' /%3E%3Cpath d='M30 130 c-10 0 -15 10 -15 15 c0 5 -5 5 -5 5 c5 0 5 0 5 5 c0 5 5 15 15 15' /%3E%3Cpath d='M50 130 c10 0 15 10 15 15 c0 5 5 5 5 5 c-5 0 -5 0 -5 5 c0 5 -5 15 -15 15' /%3E%3Ccircle cx='150' cy='140' r='4' /%3E%3Ccircle cx='170' cy='120' r='4' /%3E%3Ccircle cx='130' cy='120' r='4' /%3E%3Ccircle cx='150' cy='160' r='4' /%3E%3Cpath d='M150 144 v12' /%3E%3Cpath d='M147 137 l-14 -14' /%3E%3Cpath d='M153 137 l14 -14' /%3E%3Cpath d='M80 80 l10 10 l-10 10' /%3E%3Cline x1='95' y1='100' x2='110' y2='100' /%3E%3Cpath d='M180 80 a 8 8 0 0 0 -15 -4 a 10 10 0 0 0 -18 6 a 8 8 0 0 0 10 12 h20 a 7 7 0 0 0 3 -14 z' /%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+.dark body {
+  background-image: url("data:image/svg+xml,%3Csvg width='240' height='240' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='0.03'%3E%3Cpath d='M40 30 l-15 15 l15 15' /%3E%3Cpath d='M60 30 l15 15 l-15 15' /%3E%3Cellipse cx='140' cy='40' rx='15' ry='6' /%3E%3Cpath d='M125 40 v15 a15 6 0 0 0 30 0 v-15' /%3E%3Cpath d='M125 48 a15 6 0 0 0 30 0' /%3E%3Cpath d='M30 130 c-10 0 -15 10 -15 15 c0 5 -5 5 -5 5 c5 0 5 0 5 5 c0 5 5 15 15 15' /%3E%3Cpath d='M50 130 c10 0 15 10 15 15 c0 5 5 5 5 5 c-5 0 -5 0 -5 5 c0 5 -5 15 -15 15' /%3E%3Ccircle cx='150' cy='140' r='4' /%3E%3Ccircle cx='170' cy='120' r='4' /%3E%3Ccircle cx='130' cy='120' r='4' /%3E%3Ccircle cx='150' cy='160' r='4' /%3E%3Cpath d='M150 144 v12' /%3E%3Cpath d='M147 137 l-14 -14' /%3E%3Cpath d='M153 137 l14 -14' /%3E%3Cpath d='M80 80 l10 10 l-10 10' /%3E%3Cline x1='95' y1='100' x2='110' y2='100' /%3E%3Cpath d='M180 80 a 8 8 0 0 0 -15 -4 a 10 10 0 0 0 -18 6 a 8 8 0 0 0 10 12 h20 a 7 7 0 0 0 3 -14 z' /%3E%3C/g%3E%3C/svg%3E");
 }
 
 h1,
