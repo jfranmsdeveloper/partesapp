@@ -5,7 +5,6 @@ import { useCreateBlockNote } from "@blocknote/react";
 import { useEffect, useState, useMemo } from "react";
 import { BlockNoteSchema, defaultBlockSpecs, createCodeBlockSpec } from "@blocknote/core";
 import { codeBlockOptions } from "@blocknote/code-block";
-import { useTheme } from "../../hooks/useTheme";
 
 interface NotionEditorProps {
   initialContent?: string;
@@ -18,7 +17,6 @@ export const NotionEditor = ({
   onChange,
   placeholder,
 }: NotionEditorProps) => {
-  const { theme } = useTheme();
 
   // 1. Define custom schema to include advanced CodeBlock options
   // This enables syntax highlighting and more languages (SQL, JSON, etc.)
@@ -88,7 +86,7 @@ export const NotionEditor = ({
       <BlockNoteView
         editor={editor}
         onChange={handleChange}
-        theme={theme}
+        theme="light"
         className="min-h-[300px]"
         data-placeholder={placeholder}
       />
