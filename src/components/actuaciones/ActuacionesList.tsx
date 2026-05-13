@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Actuacion } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
-import { Trash2, Clock, Edit2, ChevronDown } from 'lucide-react';
+import { Trash2, Clock, Edit2, ChevronDown, Copy } from 'lucide-react';
 import { clsx } from 'clsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -12,10 +12,11 @@ interface ActuacionesListProps {
     actuaciones: Actuacion[];
     onDelete?: (id: string) => void;
     onEdit?: (actuacion: Actuacion) => void;
+    onDuplicate?: (actuacion: Actuacion) => void;
     readOnly?: boolean;
 }
 
-export const ActuacionesList = ({ actuaciones, onDelete, onEdit, readOnly = false }: ActuacionesListProps) => {
+export const ActuacionesList = ({ actuaciones, onDelete, onEdit, onDuplicate, readOnly = false }: ActuacionesListProps) => {
     const { users } = useAppStore();
 
     if (actuaciones.length === 0) {
@@ -35,6 +36,7 @@ export const ActuacionesList = ({ actuaciones, onDelete, onEdit, readOnly = fals
                     users={users}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onDuplicate={onDuplicate}
                     readOnly={readOnly}
                     isInitiallyExpanded={index === 0} // Primera actuación abierta por defecto
                 />
@@ -48,11 +50,12 @@ interface ActuacionItemProps {
     users: any[];
     onEdit?: (actuacion: Actuacion) => void;
     onDelete?: (id: string) => void;
+    onDuplicate?: (actuacion: Actuacion) => void;
     readOnly?: boolean;
     isInitiallyExpanded?: boolean;
 }
 
-const ActuacionItem = ({ actuacion, users, onEdit, onDelete, readOnly, isInitiallyExpanded = false }: ActuacionItemProps) => {
+const ActuacionItem = ({ actuacion, users, onEdit, onDelete, onDuplicate, readOnly, isInitiallyExpanded = false }: ActuacionItemProps) => {
     const [isOpen, setIsOpen] = useState(isInitiallyExpanded);
     const config = ACTUACION_CONFIG[actuacion.type];
     const Icon = config.icon;
@@ -153,6 +156,13 @@ const ActuacionItem = ({ actuacion, users, onEdit, onDelete, readOnly, isInitial
                                     title="Editar actuación"
                                 >
                                     <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onDuplicate?.(actuacion); }}
+                                    className="text-slate-400 hover:text-green-500 dark:hover:text-green-400 p-2 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-md transition-colors"
+                                    title="Duplicar actuación"
+                                >
+                                    <Copy className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onDelete?.(actuacion.id); }}

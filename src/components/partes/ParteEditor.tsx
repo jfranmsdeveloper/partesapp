@@ -713,6 +713,17 @@ export const ParteEditor = () => {
                                         }
                                     }}
                                     onEdit={handleEditClick}
+                                    onDuplicate={async (actuacion) => {
+                                        const { id, ...actuacionSinId } = actuacion;
+                                        const now = new Date();
+                                        const localIso = toLocalISOString(now);
+                                        const formattedNow = localIso.replace('T', ' ') + (localIso.includes(':') && localIso.split(':').length === 2 ? ':00' : '');
+                                        
+                                        await addActuacion(currentParte.id, {
+                                            ...actuacionSinId,
+                                            timestamp: formattedNow
+                                        });
+                                    }}
                                 />
                             </div>
 
