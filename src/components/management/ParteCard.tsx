@@ -45,6 +45,19 @@ export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: Part
         cardRef.current.style.setProperty('--mouse-y', `${y}px`);
     };
 
+    const getGlowColor = (status: Parte['status']) => {
+        switch (status) {
+            case 'ABIERTO':
+                return `rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08) 30%, rgba(34, 197, 94, 0.02) 50%, transparent 80%`; // Green
+            case 'EN TRÁMITE':
+                return `rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08) 30%, rgba(59, 130, 246, 0.02) 50%, transparent 80%`; // Blue
+            case 'CERRADO':
+                return `rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08) 30%, rgba(239, 68, 68, 0.02) 50%, transparent 80%`; // Red
+            default:
+                return `rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.08) 30%, rgba(249, 115, 22, 0.02) 50%, transparent 80%`; // Default orange
+        }
+    };
+
     return (
         <div
             ref={cardRef}
@@ -59,7 +72,7 @@ export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: Part
             <div 
                 className="pointer-events-none absolute -inset-px rounded-[2rem] opacity-0 transition duration-300 group-hover:opacity-100 z-0"
                 style={{
-                    background: `radial-gradient(600px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(249, 115, 22, 0.15), rgba(34, 197, 94, 0.08) 30%, rgba(59, 130, 246, 0.05) 50%, transparent 80%)`
+                    background: `radial-gradient(600px circle at var(--mouse-x, 0) var(--mouse-y, 0), ${getGlowColor(parte.status)})`
                 }}
             />
             {/* Selection Checkbox Overlay */}
