@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Parte } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
@@ -17,6 +18,7 @@ interface ParteCardProps {
 export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: ParteCardProps) => {
     const navigate = useNavigate();
     const { users } = useAppStore();
+    const cardRef = useRef<HTMLDivElement>(null);
 
     // Logic to determine which user to display
     const issuerName = parte.createdBy;
@@ -34,14 +36,32 @@ export const ParteCard = ({ parte, isSelectionMode, isSelected, onSelect }: Part
         }
     };
 
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!cardRef.current) return;
+        const rect = cardRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        cardRef.current.style.setProperty('--mouse-x', `${x}px`);
+        cardRef.current.style.setProperty('--mouse-y', `${y}px`);
+    };
+
     return (
         <div
+            ref={cardRef}
             onClick={handleCardClick}
+            onMouseMove={handleMouseMove}
             className={clsx(
-                "p-5 rounded-[2rem] glass-card transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-lg group relative",
-                isSelected ? "border-orange-500 ring-2 ring-orange-500/20" : "hover:border-white/70 dark:hover:border-white/20"
+                "p-5 rounded-[2rem] glass-card transition-all duration-300 cursor-pointer hover:-translate-y-1 group relative overflow-hidden",
+                isSelected ? "border-orange-500 ring-2 ring-orange-500/20 shadow-lg" : "hover:border-white/70 dark:hover:border-white/20 hover:shadow-lg"
             )}
         >
+            {/* Glow Hover Effect */}
+            <div 
+                className="pointer-events-none absolute -inset-px rounded-[2rem] opacity-0 transition duration-300 group-hover:opacity-100 z-0"
+                style={{
+                    background: `radial-gradient(600px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(249, 115, 22, 0.15), rgba(34, 197, 94, 0.08) 30%, rgba(59, 130, 246, 0.05) 50%, transparent 80%)`
+                }}
+            />
             {/* Selection Checkbox Overlay */}
             {isSelectionMode && (
                 <div 
