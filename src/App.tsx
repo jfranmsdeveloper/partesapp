@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import UsersPage from './pages/Users';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
+import CanvasPage from './pages/Canvas';
 
 import { useAppStore } from './store/useAppStore';
 import { useToast } from './components/ui/Toast';
@@ -73,6 +74,7 @@ function App() {
           <Route path="/global" element={<GlobalSearch />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/canvas" element={<CanvasPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/parte/:id" element={<Registration />} />
