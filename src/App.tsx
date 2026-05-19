@@ -27,7 +27,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  const { checkSession, reminders, updateReminder } = useAppStore();
+  const { checkSession, reminders, updateReminder, boards, updateBoardState } = useAppStore();
   const toast = useToast();
 
   useEffect(() => {
@@ -36,24 +36,63 @@ function App() {
 
   // Reminder Notification Engine
   useEffect(() => {
-    if (!reminders.length) return;
-
     const checkReminders = () => {
       const now = new Date();
-      reminders.forEach(reminder => {
-        if (reminder.completed || reminder.notified) return;
 
-        const dueDate = parseISO(reminder.dueDate);
-        
-        // Notify if it's due now (within a 2-minute window) or past due
-        if (isPast(dueDate) || isWithinInterval(now, {
-            start: subMinutes(dueDate, 1),
-            end: addMinutes(dueDate, 1)
-        })) {
-          toast.warn(`Recordatorio: ${reminder.text}`);
-          updateReminder(reminder.id, { notified: true });
-        }
-      });
+      // 1. Check Standard Reminders
+      if (reminders.length > 0) {
+        reminders.forEach(reminder => {
+          if (reminder.completed || reminder.notified) return;
+
+          const dueDate = parseISO(reminder.dueDate);
+          
+          // Notify if it's due now (within a 2-minute window) or past due
+          if (isPast(dueDate) || isWithinInterval(now, {
+              start: subMinutes(dueDate, 1),
+              end: addMinutes(dueDate, 1)
+          })) {
+            toast.warn(`Recordatorio: ${reminder.text}`);
+            updateReminder(reminder.id, { notified: true });
+          }
+        });
+      }
+
+      // 2. Check Board Note Reminders
+      if (boards.length > 0) {
+        boards.forEach(board => {
+          let boardChanged = false;
+          const updatedNodes = (board.nodes || []).map(node => {
+            if (node.type === 'note') {
+              const ndata = node.data as any;
+              if (ndata?.reminderAt) {
+                const notified = ndata.reminderNotified;
+                if (!notified) {
+                  const dueDate = parseISO(ndata.reminderAt);
+                  if (isPast(dueDate) || isWithinInterval(now, {
+                      start: subMinutes(dueDate, 1),
+                      end: addMinutes(dueDate, 1)
+                  })) {
+                    toast.warn(`Nota: ${ndata.title || 'Recordatorio de pizarra'}`);
+                    boardChanged = true;
+                    return {
+                      ...node,
+                      data: {
+                        ...ndata,
+                        reminderNotified: true
+                      }
+                    };
+                  }
+                }
+              }
+            }
+            return node;
+          });
+
+          if (boardChanged) {
+            updateBoardState(board.id, updatedNodes, board.edges || []);
+          }
+        });
+      }
     };
 
     // Immediate check
@@ -61,7 +100,7 @@ function App() {
 
     const interval = setInterval(checkReminders, 10000); // Check every 10s
     return () => clearInterval(interval);
-  }, [reminders, toast, updateReminder]);
+  }, [reminders, boards, toast, updateReminder, updateBoardState]);
 
   return (
     <BrowserRouter>

@@ -17,7 +17,9 @@ import '@xyflow/react/dist/style.css';
 
 import { useAppStore } from '../../store/useAppStore';
 import NoteNode from './nodes/NoteNode';
-import { Save, HelpCircle } from 'lucide-react';
+import { Save, HelpCircle, X } from 'lucide-react';
+import { NotionEditor } from '../ui/NotionEditor';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const NODE_TYPES = {
     note: NoteNode
@@ -33,12 +35,14 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
     const { boards, updateBoardState } = useAppStore();
     const board = boards.find(b => b.id === boardId);
 
-    const { getViewport } = useReactFlow();
+    const { getViewport, screenToFlowPosition } = useReactFlow();
 
     // Nodes and Edges State
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [editingNode, setEditingNode] = useState<Node | null>(null);
+    const [editorInitialContent, setEditorInitialContent] = useState<string>('');
 
     // Load initial board state
     useEffect(() => {
@@ -107,6 +111,98 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
         }
     }, [setNodes, setEdges]);
 
+    const onReminderChange = useCallback((id: string, reminderAt: string | null) => {
+        setNodes((nds) => nds.map((node) => {
+            if (node.id === id) {
+                return { 
+                    ...node, 
+                    data: { 
+                        ...node.data, 
+                        reminderAt,
+                        reminderNotified: false
+                    } 
+                };
+            }
+            return node;
+        }));
+    }, [setNodes]);
+
+    const onExpandNode = useCallback((id: string) => {
+        const node = nodes.find(n => n.id === id);
+        if (node) {
+            setEditingNode(node);
+            setEditorInitialContent((node.data as any).noteText || '');
+        }
+    }, [nodes]);
+
+    const handleNoteContentChange = useCallback((id: string, text: string) => {
+        setNodes((nds) => nds.map((node) => {
+            if (node.id === id) {
+                return { ...node, data: { ...node.data, noteText: text } };
+            }
+            return node;
+        }));
+    }, [setNodes]);
+
+    const handleNoteTitleChange = useCallback((id: string, title: string) => {
+        setEditingNode(prev => prev && prev.id === id ? { ...prev, data: { ...prev.data, title } } : prev);
+        setNodes((nds) => nds.map((node) => {
+            if (node.id === id) {
+                return { ...node, data: { ...node.data, title } };
+            }
+            return node;
+        }));
+    }, [setNodes]);
+
+    // Handle dragging a connection to create and connect a new node on drop (Scrintal style)
+    const onConnectEnd = useCallback(
+        (event: MouseEvent | TouchEvent, connectionState: any) => {
+            // If connection was dropped on a valid target handle, do nothing
+            if (connectionState.isValid) return;
+
+            // Get source node ID
+            const fromNodeId = connectionState.fromNode?.id;
+            if (!fromNodeId) return;
+
+            // Get client coordinates of the release event
+            const clientX = 'clientX' in event ? event.clientX : (event.touches?.[0]?.clientX ?? event.changedTouches?.[0]?.clientX ?? 0);
+            const clientY = 'clientY' in event ? event.clientY : (event.touches?.[0]?.clientY ?? event.changedTouches?.[0]?.clientY ?? 0);
+
+            // Convert client coordinates to flow coordinate system
+            const flowPosition = screenToFlowPosition({
+                x: clientX,
+                y: clientY
+            });
+
+            // Create new note node at this location
+            const newId = `note-${Date.now()}`;
+            const newNode = {
+                id: newId,
+                type: 'note' as const,
+                position: flowPosition,
+                data: {
+                    title: 'Nueva Nota Relacionada',
+                    noteText: '',
+                    color: 'yellow'
+                }
+            };
+
+            // Create connection edge
+            const newEdge = {
+                id: `edge-${fromNodeId}-${newId}`,
+                source: fromNodeId,
+                target: newId,
+                animated: true,
+                style: { stroke: '#f59e0b', strokeWidth: 2 }
+            };
+
+            // Update nodes and edges states
+            setNodes((nds) => nds.concat(newNode));
+            setEdges((eds) => eds.concat(newEdge));
+        },
+        [setNodes, setEdges, screenToFlowPosition]
+    );
+
     // Enrich nodes with handlers on render
     const enrichedNodes = nodes.map(node => {
         if (node.type === 'note') {
@@ -117,7 +213,9 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                     onChange: onNoteChange,
                     onTitleChange: onNoteTitleChange,
                     onColorChange: onNoteColorChange,
-                    onDeleteNode: onDeleteNode
+                    onDeleteNode: onDeleteNode,
+                    onReminderChange: onReminderChange,
+                    onExpandNode: onExpandNode
                 }
             };
         }
@@ -189,6 +287,7 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onConnectEnd={onConnectEnd}
                 nodeTypes={NODE_TYPES}
                 fitView
                 className="bg-slate-50 dark:bg-slate-950"
@@ -231,12 +330,72 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                         <ul className="list-disc pl-3.5 space-y-0.5">
                             <li>Crea notas de texto con el botón superior.</li>
                             <li>Enlaza notas arrastrando desde sus bordes.</li>
+                            <li>Suelte la línea en el lienzo para crear una nota enlazada.</li>
                             <li>Usa los círculos del post-it para cambiar color.</li>
-                            <li>Mueve cualquier nota libremente en el lienzo.</li>
+                            <li>Arrastra los bordes de la nota seleccionada para cambiar su tamaño.</li>
                         </ul>
                     </div>
                 </Panel>
             </ReactFlow>
+
+            {/* Notion-style Fullscreen Rich Text Editor Modal */}
+            <AnimatePresence>
+                {editingNode && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 select-none">
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => {
+                                setEditingNode(null);
+                                setEditorInitialContent('');
+                            }}
+                            className="absolute inset-0 bg-slate-950/40 dark:bg-black/60 backdrop-blur-md"
+                        />
+
+                        {/* Modal Box */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 15 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 15 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 260 }}
+                            className="relative bg-white/95 dark:bg-slate-900/90 backdrop-blur-3xl border border-slate-200 dark:border-white/10 shadow-2xl rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden z-10"
+                        >
+                            {/* Modal Header */}
+                            <div className="p-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between gap-4 flex-shrink-0">
+                                <input
+                                    type="text"
+                                    value={(editingNode.data as any).title || ''}
+                                    onChange={(e) => handleNoteTitleChange(editingNode.id, e.target.value)}
+                                    className="text-xl font-bold bg-transparent outline-none border-b border-transparent focus:border-orange-500/20 text-slate-800 dark:text-white/90 w-full"
+                                    placeholder="Título de la nota..."
+                                />
+                                
+                                <button
+                                    onClick={() => {
+                                        setEditingNode(null);
+                                        setEditorInitialContent('');
+                                    }}
+                                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer flex-shrink-0"
+                                    title="Guardar y Cerrar"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body: Block editor */}
+                            <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+                                <NotionEditor
+                                    initialContent={editorInitialContent}
+                                    onChange={(html) => handleNoteContentChange(editingNode.id, html)}
+                                    placeholder="Escribe aquí tu nota... Utiliza '/' para comandos rápidos de formato como títulos, tablas, listas..."
+                                />
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
