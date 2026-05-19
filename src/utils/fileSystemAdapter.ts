@@ -288,7 +288,7 @@ class FileSystemAdapter {
             // In legacy mode, we can still initialize if we have a state in IDB
             const storedState = await getStateFromIDB();
             if (storedState) {
-                this.state = storedState;
+                await this.loadDatabase();
                 this.isInitialized = true;
                 // Try to restore user from state if possible
                 // (Since we don't have session.json, we rely on the app store checking the session)
