@@ -20,9 +20,54 @@ import NoteNode from './nodes/NoteNode';
 import { Save, HelpCircle, X } from 'lucide-react';
 import { NotionEditor } from '../ui/NotionEditor';
 import { motion, AnimatePresence } from 'framer-motion';
+import clsx from 'clsx';
 
 const NODE_TYPES = {
     note: NoteNode
+};
+
+const MODAL_GLASS_STYLES: Record<string, {
+    bg: string;
+    border: string;
+    glow: string;
+    text: string;
+    inputBorder: string;
+}> = {
+    yellow: {
+        bg: "bg-amber-100/75 dark:bg-amber-950/20",
+        border: "border-amber-300/40 dark:border-amber-500/10",
+        glow: "shadow-[0_0_60px_-15px_rgba(245,158,11,0.3)]",
+        text: "text-amber-900 dark:text-amber-200",
+        inputBorder: "focus:border-amber-500/20"
+    },
+    green: {
+        bg: "bg-emerald-100/75 dark:bg-emerald-950/20",
+        border: "border-emerald-300/40 dark:border-emerald-500/10",
+        glow: "shadow-[0_0_60px_-15px_rgba(16,185,129,0.3)]",
+        text: "text-emerald-900 dark:text-emerald-200",
+        inputBorder: "focus:border-emerald-500/20"
+    },
+    blue: {
+        bg: "bg-sky-100/75 dark:bg-sky-950/20",
+        border: "border-sky-300/40 dark:border-sky-500/10",
+        glow: "shadow-[0_0_60px_-15px_rgba(14,165,233,0.3)]",
+        text: "text-sky-900 dark:text-sky-200",
+        inputBorder: "focus:border-sky-500/20"
+    },
+    pink: {
+        bg: "bg-rose-100/75 dark:bg-rose-950/20",
+        border: "border-rose-300/40 dark:border-rose-500/10",
+        glow: "shadow-[0_0_60px_-15px_rgba(244,63,94,0.3)]",
+        text: "text-rose-900 dark:text-rose-200",
+        inputBorder: "focus:border-rose-500/20"
+    },
+    gray: {
+        bg: "bg-slate-100/75 dark:bg-slate-900/20",
+        border: "border-slate-300/40 dark:border-slate-750/30",
+        glow: "shadow-[0_0_60px_-15px_rgba(148,163,184,0.3)]",
+        text: "text-slate-900 dark:text-slate-200",
+        inputBorder: "focus:border-slate-500/20"
+    }
 };
 
 interface InfiniteCanvasProps {
@@ -279,6 +324,9 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
         onAutoLayoutTrigger(handleAutoLayout);
     }, [handleAutoLayout, onAutoLayoutTrigger]);
 
+    const activeColorName = (editingNode?.data as any)?.color || 'yellow';
+    const modalStyle = MODAL_GLASS_STYLES[activeColorName] || MODAL_GLASS_STYLES.yellow;
+
     return (
         <div className="flex-1 h-full relative">
             <ReactFlow
@@ -360,15 +408,24 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, y: 15 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 260 }}
-                            className="relative bg-white/95 dark:bg-slate-900/90 backdrop-blur-3xl border border-slate-200 dark:border-white/10 shadow-2xl rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden z-10"
+                            className={clsx(
+                                "relative backdrop-blur-[35px] border shadow-2xl rounded-[32px] w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden z-10 transition-all duration-500",
+                                modalStyle.bg,
+                                modalStyle.border,
+                                modalStyle.glow
+                            )}
                         >
                             {/* Modal Header */}
-                            <div className="p-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between gap-4 flex-shrink-0">
+                            <div className="p-6 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between gap-4 flex-shrink-0">
                                 <input
                                     type="text"
                                     value={(editingNode.data as any).title || ''}
                                     onChange={(e) => handleNoteTitleChange(editingNode.id, e.target.value)}
-                                    className="text-xl font-bold bg-transparent outline-none border-b border-transparent focus:border-orange-500/20 text-slate-800 dark:text-white/90 w-full"
+                                    className={clsx(
+                                        "text-2xl font-bold bg-transparent outline-none border-b border-transparent w-full transition-all duration-300",
+                                        modalStyle.text,
+                                        modalStyle.inputBorder
+                                    )}
                                     placeholder="Título de la nota..."
                                 />
                                 
@@ -377,7 +434,7 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                                         setEditingNode(null);
                                         setEditorInitialContent('');
                                     }}
-                                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer flex-shrink-0"
+                                    className="p-2.5 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded-full text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex-shrink-0 active:scale-90"
                                     title="Guardar y Cerrar"
                                 >
                                     <X className="w-5 h-5" />
@@ -390,6 +447,7 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                                     initialContent={editorInitialContent}
                                     onChange={(html) => handleNoteContentChange(editingNode.id, html)}
                                     placeholder="Escribe aquí tu nota... Utiliza '/' para comandos rápidos de formato como títulos, tablas, listas..."
+                                    transparent={true}
                                 />
                             </div>
                         </motion.div>

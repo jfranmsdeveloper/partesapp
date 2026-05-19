@@ -5,18 +5,22 @@ import { useCreateBlockNote } from "@blocknote/react";
 import { useEffect, useState, useMemo } from "react";
 import { BlockNoteSchema, defaultBlockSpecs, createCodeBlockSpec } from "@blocknote/core";
 import { codeBlockOptions } from "@blocknote/code-block";
+import { useTheme } from "../../hooks/useTheme";
 
 interface NotionEditorProps {
   initialContent?: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  transparent?: boolean;
 }
 
 export const NotionEditor = ({
   initialContent,
   onChange,
   placeholder,
+  transparent = false,
 }: NotionEditorProps) => {
+  const { theme } = useTheme();
 
   // 1. Define custom schema to include advanced CodeBlock options
   // This enables syntax highlighting and more languages (SQL, JSON, etc.)
@@ -82,11 +86,15 @@ export const NotionEditor = ({
   if (!isReady) return <div className="p-4 text-slate-400">Cargando editor...</div>;
 
   return (
-    <div className="notion-editor-container relative bg-white dark:bg-dark-card border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden min-h-[300px] transition-all duration-300">
+    <div className={`notion-editor-container relative transition-all duration-300 ${
+      transparent 
+        ? "transparent-editor bg-transparent border-none shadow-none" 
+        : "bg-white dark:bg-dark-card border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden min-h-[300px]"
+    }`}>
       <BlockNoteView
         editor={editor}
         onChange={handleChange}
-        theme="light"
+        theme={theme}
         className="min-h-[300px]"
         data-placeholder={placeholder}
       />

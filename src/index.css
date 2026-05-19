@@ -142,6 +142,19 @@
   color: #f8f8f8 !important;
 }
 
+.notion-editor-container.transparent-editor,
+.notion-editor-container.transparent-editor .bn-editor,
+.notion-editor-container.transparent-editor [data-color-scheme="light"],
+.notion-editor-container.transparent-editor [data-color-scheme="dark"] {
+  --bn-colors-editor-background: transparent !important;
+  background-color: transparent !important;
+}
+
+.notion-editor-container.transparent-editor .bn-editor p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Outfit', sans-serif;
