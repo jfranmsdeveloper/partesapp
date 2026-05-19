@@ -995,7 +995,7 @@ class FileSystemAdapter {
                     // But usually they are fetched per parte. For a global list:
                     const myPartes = this.state.partes.filter((p: any) => String(p.user_id) === String(uid)).map(p => String(p.id));
                     results = results.filter((a: any) => myPartes.includes(String(a.parte_id)));
-                } else if (['clients', 'snippets', 'reminders'].includes(table)) {
+                } else if (['snippets', 'reminders'].includes(table)) {
                     results = results.filter((item: any) => String(item.userId || item.user_id) === String(uid));
                 }
             }
