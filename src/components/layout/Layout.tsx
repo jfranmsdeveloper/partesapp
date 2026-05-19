@@ -31,17 +31,14 @@ export const Layout = () => {
 
     return (
         <div className="min-h-screen transition-colors duration-300 bg-transparent">
-            {/* Mobile Header */}
-            <div className="md:hidden sticky top-0 z-20 glass rounded-none border-x-0 border-t-0 border-b border-white/30 dark:border-white/10 px-4 py-3 flex items-center justify-between shadow-sm">
-                <button
-                    onClick={() => setIsSidebarOpen(true)}
-                    className="p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-surface text-slate-600 dark:text-slate-300 transition-colors"
-                >
-                    <Menu className="h-6 w-6" />
-                </button>
-                <span className="font-display font-bold text-lg text-slate-800 dark:text-slate-100">PartesApp</span>
-                <div className="w-8" /> {/* Spacer for balance */}
-            </div>
+            {/* Floating Apple-like Menu Trigger */}
+            <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="fixed top-6 left-6 z-30 p-3 rounded-2xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800/30 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_32px_0_rgba(0,0,0,0.12)] hover:scale-105 active:scale-95 text-slate-700 dark:text-slate-200 transition-all duration-300 ease-out cursor-pointer flex items-center justify-center group"
+                title="Abrir menú"
+            >
+                <Menu className="w-5 h-5 group-hover:rotate-6 transition-transform" />
+            </button>
 
             <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
@@ -50,14 +47,13 @@ export const Layout = () => {
                 onClose={() => setCommandPaletteOpen(false)} 
             />
 
-
-            <main className="md:pl-64 transition-all duration-300 ease-in-out">
-                {/* On mobile, optimize padding for 4-7 inch screens (more thumb-friendly, using screen edges better) */}
+            <main className="transition-all duration-300 ease-in-out">
+                {/* Adjust layout padding to make space for the floating menu button */}
                 <div className={clsx(
                     "mx-auto w-full transition-all duration-300",
                     isCanvas 
                         ? "max-w-none p-0 h-screen overflow-hidden" 
-                        : "max-w-[1400px] p-3 sm:p-4 md:p-6 pb-20 md:pb-6"
+                        : "max-w-[1400px] pt-24 pb-20 md:pb-8 px-4 sm:px-6 md:px-8 pl-20 sm:pl-24 md:pl-28"
                 )}>
                     <Outlet />
                 </div>

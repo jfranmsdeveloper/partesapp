@@ -39,7 +39,7 @@ export default function CanvasSidebar({
 
     if (isCollapsed) {
         return (
-            <aside className="w-16 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center py-4 gap-6 h-full select-none transition-all duration-300">
+            <aside className="w-16 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center py-4 gap-6 h-full select-none transition-all duration-300 pt-20">
                 {/* Expand Toggle */}
                 <button 
                     onClick={() => setIsCollapsed(false)}
@@ -77,7 +77,7 @@ export default function CanvasSidebar({
                 {activeBoardId ? (
                     <button 
                         onClick={() => setActiveBoardId(null)}
-                        className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-500 hover:text-slate-750 transition-colors mt-auto cursor-pointer"
+                        className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-550 hover:text-slate-700 transition-colors mt-auto cursor-pointer"
                         title="Ver todas las pizarras"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -92,7 +92,7 @@ export default function CanvasSidebar({
     }
 
     return (
-        <aside className="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full overflow-hidden select-none transition-all duration-300">
+        <aside className="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full overflow-hidden select-none transition-all duration-300 pt-20">
             {/* Header: Boards Selector / Active Board name */}
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
