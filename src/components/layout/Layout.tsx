@@ -1,13 +1,16 @@
 /* UI Version: 12:30 Baseline */
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Menu } from 'lucide-react';
 import { CommandPalette } from '../ui/CommandPalette';
 import { ToastContainer } from '../ui/Toast';
 import { useAppStore } from '../../store/useAppStore';
+import clsx from 'clsx';
 
 export const Layout = () => {
+    const location = useLocation();
+    const isCanvas = location.pathname.startsWith('/canvas');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { isCommandPaletteOpen, setCommandPaletteOpen } = useAppStore();
 
@@ -50,7 +53,12 @@ export const Layout = () => {
 
             <main className="md:pl-64 transition-all duration-300 ease-in-out">
                 {/* On mobile, optimize padding for 4-7 inch screens (more thumb-friendly, using screen edges better) */}
-                <div className="mx-auto w-full max-w-[1400px] p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+                <div className={clsx(
+                    "mx-auto w-full transition-all duration-300",
+                    isCanvas 
+                        ? "max-w-none p-0 h-screen overflow-hidden" 
+                        : "max-w-[1400px] p-3 sm:p-4 md:p-6 pb-20 md:pb-6"
+                )}>
                     <Outlet />
                 </div>
             </main>
