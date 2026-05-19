@@ -1254,8 +1254,14 @@ class FileSystemAdapter {
      */
     async importDatabaseFromText(text: string): Promise<boolean> {
         try {
-            const newState = JSON.parse(text);
-            if (newState && newState.users) {
+            let newState = decryptData(text);
+            
+            if (!newState) {
+                // Fallback: try parsing as raw JSON if decryption failed
+                newState = JSON.parse(text);
+            }
+            
+            if (newState && (newState.users || newState.partes)) {
                 this.state = newState;
                 await this.saveDatabase();
                 this.isInitialized = true;
