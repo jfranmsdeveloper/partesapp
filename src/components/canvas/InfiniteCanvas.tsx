@@ -32,41 +32,53 @@ const MODAL_GLASS_STYLES: Record<string, {
     glow: string;
     text: string;
     inputBorder: string;
+    editorBg: string;
+    editorBorder: string;
 }> = {
     yellow: {
         bg: "bg-amber-100/75 dark:bg-amber-950/20",
         border: "border-amber-300/40 dark:border-amber-500/10",
         glow: "shadow-[0_0_60px_-15px_rgba(245,158,11,0.3)]",
         text: "text-amber-900 dark:text-amber-200",
-        inputBorder: "focus:border-amber-500/20"
+        inputBorder: "focus:border-amber-500/20",
+        editorBg: "bg-white/80 dark:bg-amber-950/40 backdrop-blur-md",
+        editorBorder: "border-white/90 dark:border-amber-500/20"
     },
     green: {
         bg: "bg-emerald-100/75 dark:bg-emerald-950/20",
         border: "border-emerald-300/40 dark:border-emerald-500/10",
         glow: "shadow-[0_0_60px_-15px_rgba(16,185,129,0.3)]",
         text: "text-emerald-900 dark:text-emerald-200",
-        inputBorder: "focus:border-emerald-500/20"
+        inputBorder: "focus:border-emerald-500/20",
+        editorBg: "bg-white/80 dark:bg-emerald-950/40 backdrop-blur-md",
+        editorBorder: "border-white/90 dark:border-emerald-500/20"
     },
     blue: {
         bg: "bg-sky-100/75 dark:bg-sky-950/20",
         border: "border-sky-300/40 dark:border-sky-500/10",
         glow: "shadow-[0_0_60px_-15px_rgba(14,165,233,0.3)]",
         text: "text-sky-900 dark:text-sky-200",
-        inputBorder: "focus:border-sky-500/20"
+        inputBorder: "focus:border-sky-500/20",
+        editorBg: "bg-white/80 dark:bg-sky-950/40 backdrop-blur-md",
+        editorBorder: "border-white/90 dark:border-sky-500/20"
     },
     pink: {
         bg: "bg-rose-100/75 dark:bg-rose-950/20",
         border: "border-rose-300/40 dark:border-rose-500/10",
         glow: "shadow-[0_0_60px_-15px_rgba(244,63,94,0.3)]",
         text: "text-rose-900 dark:text-rose-200",
-        inputBorder: "focus:border-rose-500/20"
+        inputBorder: "focus:border-rose-500/20",
+        editorBg: "bg-white/80 dark:bg-rose-950/40 backdrop-blur-md",
+        editorBorder: "border-white/90 dark:border-rose-500/20"
     },
     gray: {
         bg: "bg-slate-100/75 dark:bg-slate-900/20",
         border: "border-slate-300/40 dark:border-slate-750/30",
         glow: "shadow-[0_0_60px_-15px_rgba(148,163,184,0.3)]",
         text: "text-slate-900 dark:text-slate-200",
-        inputBorder: "focus:border-slate-500/20"
+        inputBorder: "focus:border-slate-500/20",
+        editorBg: "bg-white/80 dark:bg-slate-900/40 backdrop-blur-md",
+        editorBorder: "border-white/90 dark:border-slate-700/20"
     }
 };
 
@@ -443,12 +455,18 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
 
                             {/* Modal Body: Block editor */}
                             <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-                                <NotionEditor
-                                    initialContent={editorInitialContent}
-                                    onChange={(html) => handleNoteContentChange(editingNode.id, html)}
-                                    placeholder="Escribe aquí tu nota... Utiliza '/' para comandos rápidos de formato como títulos, tablas, listas..."
-                                    transparent={true}
-                                />
+                                <div className={clsx(
+                                    "rounded-[20px] border p-4 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)] dark:shadow-none min-h-[50vh] transition-all duration-500",
+                                    modalStyle.editorBg,
+                                    modalStyle.editorBorder
+                                )}>
+                                    <NotionEditor
+                                        initialContent={editorInitialContent}
+                                        onChange={(html) => handleNoteContentChange(editingNode.id, html)}
+                                        placeholder="Escribe aquí tu nota... Utiliza '/' para comandos rápidos de formato como títulos, tablas, listas..."
+                                        transparent={true}
+                                    />
+                                </div>
                             </div>
                         </motion.div>
                     </div>
