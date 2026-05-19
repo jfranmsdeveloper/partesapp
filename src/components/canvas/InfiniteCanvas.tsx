@@ -41,8 +41,8 @@ const MODAL_GLASS_STYLES: Record<string, {
         glow: "shadow-[0_0_60px_-15px_rgba(245,158,11,0.3)]",
         text: "text-amber-900 dark:text-amber-200",
         inputBorder: "focus:border-amber-500/20",
-        editorBg: "bg-white/80 dark:bg-amber-950/40 backdrop-blur-md",
-        editorBorder: "border-white/90 dark:border-amber-500/20"
+        editorBg: "bg-white/20 dark:bg-white/5",
+        editorBorder: "border-white/25 dark:border-white/5"
     },
     green: {
         bg: "bg-emerald-100/75 dark:bg-emerald-950/20",
@@ -50,8 +50,8 @@ const MODAL_GLASS_STYLES: Record<string, {
         glow: "shadow-[0_0_60px_-15px_rgba(16,185,129,0.3)]",
         text: "text-emerald-900 dark:text-emerald-200",
         inputBorder: "focus:border-emerald-500/20",
-        editorBg: "bg-white/80 dark:bg-emerald-950/40 backdrop-blur-md",
-        editorBorder: "border-white/90 dark:border-emerald-500/20"
+        editorBg: "bg-white/20 dark:bg-white/5",
+        editorBorder: "border-white/25 dark:border-white/5"
     },
     blue: {
         bg: "bg-sky-100/75 dark:bg-sky-950/20",
@@ -59,8 +59,8 @@ const MODAL_GLASS_STYLES: Record<string, {
         glow: "shadow-[0_0_60px_-15px_rgba(14,165,233,0.3)]",
         text: "text-sky-900 dark:text-sky-200",
         inputBorder: "focus:border-sky-500/20",
-        editorBg: "bg-white/80 dark:bg-sky-950/40 backdrop-blur-md",
-        editorBorder: "border-white/90 dark:border-sky-500/20"
+        editorBg: "bg-white/20 dark:bg-white/5",
+        editorBorder: "border-white/25 dark:border-white/5"
     },
     pink: {
         bg: "bg-rose-100/75 dark:bg-rose-950/20",
@@ -68,8 +68,8 @@ const MODAL_GLASS_STYLES: Record<string, {
         glow: "shadow-[0_0_60px_-15px_rgba(244,63,94,0.3)]",
         text: "text-rose-900 dark:text-rose-200",
         inputBorder: "focus:border-rose-500/20",
-        editorBg: "bg-white/80 dark:bg-rose-950/40 backdrop-blur-md",
-        editorBorder: "border-white/90 dark:border-rose-500/20"
+        editorBg: "bg-white/20 dark:bg-white/5",
+        editorBorder: "border-white/25 dark:border-white/5"
     },
     gray: {
         bg: "bg-slate-100/75 dark:bg-slate-900/20",
@@ -77,8 +77,8 @@ const MODAL_GLASS_STYLES: Record<string, {
         glow: "shadow-[0_0_60px_-15px_rgba(148,163,184,0.3)]",
         text: "text-slate-900 dark:text-slate-200",
         inputBorder: "focus:border-slate-500/20",
-        editorBg: "bg-white/80 dark:bg-slate-900/40 backdrop-blur-md",
-        editorBorder: "border-white/90 dark:border-slate-700/20"
+        editorBg: "bg-white/20 dark:bg-white/5",
+        editorBorder: "border-white/25 dark:border-white/5"
     }
 };
 

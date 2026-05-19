@@ -143,11 +143,15 @@
 }
 
 .notion-editor-container.transparent-editor,
+.notion-editor-container.transparent-editor .bn-container,
 .notion-editor-container.transparent-editor .bn-editor,
 .notion-editor-container.transparent-editor [data-color-scheme="light"],
 .notion-editor-container.transparent-editor [data-color-scheme="dark"] {
   --bn-colors-editor-background: transparent !important;
   background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .notion-editor-container.transparent-editor .bn-editor p {
