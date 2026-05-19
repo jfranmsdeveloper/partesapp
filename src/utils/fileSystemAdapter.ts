@@ -550,6 +550,17 @@ class FileSystemAdapter {
                         try { this.state = typeof stored === 'string' ? JSON.parse(stored) : stored; }
                         catch { /* use current state */ }
                     }
+                    
+                    // Schema migrations / safety checks (ensure all tables exist)
+                    if (!this.state) this.state = {} as any;
+                    if (!this.state.users) this.state.users = [];
+                    if (!this.state.partes) this.state.partes = [];
+                    if (!this.state.actuaciones) this.state.actuaciones = [];
+                    if (!this.state.clients) this.state.clients = [];
+                    if (!this.state.snippets) this.state.snippets = [];
+                    if (!this.state.reminders) this.state.reminders = [];
+                    if (!this.state.boards) this.state.boards = [];
+
                     console.log('FSA: Base de datos cargada desde IndexedDB (Modo Legacy).');
                     this.lastLoadTime = Date.now();
                     return;
@@ -606,6 +617,15 @@ class FileSystemAdapter {
             }
 
             this.state = loadedState!;
+
+            // Ensure all database tables exist in the state (essential for schema migrations)
+            if (!this.state.users) this.state.users = [];
+            if (!this.state.partes) this.state.partes = [];
+            if (!this.state.actuaciones) this.state.actuaciones = [];
+            if (!this.state.clients) this.state.clients = [];
+            if (!this.state.snippets) this.state.snippets = [];
+            if (!this.state.reminders) this.state.reminders = [];
+            if (!this.state.boards) this.state.boards = [];
 
             // Run migrations
             let migrationModified = false;

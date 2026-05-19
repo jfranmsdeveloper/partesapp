@@ -50,16 +50,21 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
 
     // Auto-save logic (Debounced)
     useEffect(() => {
-        if (!boardId || nodes.length === 0 && edges.length === 0) return;
+        if (!boardId || !board) return;
         
+        // Skip saving if local state matches store state (no changes made or just loaded)
+        const isSync = JSON.stringify(nodes) === JSON.stringify(board.nodes || []) && 
+                       JSON.stringify(edges) === JSON.stringify(board.edges || []);
+        if (isSync) return;
+
         setIsSaving(true);
         const timer = setTimeout(async () => {
             await updateBoardState(boardId, nodes, edges);
             setIsSaving(false);
-        }, 1500);
+        }, 1200);
 
         return () => clearTimeout(timer);
-    }, [nodes, edges, boardId]);
+    }, [nodes, edges, boardId, board]);
 
     // Handle Connection
     const onConnect = useCallback(
@@ -192,8 +197,17 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                 <Controls className="!bg-white dark:!bg-slate-900 !border-slate-200 dark:!border-slate-800" />
                 
                 {/* Floating Indicator Panels */}
-                <Panel position="top-right" className="flex items-center gap-2 pointer-events-none">
-                    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full shadow-sm flex items-center gap-2 text-xs font-medium text-slate-505 dark:text-slate-400">
+                <Panel position="top-right" className="flex items-center gap-2">
+                    <button
+                        onClick={async () => {
+                            if (!boardId) return;
+                            setIsSaving(true);
+                            await updateBoardState(boardId, nodes, edges);
+                            setIsSaving(false);
+                        }}
+                        className="bg-white/90 dark:bg-slate-900/90 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 px-3.5 py-1.5 rounded-full shadow-md flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-all active:scale-95 cursor-pointer pointer-events-auto"
+                        title="Guardar pizarra ahora en disco"
+                    >
                         {isSaving ? (
                             <>
                                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
@@ -201,11 +215,11 @@ export default function InfiniteCanvas({ boardId, onAddNoteTrigger, onAutoLayout
                             </>
                         ) : (
                             <>
-                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                <span>Guardado</span>
+                                <Save className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>Guardar Pizarra</span>
                             </>
                         )}
-                    </div>
+                    </button>
                 </Panel>
 
                 <Panel position="bottom-left" className="pointer-events-none">
