@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../utils/supabase';
-import type { Parte, Actuacion, ParteStatus, Client, User, Snippet, Reminder, CanvasBoard } from '../types';
+import type { Parte, Actuacion, ParteStatus, Client, User, Snippet, Reminder, CanvasBoard, EisenhowerTask } from '../types';
 
 interface AppState {
     // UI State
@@ -30,6 +30,7 @@ interface AppState {
     users: User[];
     snippets: Snippet[];
     boards: CanvasBoard[];
+    eisenhowerTasks: EisenhowerTask[];
 
     // Data Actions
     fetchData: () => Promise<void>;
@@ -66,7 +67,10 @@ interface AppState {
     deleteBoard: (id: string) => Promise<void>;
     changePassword: (email: string, oldPass: string, newPass: string) => Promise<boolean>;
 
-    // New Actions
+    // Eisenhower Actions
+    addEisenhowerTask: (text: string, quadrant: 'q1' | 'q2' | 'q3' | 'q4') => Promise<void>;
+    updateEisenhowerTask: (id: string, data: Partial<EisenhowerTask>) => Promise<void>;
+    deleteEisenhowerTask: (id: string) => Promise<void>;
     uploadAvatar: (file: File) => Promise<string | null>;
     updateUserRole: (userId: string, role: string) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
@@ -107,6 +111,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     users: [],
     snippets: [],
     boards: [],
+    eisenhowerTasks: [],
 
     checkSession: async () => {
         try {
@@ -272,6 +277,10 @@ export const useAppStore = create<AppState>((set, get) => ({
             // 3.7. Fetch Canvas Boards
             const { data: boardsData } = await supabase.from('boards').select('*');
             set({ boards: boardsData || [] });
+
+            // 3.8. Fetch Eisenhower Tasks
+            const { data: eisenhowerTasksData } = await supabase.from('eisenhowerTasks').select('*');
+            set({ eisenhowerTasks: eisenhowerTasksData || [] });
 
             // 4. Fetch Users (for avatars and roles)
             const { data: usersData } = await supabase.from('users').select('*');
@@ -896,6 +905,51 @@ export const useAppStore = create<AppState>((set, get) => ({
             alert(`Error al eliminar pizarra: ${error.message}`);
         } else {
             await get().fetchData();
+        }
+    },
+
+    addEisenhowerTask: async (text: string, quadrant: 'q1' | 'q2' | 'q3' | 'q4') => {
+        const { currentUser } = get();
+        if (!currentUser) return;
+
+        const newTask: EisenhowerTask = {
+            id: crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}`,
+            text,
+            quadrant,
+            completed: false,
+            userId: currentUser.id || '',
+            createdAt: new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('eisenhowerTasks').insert(newTask);
+        if (error) {
+            console.error('Error adding Eisenhower task:', error);
+        } else {
+            set(state => ({
+                eisenhowerTasks: [...state.eisenhowerTasks, newTask]
+            }));
+        }
+    },
+
+    updateEisenhowerTask: async (id: string, data: Partial<EisenhowerTask>) => {
+        const { error } = await supabase.from('eisenhowerTasks').update(data).eq('id', id);
+        if (error) {
+            console.error('Error updating Eisenhower task:', error);
+        } else {
+            set(state => ({
+                eisenhowerTasks: state.eisenhowerTasks.map(t => t.id === id ? { ...t, ...data } : t)
+            }));
+        }
+    },
+
+    deleteEisenhowerTask: async (id: string) => {
+        const { error } = await supabase.from('eisenhowerTasks').delete().eq('id', id);
+        if (error) {
+            console.error('Error deleting Eisenhower task:', error);
+        } else {
+            set(state => ({
+                eisenhowerTasks: state.eisenhowerTasks.filter(t => t.id !== id)
+            }));
         }
     }
 }));

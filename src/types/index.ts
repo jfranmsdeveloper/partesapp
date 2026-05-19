@@ -124,3 +124,12 @@ export interface CanvasBoard {
     nodes: CanvasNode[];
     edges: CanvasEdge[];
 }
+
+export interface EisenhowerTask {
+    id: string;
+    text: string;
+    quadrant: 'q1' | 'q2' | 'q3' | 'q4';
+    completed: boolean;
+    userId: string;
+    createdAt: string;
+}

@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, PlusCircle, LogOut, Search, Moon, Sun, X, Users, TrendingUp, Calendar, Workflow } from 'lucide-react';
+import { LayoutDashboard, FileText, PlusCircle, LogOut, Search, Moon, Sun, X, Users, TrendingUp, Calendar, Workflow, LayoutGrid } from 'lucide-react';
 import { NavLink, Link } from 'react-router-dom';
 import clsx from 'clsx';
 import logoUrl from '../../assets/logo.png';
@@ -11,6 +11,7 @@ const API_NAV_ITEMS = [
     { label: 'Calendario', icon: Calendar, to: '/calendar', adminOnly: false },
     { label: 'Gestión de Partes', icon: FileText, to: '/management', adminOnly: false },
     { label: 'Pizarras', icon: Workflow, to: '/canvas', adminOnly: false },
+    { label: 'Matriz Eisenhower', icon: LayoutGrid, to: '/eisenhower', adminOnly: false },
     { label: 'Importar PDF', icon: PlusCircle, to: '/new', adminOnly: false },
     { label: 'Explorador Global', icon: Search, to: '/global', adminOnly: false },
     { label: 'Usuarios', icon: Users, to: '/users', adminOnly: true },

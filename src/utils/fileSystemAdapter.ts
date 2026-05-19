@@ -194,6 +194,7 @@ interface DBState {
     snippets: any[];
     reminders: any[];
     boards: any[];
+    eisenhowerTasks?: any[];
 }
 
 const dateIso = new Date().toISOString();
@@ -246,7 +247,8 @@ const DEFAULT_DB: DBState = {
     clients: [],
     snippets: [],
     reminders: [],
-    boards: []
+    boards: [],
+    eisenhowerTasks: []
 };
 
 // ---------------------------------------------------------------------------
@@ -560,6 +562,7 @@ class FileSystemAdapter {
                     if (!this.state.snippets) this.state.snippets = [];
                     if (!this.state.reminders) this.state.reminders = [];
                     if (!this.state.boards) this.state.boards = [];
+                    if (!this.state.eisenhowerTasks) this.state.eisenhowerTasks = [];
 
                     console.log('FSA: Base de datos cargada desde IndexedDB (Modo Legacy).');
                     this.lastLoadTime = Date.now();
@@ -626,6 +629,7 @@ class FileSystemAdapter {
             if (!this.state.snippets) this.state.snippets = [];
             if (!this.state.reminders) this.state.reminders = [];
             if (!this.state.boards) this.state.boards = [];
+            if (!this.state.eisenhowerTasks) this.state.eisenhowerTasks = [];
 
             // Run migrations
             let migrationModified = false;
