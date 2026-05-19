@@ -12,6 +12,12 @@ interface CanvasSidebarProps {
     setIsCollapsed: (collapsed: boolean) => void;
 }
 
+const getDefaultBoardName = () => {
+    const today = new Date();
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+    return today.toLocaleDateString('es-ES', options);
+};
+
 export default function CanvasSidebar({ 
     activeBoardId, 
     setActiveBoardId, 
@@ -26,8 +32,8 @@ export default function CanvasSidebar({
 
     const handleCreateBoard = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newBoardName.trim()) return;
-        const newId = await addBoard(newBoardName.trim());
+        const boardName = newBoardName.trim() || getDefaultBoardName();
+        const newId = await addBoard(boardName);
         if (newId) {
             setActiveBoardId(newId);
             setNewBoardName('');
@@ -176,7 +182,10 @@ export default function CanvasSidebar({
                             </form>
                         ) : (
                             <button
-                                onClick={() => setIsCreatingBoard(true)}
+                                onClick={() => {
+                                    setIsCreatingBoard(true);
+                                    setNewBoardName(getDefaultBoardName());
+                                }}
                                 className="w-full py-3.5 border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
                             >
                                 <Plus className="w-4 h-4" />
