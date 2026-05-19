@@ -15,7 +15,12 @@ const encryptData = (data: any) => {
 
 const decryptData = (ciphertext: string) => {
     try {
-        const bytes = CryptoJS.AES.decrypt(ciphertext, INTERNAL_SECRET);
+        let cleanText = ciphertext.trim();
+        // Sometimes JSON stringify or file copy might add quotes
+        if (cleanText.startsWith('"') && cleanText.endsWith('"')) {
+            cleanText = cleanText.slice(1, -1);
+        }
+        const bytes = CryptoJS.AES.decrypt(cleanText, INTERNAL_SECRET);
         const originalText = bytes.toString(CryptoJS.enc.Utf8);
         return JSON.parse(originalText);
     } catch (e) {
@@ -477,11 +482,11 @@ class FileSystemAdapter {
     /**
      * Called from the Login page reconnect button.
      * Requests folder permission (needs user gesture) and then restores the session.
-     * Returns true if session was successfully restored.
+     * Returns true if the folder was successfully accessed.
      */
     async requestPermissionAndRestore(): Promise<boolean> {
         const ready = await this.init(true);
-        return ready && !!this.activeSessionUser;
+        return ready;
     }
 
     /** Returns the email of the user whose session.json was found, if any. */
