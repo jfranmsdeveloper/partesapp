@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import type { Parte } from '../../types';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
 import type { ActuacionType } from '../../types';
+import DOMPurify from 'dompurify';
 import { Button } from '../ui/Button';
 
 function statusBadgeClass(status: Parte['status']) {
@@ -110,8 +111,13 @@ export function CalendarPartePreviewModal({ parte, onClose, onOpenParte }: Calen
                                                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{a.type}</span>
                                                         <span className="text-[10px] font-black text-slate-400 shrink-0">{a.duration}m</span>
                                                     </div>
-                                                    {a.notes && (
-                                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-3">{a.notes}</p>
+                                                    {a.notes && a.notes.replace(/<[^>]*>/g, '').trim() && (
+                                                        <div
+                                                            className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-3 prose prose-sm dark:prose-invert max-w-none break-words [&_p]:my-0 [&_p]:leading-snug"
+                                                            dangerouslySetInnerHTML={{
+                                                                __html: DOMPurify.sanitize(a.notes),
+                                                            }}
+                                                        />
                                                     )}
                                                     <p className="text-[10px] text-slate-400 mt-1">{a.user}</p>
                                                 </div>
@@ -150,28 +156,21 @@ export function parteStatusDotClass(status: Parte['status']): string {
     }
 }
 
-/** Punto de calendario con efecto cristal / glow según estado del parte. */
-export function parteStatusDotGlassClass(status: Parte['status']): string {
+/** Tinte interior del punto (sin halo de color externo). */
+export function parteStatusDotTintClass(status: Parte['status']): string {
     switch (status) {
         case 'ABIERTO':
-            return clsx(
-                'bg-gradient-to-br from-amber-200/90 via-amber-500 to-amber-700',
-                'shadow-[0_0_8px_rgba(251,191,36,0.85),0_2px_4px_rgba(180,83,9,0.25),inset_0_1px_0_rgba(255,255,255,0.55)]',
-                'hover:shadow-[0_0_12px_rgba(251,191,36,1),0_2px_6px_rgba(180,83,9,0.35),inset_0_1px_0_rgba(255,255,255,0.65)]'
-            );
+            return 'from-amber-400/50 via-amber-300/20 to-amber-600/35';
         case 'EN TRÁMITE':
-            return clsx(
-                'bg-gradient-to-br from-sky-200/90 via-blue-500 to-blue-700',
-                'shadow-[0_0_8px_rgba(59,130,246,0.85),0_2px_4px_rgba(29,78,216,0.25),inset_0_1px_0_rgba(255,255,255,0.55)]',
-                'hover:shadow-[0_0_12px_rgba(59,130,246,1),0_2px_6px_rgba(29,78,216,0.35),inset_0_1px_0_rgba(255,255,255,0.65)]'
-            );
+            return 'from-blue-400/50 via-sky-300/20 to-blue-600/35';
         case 'CERRADO':
-            return clsx(
-                'bg-gradient-to-br from-emerald-200/90 via-emerald-500 to-emerald-800',
-                'shadow-[0_0_8px_rgba(16,185,129,0.85),0_2px_4px_rgba(6,95,70,0.25),inset_0_1px_0_rgba(255,255,255,0.55)]',
-                'hover:shadow-[0_0_12px_rgba(16,185,129,1),0_2px_6px_rgba(6,95,70,0.35),inset_0_1px_0_rgba(255,255,255,0.65)]'
-            );
+            return 'from-emerald-400/40 via-teal-300/15 to-emerald-600/28';
     }
+}
+
+/** @deprecated Usar tint + capas liquid en el botón del calendario */
+export function parteStatusDotGlassClass(status: Parte['status']): string {
+    return parteStatusDotTintClass(status);
 }
 
 export const CALENDAR_PARTE_DOTS_MAX = 12;
