@@ -10,9 +10,11 @@ interface DataItem {
 
 interface TrendChartProps {
     data: DataItem[];
+    /** Etiqueta del valor en tooltip (p. ej. "partes" en Analíticas) */
+    valueLabel?: string;
 }
 
-export const TrendChart = ({ data }: TrendChartProps) => {
+export const TrendChart = ({ data, valueLabel = 'Actuaciones' }: TrendChartProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -24,7 +26,8 @@ export const TrendChart = ({ data }: TrendChartProps) => {
                         {format(new Date(label), "d MMM yyyy", { locale: es })}
                     </p>
                     <p className="text-orange-600 dark:text-orange-400 font-black">
-                        {payload[0].value} <span className="text-xs font-medium opacity-70 uppercase tracking-tighter ml-1">Actuaciones</span>
+                        {payload[0].value}{' '}
+                        <span className="text-xs font-medium opacity-70 uppercase tracking-tighter ml-1">{valueLabel}</span>
                     </p>
                 </div>
             );

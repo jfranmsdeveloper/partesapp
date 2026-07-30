@@ -8,14 +8,18 @@ interface DataItem {
 
 interface ActivityTypeChartProps {
     data: DataItem[];
+    /** Convierte el nombre del tipo para el eje Y (Analíticas usa etiquetas cortas) */
+    formatCategoryLabel?: (name: string) => string;
 }
 
-export const ActivityTypeChart = ({ data }: ActivityTypeChartProps) => {
+export const ActivityTypeChart = ({ data, formatCategoryLabel }: ActivityTypeChartProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
-    // Sort by count desc
-    const sortedData = [...data].sort((a, b) => b.count - a.count).slice(0, 7); // Top 7
+    const sortedData = [...data].sort((a, b) => b.count - a.count).slice(0, 7);
+    const chartData = formatCategoryLabel
+        ? sortedData.map(row => ({ ...row, displayName: formatCategoryLabel(row.name) }))
+        : sortedData.map(row => ({ ...row, displayName: row.name }));
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -35,7 +39,7 @@ export const ActivityTypeChart = ({ data }: ActivityTypeChartProps) => {
         <div className="w-full h-full min-h-0">
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                    data={sortedData}
+                    data={chartData}
                     layout="vertical"
                     margin={{ top: 0, right: 30, left: 20, bottom: 0 }}
                 >
@@ -48,7 +52,7 @@ export const ActivityTypeChart = ({ data }: ActivityTypeChartProps) => {
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} opacity={0.2} />
                     <XAxis type="number" hide />
                     <YAxis
-                        dataKey="name"
+                        dataKey="displayName"
                         type="category"
                         width={120}
                         tick={{ fontSize: 10, fontWeight: 700, fill: isDark ? '#94a3b8' : '#64748b' }}

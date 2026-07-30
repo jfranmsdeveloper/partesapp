@@ -8,14 +8,15 @@ interface DataItem {
 
 interface TimePerClientChartProps {
     data: DataItem[];
+    formatValue?: (minutes: number) => string;
 }
 
-export const TimePerClientChart = ({ data }: TimePerClientChartProps) => {
+export const TimePerClientChart = ({ data, formatValue }: TimePerClientChartProps) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
-    // Sort by duration desc and take top 10
     const sortedData = [...data].sort((a, b) => b.duration - a.duration).slice(0, 10);
+    const formatDuration = formatValue ?? ((v: number) => `${v} minutos invertidos`);
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -23,7 +24,7 @@ export const TimePerClientChart = ({ data }: TimePerClientChartProps) => {
                 <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-4 border border-white/20 dark:border-white/10 shadow-2xl rounded-2xl text-sm">
                     <p className="font-bold text-slate-800 dark:text-slate-100 mb-1">{label}</p>
                     <p className="text-orange-500 font-black">
-                        {payload[0].value} <span className="text-xs font-medium opacity-70 uppercase tracking-tighter ml-1 text-slate-500">minutos invertidos</span>
+                        {formatDuration(payload[0].value)}
                     </p>
                 </div>
             );
