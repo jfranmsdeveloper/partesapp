@@ -150,6 +150,32 @@ export function parteStatusDotClass(status: Parte['status']): string {
     }
 }
 
+/** Punto de calendario con efecto cristal / glow según estado del parte. */
+export function parteStatusDotGlassClass(status: Parte['status']): string {
+    switch (status) {
+        case 'ABIERTO':
+            return clsx(
+                'bg-gradient-to-br from-amber-200/90 via-amber-500 to-amber-700',
+                'shadow-[0_0_8px_rgba(251,191,36,0.85),0_2px_4px_rgba(180,83,9,0.25),inset_0_1px_0_rgba(255,255,255,0.55)]',
+                'hover:shadow-[0_0_12px_rgba(251,191,36,1),0_2px_6px_rgba(180,83,9,0.35),inset_0_1px_0_rgba(255,255,255,0.65)]'
+            );
+        case 'EN TRÁMITE':
+            return clsx(
+                'bg-gradient-to-br from-sky-200/90 via-blue-500 to-blue-700',
+                'shadow-[0_0_8px_rgba(59,130,246,0.85),0_2px_4px_rgba(29,78,216,0.25),inset_0_1px_0_rgba(255,255,255,0.55)]',
+                'hover:shadow-[0_0_12px_rgba(59,130,246,1),0_2px_6px_rgba(29,78,216,0.35),inset_0_1px_0_rgba(255,255,255,0.65)]'
+            );
+        case 'CERRADO':
+            return clsx(
+                'bg-gradient-to-br from-emerald-200/90 via-emerald-500 to-emerald-800',
+                'shadow-[0_0_8px_rgba(16,185,129,0.85),0_2px_4px_rgba(6,95,70,0.25),inset_0_1px_0_rgba(255,255,255,0.55)]',
+                'hover:shadow-[0_0_12px_rgba(16,185,129,1),0_2px_6px_rgba(6,95,70,0.35),inset_0_1px_0_rgba(255,255,255,0.65)]'
+            );
+    }
+}
+
+export const CALENDAR_PARTE_DOTS_MAX = 12;
+
 export function parteTooltipLabel(parte: { title: string; clientName?: string }): string {
     return [parte.title, parte.clientName].filter(Boolean).join(' · ');
 }

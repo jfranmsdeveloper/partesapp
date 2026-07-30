@@ -15,7 +15,8 @@ import {
 import { ReminderModal } from '../../components/reminders/ReminderModal';
 import {
     CalendarPartePreviewModal,
-    parteStatusDotClass,
+    CALENDAR_PARTE_DOTS_MAX,
+    parteStatusDotGlassClass,
     parteTooltipLabel,
 } from '../../components/calendar/CalendarPartePreviewModal';
 import { useAppStore } from '../../store/useAppStore';
@@ -194,7 +195,7 @@ export default function CalendarPage() {
                                     key={idx}
                                     onClick={() => setSelectedDate(day)}
                                     className={clsx(
-                                        "relative min-h-0 h-full p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all duration-300 flex flex-col items-start justify-start group cursor-pointer border border-transparent",
+                                        "relative min-h-0 h-full min-w-0 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all duration-300 flex flex-col overflow-hidden group cursor-pointer border border-transparent",
                                         !isCurrentMonth ? "bg-slate-100/40 dark:bg-white/[0.02] opacity-70" : "bg-white/50 dark:bg-white/[0.03] hover:bg-white/70 dark:hover:bg-white/[0.06]",
                                         isSelected && "ring-2 ring-blue-400/50 bg-blue-50/60 dark:bg-blue-500/[0.08] border-blue-200/40 dark:border-blue-500/20 shadow-md shadow-blue-500/10"
                                     )}
@@ -223,7 +224,7 @@ export default function CalendarPage() {
                                         </button>
                                     </div>
 
-                                    <div className="w-full flex justify-between items-start mb-2 relative z-10">
+                                    <div className="w-full shrink-0 flex justify-between items-start mb-1 relative z-10">
                                         <span className={clsx(
                                             "text-xs font-black w-7 h-7 flex items-center justify-center rounded-lg transition-all",
                                             isTodayDay ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : 
@@ -233,15 +234,16 @@ export default function CalendarPage() {
                                         </span>
                                     </div>
 
-                                    {/* Partes: punto por estado */}
-                                    <div className="flex flex-wrap gap-1 w-full mt-auto content-end relative z-10 pt-1">
-                                        {dayPartes.map((p) => {
+                                    {/* Partes: puntos cristal (contenidos en la celda) */}
+                                    <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col justify-end overflow-hidden mt-auto">
+                                        <div className="flex flex-wrap gap-0.5 sm:gap-1 justify-start items-center w-full max-h-[2.5rem] sm:max-h-[3rem] overflow-hidden content-start px-0.5 pb-0.5 pt-0.5 relative z-10">
+                                        {dayPartes.slice(0, CALENDAR_PARTE_DOTS_MAX).map((p) => {
                                             const parte = partes.find((x) => x.id === p.parteId);
                                             const tooltip = parte
                                                 ? parteTooltipLabel(parte)
                                                 : p.title;
                                             return (
-                                                <div key={String(p.parteId)} className="relative group/dot">
+                                                <div key={String(p.parteId)} className="relative group/dot shrink-0">
                                                     <button
                                                         type="button"
                                                         title={tooltip}
@@ -251,10 +253,17 @@ export default function CalendarPage() {
                                                             setPreviewParteId(p.parteId);
                                                         }}
                                                         className={clsx(
-                                                            'w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white dark:focus:ring-offset-slate-900',
-                                                            parteStatusDotClass(p.status as ParteStatus)
+                                                            'relative block w-[7px] h-[7px] sm:w-2 sm:h-2 rounded-full shrink-0',
+                                                            'border border-white/70 dark:border-white/30 backdrop-blur-[2px]',
+                                                            'transition-all duration-200 hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+                                                            parteStatusDotGlassClass(p.status as ParteStatus)
                                                         )}
-                                                    />
+                                                    >
+                                                        <span
+                                                            className="absolute left-[22%] top-[18%] w-[45%] h-[35%] rounded-full bg-white/50 blur-[0.3px] pointer-events-none"
+                                                            aria-hidden
+                                                        />
+                                                    </button>
                                                     <div
                                                         role="tooltip"
                                                         className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/95 text-white text-[10px] font-medium leading-snug max-w-[11rem] text-center opacity-0 group-hover/dot:opacity-100 transition-opacity z-[60] shadow-lg line-clamp-4 hidden sm:block"
@@ -264,16 +273,28 @@ export default function CalendarPage() {
                                                 </div>
                                             );
                                         })}
+                                        {dayPartes.length > CALENDAR_PARTE_DOTS_MAX && (
+                                            <span
+                                                className="text-[8px] sm:text-[9px] font-black text-slate-500 dark:text-slate-400 leading-none shrink-0 tabular-nums"
+                                                title={`${dayPartes.length - CALENDAR_PARTE_DOTS_MAX} partes más este día`}
+                                            >
+                                                +{dayPartes.length - CALENDAR_PARTE_DOTS_MAX}
+                                            </span>
+                                        )}
                                         {dayItems.filter((i) => i.type === 'REMINDER').map((r, i) => (
-                                            <div
+                                            <span
                                                 key={`rem-${i}`}
                                                 className={clsx(
-                                                    'w-1.5 h-1.5 rounded-full ring-1 ring-white/60',
-                                                    r.completed ? 'bg-slate-300 dark:bg-slate-600' : 'bg-orange-500'
+                                                    'relative block w-[6px] h-[6px] sm:w-1.5 sm:h-1.5 rounded-full shrink-0 border border-white/60',
+                                                    'backdrop-blur-[2px]',
+                                                    r.completed
+                                                        ? 'bg-gradient-to-br from-slate-200 to-slate-400 shadow-[0_0_4px_rgba(148,163,184,0.5)]'
+                                                        : 'bg-gradient-to-br from-orange-200 via-orange-500 to-orange-600 shadow-[0_0_8px_rgba(249,115,22,0.85),inset_0_1px_0_rgba(255,255,255,0.5)]'
                                                 )}
                                                 title={r.text}
                                             />
                                         ))}
+                                        </div>
                                     </div>
 
                                     {isSelected && (
