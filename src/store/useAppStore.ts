@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../utils/supabase';
-import type { Parte, Actuacion, ParteStatus, Client, User, Snippet, Reminder, CanvasBoard, EisenhowerTask } from '../types';
+import type { Parte, Actuacion, ParteStatus, Client, User, Snippet, Reminder } from '../types';
 
 interface AppState {
     // UI State
@@ -29,8 +29,6 @@ interface AppState {
     clients: Client[];
     users: User[];
     snippets: Snippet[];
-    boards: CanvasBoard[];
-    eisenhowerTasks: EisenhowerTask[];
 
     // Data Actions
     fetchData: () => Promise<void>;
@@ -61,16 +59,8 @@ interface AppState {
     updateUserProfile: (email: string, data: Partial<User>) => Promise<void>;
     updateQuickButtons: (buttons: string[]) => Promise<void>;
 
-    // Canvas Actions
-    addBoard: (name: string) => Promise<string | null>;
-    updateBoardState: (id: string, nodes: any[], edges: any[]) => Promise<void>;
-    deleteBoard: (id: string) => Promise<void>;
     changePassword: (email: string, oldPass: string, newPass: string) => Promise<boolean>;
 
-    // Eisenhower Actions
-    addEisenhowerTask: (text: string, quadrant: 'q1' | 'q2' | 'q3' | 'q4') => Promise<void>;
-    updateEisenhowerTask: (id: string, data: Partial<EisenhowerTask>) => Promise<void>;
-    deleteEisenhowerTask: (id: string) => Promise<void>;
     uploadAvatar: (file: File) => Promise<string | null>;
     updateUserRole: (userId: string, role: string) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
@@ -110,8 +100,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     clients: [],
     users: [],
     snippets: [],
-    boards: [],
-    eisenhowerTasks: [],
 
     checkSession: async () => {
         try {
@@ -273,14 +261,6 @@ export const useAppStore = create<AppState>((set, get) => ({
             // 3.6. Fetch Reminders
             const { data: remindersData } = await supabase.from('reminders').select('*');
             set({ reminders: remindersData || [] });
-
-            // 3.7. Fetch Canvas Boards
-            const { data: boardsData } = await supabase.from('boards').select('*');
-            set({ boards: boardsData || [] });
-
-            // 3.8. Fetch Eisenhower Tasks
-            const { data: eisenhowerTasksData } = await supabase.from('eisenhowerTasks').select('*');
-            set({ eisenhowerTasks: eisenhowerTasksData || [] });
 
             // 4. Fetch Users (for avatars and roles)
             const { data: usersData } = await supabase.from('users').select('*');
@@ -840,117 +820,4 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
         return success;
     },
-
-    addBoard: async (name: string) => {
-        const { currentUser } = get();
-        if (!currentUser) return null;
-
-        const newBoard = {
-            id: `board-${Date.now()}`,
-            name,
-            userId: currentUser.id || currentUser.email,
-            createdAt: new Date().toISOString(),
-            nodes: [],
-            edges: []
-        };
-
-        const { error } = await supabase.from('boards').insert(newBoard);
-        if (error) {
-            console.error('Error creating board:', error);
-            return null;
-        }
-
-        await get().fetchData();
-        return newBoard.id;
-    },
-
-    updateBoardState: async (id: string, nodes: any[], edges: any[]) => {
-        // Clean nodes/edges to prevent saving React Flow internal states that might contain functions
-        const cleanNodes = nodes.map(n => ({
-            id: n.id,
-            type: n.type,
-            position: n.position,
-            data: n.data,
-            width: n.width,
-            height: n.height
-        }));
-
-        const cleanEdges = edges.map(e => ({
-            id: e.id,
-            source: e.source,
-            target: e.target,
-            type: e.type,
-            animated: e.animated
-        }));
-
-        const { error } = await supabase
-            .from('boards')
-            .update({ nodes: cleanNodes, edges: cleanEdges })
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error saving board state:', error);
-        } else {
-            // Update local state directly to be responsive
-            set(state => ({
-                boards: state.boards.map(b => b.id === id ? { ...b, nodes: cleanNodes, edges: cleanEdges } : b)
-            }));
-        }
-    },
-
-    deleteBoard: async (id: string) => {
-        const { error } = await supabase.from('boards').delete().eq('id', id);
-        if (error) {
-            console.error('Error deleting board:', error);
-            alert(`Error al eliminar pizarra: ${error.message}`);
-        } else {
-            await get().fetchData();
-        }
-    },
-
-    addEisenhowerTask: async (text: string, quadrant: 'q1' | 'q2' | 'q3' | 'q4') => {
-        const { currentUser } = get();
-        if (!currentUser) return;
-
-        const newTask: EisenhowerTask = {
-            id: crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}`,
-            text,
-            quadrant,
-            completed: false,
-            userId: currentUser.id || '',
-            createdAt: new Date().toISOString()
-        };
-
-        const { error } = await supabase.from('eisenhowerTasks').insert(newTask);
-        if (error) {
-            console.error('Error adding Eisenhower task:', error);
-        } else {
-            set(state => ({
-                eisenhowerTasks: [...state.eisenhowerTasks, newTask]
-            }));
-        }
-    },
-
-    updateEisenhowerTask: async (id: string, data: Partial<EisenhowerTask>) => {
-        const { error } = await supabase.from('eisenhowerTasks').update(data).eq('id', id);
-        if (error) {
-            console.error('Error updating Eisenhower task:', error);
-        } else {
-            set(state => ({
-                eisenhowerTasks: state.eisenhowerTasks.map(t => t.id === id ? { ...t, ...data } : t)
-            }));
-        }
-    },
-
-    deleteEisenhowerTask: async (id: string) => {
-        const { error } = await supabase.from('eisenhowerTasks').delete().eq('id', id);
-        if (error) {
-            console.error('Error deleting Eisenhower task:', error);
-        } else {
-            set(state => ({
-                eisenhowerTasks: state.eisenhowerTasks.filter(t => t.id !== id)
-            }));
-        }
-    }
 }));
-

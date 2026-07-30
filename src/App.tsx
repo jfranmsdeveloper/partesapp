@@ -10,8 +10,6 @@ import Profile from './pages/Profile';
 import UsersPage from './pages/Users';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
-import CanvasPage from './pages/Canvas';
-import EisenhowerPage from './pages/Eisenhower';
 
 import { useAppStore } from './store/useAppStore';
 import { useToast } from './components/ui/Toast';
@@ -28,7 +26,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  const { checkSession, reminders, updateReminder, boards, updateBoardState } = useAppStore();
+  const { checkSession, reminders, updateReminder } = useAppStore();
   const toast = useToast();
 
   useEffect(() => {
@@ -40,7 +38,6 @@ function App() {
     const checkReminders = () => {
       const now = new Date();
 
-      // 1. Check Standard Reminders
       if (reminders.length > 0) {
         reminders.forEach(reminder => {
           if (reminder.completed || reminder.notified) return;
@@ -57,43 +54,6 @@ function App() {
           }
         });
       }
-
-      // 2. Check Board Note Reminders
-      if (boards.length > 0) {
-        boards.forEach(board => {
-          let boardChanged = false;
-          const updatedNodes = (board.nodes || []).map(node => {
-            if (node.type === 'note') {
-              const ndata = node.data as any;
-              if (ndata?.reminderAt) {
-                const notified = ndata.reminderNotified;
-                if (!notified) {
-                  const dueDate = parseISO(ndata.reminderAt);
-                  if (isPast(dueDate) || isWithinInterval(now, {
-                      start: subMinutes(dueDate, 1),
-                      end: addMinutes(dueDate, 1)
-                  })) {
-                    toast.warn(`Nota: ${ndata.title || 'Recordatorio de pizarra'}`);
-                    boardChanged = true;
-                    return {
-                      ...node,
-                      data: {
-                        ...ndata,
-                        reminderNotified: true
-                      }
-                    };
-                  }
-                }
-              }
-            }
-            return node;
-          });
-
-          if (boardChanged) {
-            updateBoardState(board.id, updatedNodes, board.edges || []);
-          }
-        });
-      }
     };
 
     // Immediate check
@@ -101,7 +61,7 @@ function App() {
 
     const interval = setInterval(checkReminders, 10000); // Check every 10s
     return () => clearInterval(interval);
-  }, [reminders, boards, toast, updateReminder, updateBoardState]);
+  }, [reminders, toast, updateReminder]);
 
   return (
     <BrowserRouter>
@@ -114,8 +74,6 @@ function App() {
           <Route path="/global" element={<GlobalSearch />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/calendar" element={<Calendar />} />
-          <Route path="/canvas" element={<CanvasPage />} />
-          <Route path="/eisenhower" element={<EisenhowerPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/parte/:id" element={<Registration />} />

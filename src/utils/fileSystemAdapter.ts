@@ -193,8 +193,6 @@ interface DBState {
     clients: any[];
     snippets: any[];
     reminders: any[];
-    boards: any[];
-    eisenhowerTasks?: any[];
 }
 
 const dateIso = new Date().toISOString();
@@ -246,9 +244,7 @@ const DEFAULT_DB: DBState = {
     actuaciones: [],
     clients: [],
     snippets: [],
-    reminders: [],
-    boards: [],
-    eisenhowerTasks: []
+    reminders: []
 };
 
 // ---------------------------------------------------------------------------
@@ -561,8 +557,6 @@ class FileSystemAdapter {
                     if (!this.state.clients) this.state.clients = [];
                     if (!this.state.snippets) this.state.snippets = [];
                     if (!this.state.reminders) this.state.reminders = [];
-                    if (!this.state.boards) this.state.boards = [];
-                    if (!this.state.eisenhowerTasks) this.state.eisenhowerTasks = [];
 
                     console.log('FSA: Base de datos cargada desde IndexedDB (Modo Legacy).');
                     this.lastLoadTime = Date.now();
@@ -628,8 +622,6 @@ class FileSystemAdapter {
             if (!this.state.clients) this.state.clients = [];
             if (!this.state.snippets) this.state.snippets = [];
             if (!this.state.reminders) this.state.reminders = [];
-            if (!this.state.boards) this.state.boards = [];
-            if (!this.state.eisenhowerTasks) this.state.eisenhowerTasks = [];
 
             // Run migrations
             let migrationModified = false;
@@ -1021,7 +1013,7 @@ class FileSystemAdapter {
                     // But usually they are fetched per parte. For a global list:
                     const myPartes = this.state.partes.filter((p: any) => String(p.user_id) === String(uid)).map(p => String(p.id));
                     results = results.filter((a: any) => myPartes.includes(String(a.parte_id)));
-                } else if (['snippets', 'reminders', 'boards'].includes(table)) {
+                } else if (['snippets', 'reminders'].includes(table)) {
                     results = results.filter((item: any) => String(item.userId || item.user_id) === String(uid));
                 }
             }
