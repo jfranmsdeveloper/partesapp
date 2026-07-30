@@ -278,7 +278,11 @@ class FileSystemAdapter {
     //   promptUserIfNeeded = true  → show directory picker if not stored yet
     //   promptUserIfNeeded = false → silent check only (used by checkSession)
     // -----------------------------------------------------------------------
-    async init(promptUserIfNeeded = false): Promise<boolean> {
+    /**
+     * @param activateStoredSession If false, a valid session.json only sets pending user (email shown);
+     *        activeSessionUser is set after password confirmation (reconnect / sign-in).
+     */
+    async init(promptUserIfNeeded = false, activateStoredSession = true): Promise<boolean> {
         const hasDirectoryPicker = 'showDirectoryPicker' in window;
         const hasFilePicker = 'showOpenFilePicker' in window;
 
@@ -370,7 +374,7 @@ class FileSystemAdapter {
                 this.hasPendingHandle = false;
                 await this.loadDatabase();
                 this.isInitialized = true;
-                await this.restoreSessionFromFile();
+                await this.restoreSessionFromFile(activateStoredSession);
                 return true;
             }
 
@@ -442,7 +446,7 @@ class FileSystemAdapter {
      * After the folder is successfully opened, scan all user folders for a valid session.
      * This replaces the old localStorage-based restore.
      */
-    private async restoreSessionFromFile(): Promise<void> {
+    private async restoreSessionFromFile(activate = true): Promise<void> {
         if (!this.handle || !this.state.users) return;
 
         console.log('FSA: Intentando restaurar sesión desde archivos...');
@@ -466,9 +470,14 @@ class FileSystemAdapter {
                 // Validate against DB
                 const dbUser = this.state.users.find(u => String(u.id) === String(sid));
                 if (dbUser) {
-                    this.activeSessionUser = dbUser;
                     this.pendingUsername = uname;
-                    console.log(`FSA: Sesión restaurada con éxito para ${dbUser.email}`);
+                    if (activate) {
+                        this.activeSessionUser = dbUser;
+                        console.log(`FSA: Sesión restaurada con éxito para ${dbUser.email}`);
+                    } else {
+                        this.activeSessionUser = null;
+                        console.log(`FSA: Sesión pendiente (requiere contraseña) para ${dbUser.email}`);
+                    }
                     return;
                 }
             }
@@ -485,8 +494,44 @@ class FileSystemAdapter {
      * Returns true if the folder was successfully accessed.
      */
     async requestPermissionAndRestore(): Promise<boolean> {
-        const ready = await this.init(true);
-        return ready;
+        return this.init(true, false);
+    }
+
+    /** Folder connected and session.json found, but user must enter password. */
+    get requiresReconnectPassword(): boolean {
+        return this.isInitialized && !!this.pendingUsername && !this.activeSessionUser;
+    }
+
+    /** Confirm identity after reconnecting folder access (does not re-prompt for folder). */
+    async confirmReconnectPassword(password: string): Promise<{ error: { message: string } | null }> {
+        if (!this.isInitialized) {
+            return { error: { message: 'Conecta primero tu carpeta de datos.' } };
+        }
+        if (!this.pendingUsername) {
+            return { error: { message: 'No hay una sesión guardada que confirmar.' } };
+        }
+
+        const dbUser = this.state.users.find(u => userFolderName(u.email) === this.pendingUsername);
+        if (!dbUser) {
+            return { error: { message: 'Usuario de sesión no encontrado en la base de datos.' } };
+        }
+
+        const inputHash = hashPassword(password);
+        if (dbUser.password !== inputHash && dbUser.password !== password) {
+            return { error: { message: 'Contraseña incorrecta.' } };
+        }
+
+        const now = Date.now();
+        const expiresAt = now + 24 * 60 * 60 * 1000;
+        await this.writeSessionFile(this.pendingUsername, {
+            userId: dbUser.id,
+            email: dbUser.email,
+            expiresAt,
+        });
+
+        this.activeSessionUser = dbUser;
+        console.log('FSA: Sesión confirmada con contraseña tras reconexión.');
+        return { error: null };
     }
 
     /** Returns the email of the user whose session.json was found, if any. */
@@ -1112,10 +1157,12 @@ class FileSystemAdapter {
 
             // ALWAYS force folder selection on login as requested by user
             console.log('FSA: Forzando selección de carpeta en login...');
-            const ready = await this.init(true);
+            const ready = await this.init(true, false);
             if (!ready) {
                 return { data: { user: null }, error: { message: 'Es obligatorio seleccionar la carpeta de datos para entrar.' } };
             }
+
+            this.activeSessionUser = null;
 
             const inputHash = hashPassword(password);
             

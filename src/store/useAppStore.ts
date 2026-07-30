@@ -22,6 +22,7 @@ interface AppState {
     registerUser: (user: User) => Promise<boolean>;
     logoutUser: () => Promise<void>;
     reconnectSession: () => Promise<boolean>;
+    confirmReconnectPassword: (password: string) => Promise<boolean>;
 
     // Data State
     partes: Parte[];
@@ -195,12 +196,45 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
 
     reconnectSession: async () => {
-        // Called from the Login page reconnect button (requires user gesture)
         const ok = await (supabase as any).requestPermissionAndRestore();
         if (ok) {
-            await get().checkSession();
+            set({
+                hasPendingHandle: false,
+                isSingleFileMode: (supabase as any).isSingleFileMode || false,
+                isLegacyMode: (supabase as any).isLegacyMode || false,
+            });
         }
         return ok;
+    },
+
+    confirmReconnectPassword: async (password) => {
+        set({ isLoading: true, error: null });
+        const { error } = await (supabase as any).confirmReconnectPassword(password);
+        if (error) {
+            set({ isLoading: false, error: error.message });
+            return false;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            set({
+                currentUser: {
+                    id: session.user.id,
+                    email: session.user.email!,
+                    name: session.user.user_metadata?.full_name || session.user.name || '',
+                    password: '',
+                    role: session.user.role || session.user.user_metadata?.role || 'user',
+                    quickButtons: session.user.quickButtons || [],
+                },
+                isLoading: false,
+                error: null,
+            });
+            await get().fetchData();
+            return true;
+        }
+
+        set({ isLoading: false, error: 'No se pudo establecer la sesión.' });
+        return false;
     },
 
     fetchData: async () => {

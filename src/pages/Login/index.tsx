@@ -10,7 +10,7 @@ import logo from '../../assets/logo.png';
 export default function Login() {
     const navigate = useNavigate();
     const { 
-        loginUser, reconnectSession, hasPendingHandle, 
+        loginUser, reconnectSession, confirmReconnectPassword, hasPendingHandle, 
         error: storeError, isLegacyMode, importDatabase 
     } = useAppStore();
 
@@ -20,6 +20,8 @@ export default function Login() {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [isReconnecting, setIsReconnecting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    /** Carpeta ya autorizada; falta contraseña para completar la sesión. */
+    const [needsPasswordConfirm, setNeedsPasswordConfirm] = useState(false);
 
     // Email of user whose session.json was found (shown in reconnect banner)
     const pendingEmail = (supabase as any).pendingSessionEmail as string | null;
@@ -32,7 +34,7 @@ export default function Login() {
         const success = await loginUser(email, password);
 
         if (success) {
-            navigate('/dashboard');
+            navigate('/');
         }
 
         setIsLoggingIn(false);
@@ -50,18 +52,36 @@ export default function Login() {
         const ok = await reconnectSession();
 
         if (ok) {
-            // Check if we actually have a session now
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                navigate('/dashboard');
+            const requiresPassword = (supabase as any).requiresReconnectPassword as boolean;
+            const pending = (supabase as any).pendingSessionEmail as string | null;
+
+            if (requiresPassword && pending) {
+                setEmail(pending);
+                setPassword('');
+                setNeedsPasswordConfirm(true);
+            } else if ((supabase as any).requiresReconnectPassword) {
+                setNeedsPasswordConfirm(true);
             } else {
-                setLocalSuccess('Carpeta conectada correctamente. Ya puedes introducir tus credenciales.');
+                setLocalSuccess('Carpeta conectada. Inicia sesión con tu correo y contraseña.');
             }
         } else {
             setLocalError('No se pudo acceder a la carpeta seleccionada.');
         }
 
         setIsReconnecting(false);
+    };
+
+    const handleConfirmReconnectPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLocalError('');
+        setIsLoggingIn(true);
+
+        const success = await confirmReconnectPassword(password);
+        if (success) {
+            navigate('/');
+        }
+
+        setIsLoggingIn(false);
     };
 
     const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,7 +96,7 @@ export default function Login() {
             // If the user already exists in the file and we restored a session, 
             // the store might have set currentUser already.
             setTimeout(() => {
-                navigate('/dashboard');
+                navigate('/');
             }, 500);
         } else {
             setLocalError('El archivo seleccionado no es un database.json válido.');
@@ -132,7 +152,7 @@ export default function Login() {
 
                 {/* Reconnect banner — shown when the handle is stored in IndexedDB but the browser
                     needs a user gesture to re-grant access (e.g. after a browser restart). */}
-                {hasPendingHandle && !displayError && (
+                {hasPendingHandle && !needsPasswordConfirm && !displayError && (
                     <div className="mb-6 space-y-3 animate-fade-in">
                         <div className="bg-orange-50/80 backdrop-blur-sm p-4 rounded-xl border border-orange-200 shadow-sm text-center">
                             <p className="text-slate-700 text-sm font-medium mb-1">
@@ -141,7 +161,7 @@ export default function Login() {
                                     : 'Sesión guardada detectada'}
                             </p>
                             <p className="text-xs text-orange-600">
-                                El navegador necesita que confirmes el acceso a tu carpeta de datos.
+                                Primero confirma el acceso a tu carpeta; después te pediremos la contraseña.
                             </p>
                         </div>
                         <Button
@@ -163,8 +183,49 @@ export default function Login() {
                     </div>
                 )}
 
-                {/* Standard login form — always shown when no pending handle */}
-                {!hasPendingHandle && (
+                {needsPasswordConfirm && (
+                    <form onSubmit={handleConfirmReconnectPassword} className="space-y-5 animate-fade-in">
+                        <div className="bg-green-50/80 backdrop-blur-sm p-4 rounded-xl border border-green-200 text-center mb-2">
+                            <p className="text-slate-700 text-sm font-medium">Carpeta conectada</p>
+                            <p className="text-xs text-green-700 mt-1">
+                                Introduce tu contraseña para completar la sesión
+                                {email ? ` (${email})` : ''}.
+                            </p>
+                        </div>
+                        <Input
+                            label="Contraseña"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            autoFocus
+                            className="bg-white/50 border-orange-200 focus:border-orange-500 focus:ring-orange-500/20"
+                        />
+                        <Button
+                            type="submit"
+                            disabled={isLoggingIn}
+                            className="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/30 border-none rounded-xl disabled:opacity-60"
+                        >
+                            {isLoggingIn ? 'Verificando...' : 'Entrar'}
+                        </Button>
+                        <div className="text-center">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setNeedsPasswordConfirm(false);
+                                    setPassword('');
+                                    useAppStore.setState({ error: null });
+                                }}
+                                className="text-xs text-slate-400 hover:text-slate-600 underline"
+                            >
+                                Volver al inicio de sesión
+                            </button>
+                        </div>
+                    </form>
+                )}
+
+                {/* Standard login form */}
+                {!hasPendingHandle && !needsPasswordConfirm && (
                     <form onSubmit={handleLogin} className="space-y-5 animate-fade-in">
                         <div className="space-y-1">
                             <Input
@@ -245,7 +306,7 @@ export default function Login() {
                     </form>
                 )}
 
-                {!hasPendingHandle && (
+                {!hasPendingHandle && !needsPasswordConfirm && (
                     <div className="mt-8 text-center text-sm text-slate-600 flex flex-col items-center gap-2">
                         <button 
                             type="button"
