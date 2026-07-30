@@ -1,0 +1,21 @@
+{
+  "name": "partes-app",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "prestart": "lsof -ti:5001,5173 | xargs kill -9 || true",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\" \"npm run start:electron\"",
+    "start:backend": "cd src/backend && npm start",
+    "start:frontend": "cd src/frontend && npm run dev",
+    "start:electron": "wait-on http://localhost:5173 && cross-env ELECTRON_START_URL=http://localhost:5173 electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "wait-on": "^7.2.0"
+  }
+}
