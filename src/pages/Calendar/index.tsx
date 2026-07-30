@@ -1,23 +1,23 @@
 import { useState, useMemo } from 'react';
-import { useUserStore } from '../../hooks/useUserStore';
 import { useNavigate } from 'react-router-dom';
-import { Card } from '../../components/ui/Card';
 import { 
     ChevronLeft, 
     ChevronRight, 
     Calendar as CalendarIcon, 
     Clock, 
     User,
-    ArrowRight,
-    FileText,
     Plus,
     Bell,
     Trash2,
     CheckCircle2,
-    CheckCircle,
     Link2
 } from 'lucide-react';
 import { ReminderModal } from '../../components/reminders/ReminderModal';
+import {
+    CalendarPartePreviewModal,
+    parteStatusDotClass,
+    parteTooltipLabel,
+} from '../../components/calendar/CalendarPartePreviewModal';
 import { useAppStore } from '../../store/useAppStore';
 import { 
     format, 
@@ -36,12 +36,13 @@ import {
 import { es } from 'date-fns/locale';
 import clsx from 'clsx';
 import { ACTUACION_CONFIG } from '../../utils/actuacionConfig';
-import type { ActuacionType } from '../../types';
+import type { ActuacionType, ParteStatus } from '../../types';
 
 export default function CalendarPage() {
     const navigate = useNavigate();
     const { partes, reminders, updateReminder, deleteReminder } = useAppStore();
     const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+    const [previewParteId, setPreviewParteId] = useState<number | string | null>(null);
     const [currentMonth, setCurrentMonth] = useState(() => {
         if (partes.length === 0) return new Date();
         const sorted = [...partes].sort((a, b) => {
@@ -124,6 +125,11 @@ export default function CalendarPage() {
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
     const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+    const previewParte = useMemo(
+        () => (previewParteId != null ? partes.find((p) => p.id === previewParteId) ?? null : null),
+        [partes, previewParteId]
+    );
 
     return (
         <div className="flex flex-col h-[calc(100dvh-6.5rem)] min-h-[32rem] max-h-[calc(100dvh-4rem)] gap-4 pb-4 fade-in">
@@ -227,31 +233,46 @@ export default function CalendarPage() {
                                         </span>
                                     </div>
 
-                                    {/* Partes as Text Pills */}
-                                    <div className="flex flex-col gap-1 w-full overflow-hidden">
-                                        {dayPartes.slice(0, 3).map((p, i) => (
-                                            <div 
-                                                key={i} 
+                                    {/* Partes: punto por estado */}
+                                    <div className="flex flex-wrap gap-1 w-full mt-auto content-end relative z-10 pt-1">
+                                        {dayPartes.map((p) => {
+                                            const parte = partes.find((x) => x.id === p.parteId);
+                                            const tooltip = parte
+                                                ? parteTooltipLabel(parte)
+                                                : p.title;
+                                            return (
+                                                <div key={String(p.parteId)} className="relative group/dot">
+                                                    <button
+                                                        type="button"
+                                                        title={tooltip}
+                                                        aria-label={tooltip}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setPreviewParteId(p.parteId);
+                                                        }}
+                                                        className={clsx(
+                                                            'w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white dark:focus:ring-offset-slate-900',
+                                                            parteStatusDotClass(p.status as ParteStatus)
+                                                        )}
+                                                    />
+                                                    <div
+                                                        role="tooltip"
+                                                        className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/95 text-white text-[10px] font-medium leading-snug max-w-[11rem] text-center opacity-0 group-hover/dot:opacity-100 transition-opacity z-[60] shadow-lg line-clamp-4 hidden sm:block"
+                                                    >
+                                                        {tooltip}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {dayItems.filter((i) => i.type === 'REMINDER').map((r, i) => (
+                                            <div
+                                                key={`rem-${i}`}
                                                 className={clsx(
-                                                    "px-2 py-1 rounded-md text-[9px] font-bold truncate border shadow-sm transition-transform hover:scale-[1.02]",
-                                                    p.status === 'ABIERTO' ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-100 dark:border-green-500/20' : 
-                                                    p.status === 'EN TRÁMITE' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-500/20' : 
-                                                    'bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-white/10'
+                                                    'w-1.5 h-1.5 rounded-full ring-1 ring-white/60',
+                                                    r.completed ? 'bg-slate-300 dark:bg-slate-600' : 'bg-orange-500'
                                                 )}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    navigate(`/parte/${p.parteId}`);
-                                                }}
-                                            >
-                                                {p.title}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* Reminders Indicators (Dots) */}
-                                    <div className="flex gap-1 mt-auto">
-                                        {dayItems.filter(i => i.type === 'REMINDER').map((r, i) => (
-                                            <div key={i} className={clsx("w-1.5 h-1.5 rounded-full", r.completed ? "bg-slate-300 dark:bg-slate-600" : "bg-orange-500")} />
+                                                title={r.text}
+                                            />
                                         ))}
                                     </div>
 
@@ -414,6 +435,15 @@ export default function CalendarPage() {
                 isOpen={isReminderModalOpen} 
                 onClose={() => setIsReminderModalOpen(false)} 
                 initialDate={format(selectedDate, 'yyyy-MM-dd')}
+            />
+
+            <CalendarPartePreviewModal
+                parte={previewParte}
+                onClose={() => setPreviewParteId(null)}
+                onOpenParte={(id) => {
+                    setPreviewParteId(null);
+                    navigate(`/parte/${id}`);
+                }}
             />
         </div>
     );
