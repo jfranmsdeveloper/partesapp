@@ -255,6 +255,42 @@ function userFolderName(email: string): string {
     return email.split('@')[0].replace(/[^a-z0-9_\-]/gi, '_');
 }
 
+const TAB_SESSION_KEY = 'partes-app-tab-session';
+
+type TabSession = { userId: string; email: string; expiresAt: number };
+
+function readTabSession(): TabSession | null {
+    try {
+        const raw = sessionStorage.getItem(TAB_SESSION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as TabSession;
+        if (parsed.expiresAt && parsed.expiresAt < Date.now()) {
+            sessionStorage.removeItem(TAB_SESSION_KEY);
+            return null;
+        }
+        if (!parsed.userId || !parsed.email) return null;
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function saveTabSession(user: { id: string; email: string }, expiresAt?: number) {
+    const exp = expiresAt ?? Date.now() + 24 * 60 * 60 * 1000;
+    sessionStorage.setItem(
+        TAB_SESSION_KEY,
+        JSON.stringify({ userId: user.id, email: user.email, expiresAt: exp })
+    );
+}
+
+function clearTabSession() {
+    try {
+        sessionStorage.removeItem(TAB_SESSION_KEY);
+    } catch {
+        /* ignore */
+    }
+}
+
 // ---------------------------------------------------------------------------
 // FileSystemAdapter — wraps the File System Access API as a Supabase-like client
 // ---------------------------------------------------------------------------
@@ -272,6 +308,59 @@ class FileSystemAdapter {
     private pendingUsername: string | null = null;
     private lastLoadTime: number = 0;
     private dbQueue: Promise<any> = Promise.resolve();
+
+    /** Re-grant read/write; may resolve without UI if access was granted before. */
+    private async resolveHandlePermission(
+        handle: FileSystemHandle,
+        promptUserIfNeeded: boolean
+    ): Promise<'granted' | 'denied' | 'pending'> {
+        try {
+            let perm = await (handle as any).queryPermission({ mode: 'readwrite' });
+            if (perm === 'granted') return 'granted';
+
+            perm = await (handle as any).requestPermission({ mode: 'readwrite' });
+            if (perm === 'granted') return 'granted';
+
+            return promptUserIfNeeded ? 'denied' : 'pending';
+        } catch {
+            return promptUserIfNeeded ? 'denied' : 'pending';
+        }
+    }
+
+    private applyPendingSessionHintFromTab(): void {
+        const tab = readTabSession();
+        if (tab?.email) {
+            this.pendingUsername = userFolderName(tab.email);
+        }
+    }
+
+    private async restoreSessionFromBrowserStorage(activate: boolean): Promise<void> {
+        if (!activate || this.activeSessionUser || !this.state.users?.length) return;
+
+        const tab = readTabSession();
+        if (!tab) return;
+
+        const dbUser = this.state.users.find((u) => String(u.id) === String(tab.userId));
+        if (!dbUser) {
+            clearTabSession();
+            return;
+        }
+
+        this.activeSessionUser = dbUser;
+        this.pendingUsername = userFolderName(dbUser.email);
+        console.log(`FSA: Sesión de pestaña restaurada para ${dbUser.email}`);
+    }
+
+    private async restoreStoredSession(activate: boolean): Promise<void> {
+        if (!activate) {
+            await this.restoreSessionFromFile(false);
+            return;
+        }
+        await this.restoreSessionFromFile(true);
+        if (!this.activeSessionUser) {
+            await this.restoreSessionFromBrowserStorage(true);
+        }
+    }
 
     // -----------------------------------------------------------------------
     // init — restore or acquire the root folder handle (or file handle in Safari)
@@ -294,8 +383,7 @@ class FileSystemAdapter {
             if (storedState) {
                 await this.loadDatabase();
                 this.isInitialized = true;
-                // Try to restore user from state if possible
-                // (Since we don't have session.json, we rely on the app store checking the session)
+                await this.restoreStoredSession(activateStoredSession);
                 return true;
             }
             return false;
@@ -307,35 +395,31 @@ class FileSystemAdapter {
 
             // 1. RE-GRANT PERMISSIONS if stored
             if (dirHandle) {
-                const permission = await (dirHandle as any).queryPermission({ mode: 'readwrite' });
-                if (permission !== 'granted') {
-                    if (promptUserIfNeeded) {
-                        try {
-                            const newPerm = await (dirHandle as any).requestPermission({ mode: 'readwrite' });
-                            if (newPerm !== 'granted') dirHandle = null;
-                        } catch { dirHandle = null; }
-                    } else {
-                        this.handle = dirHandle;
-                        this.hasPendingHandle = true;
-                        return false;
-                    }
+                const access = await this.resolveHandlePermission(dirHandle, promptUserIfNeeded);
+                if (access === 'granted') {
+                    // keep dirHandle
+                } else if (access === 'pending') {
+                    this.handle = dirHandle;
+                    this.applyPendingSessionHintFromTab();
+                    this.hasPendingHandle = true;
+                    return false;
+                } else {
+                    dirHandle = null;
                 }
             }
 
             if (!dirHandle && dbFileHandle) {
-                const permission = await (dbFileHandle as any).queryPermission({ mode: 'readwrite' });
-                if (permission !== 'granted') {
-                    if (promptUserIfNeeded) {
-                        try {
-                            const newPerm = await (dbFileHandle as any).requestPermission({ mode: 'readwrite' });
-                            if (newPerm !== 'granted') dbFileHandle = null;
-                        } catch { dbFileHandle = null; }
-                    } else {
-                        this.fileHandle = dbFileHandle;
-                        this.isSingleFileMode = true;
-                        this.hasPendingHandle = true;
-                        return false;
-                    }
+                const access = await this.resolveHandlePermission(dbFileHandle, promptUserIfNeeded);
+                if (access === 'granted') {
+                    // keep dbFileHandle
+                } else if (access === 'pending') {
+                    this.fileHandle = dbFileHandle;
+                    this.isSingleFileMode = true;
+                    this.applyPendingSessionHintFromTab();
+                    this.hasPendingHandle = true;
+                    return false;
+                } else {
+                    dbFileHandle = null;
                 }
             }
 
@@ -374,7 +458,7 @@ class FileSystemAdapter {
                 this.hasPendingHandle = false;
                 await this.loadDatabase();
                 this.isInitialized = true;
-                await this.restoreSessionFromFile(activateStoredSession);
+                await this.restoreStoredSession(activateStoredSession);
                 return true;
             }
 
@@ -385,8 +469,7 @@ class FileSystemAdapter {
                 this.hasPendingHandle = false;
                 await this.loadDatabase();
                 this.isInitialized = true;
-                // Session restoration is harder in single file mode without the session.json file,
-                // but we can at least try to see if activeSessionUser is in the state.
+                await this.restoreStoredSession(activateStoredSession);
                 return true;
             }
 
@@ -473,6 +556,7 @@ class FileSystemAdapter {
                     this.pendingUsername = uname;
                     if (activate) {
                         this.activeSessionUser = dbUser;
+                        saveTabSession(dbUser, session.expiresAt);
                         console.log(`FSA: Sesión restaurada con éxito para ${dbUser.email}`);
                     } else {
                         this.activeSessionUser = null;
@@ -530,6 +614,7 @@ class FileSystemAdapter {
         });
 
         this.activeSessionUser = dbUser;
+        saveTabSession(dbUser, expiresAt);
         console.log('FSA: Sesión confirmada con contraseña tras reconexión.');
         return { error: null };
     }
@@ -1185,6 +1270,7 @@ class FileSystemAdapter {
             await this.writeSessionFile(uname, { userId: user.id, email: user.email, expiresAt });
 
             this.activeSessionUser = user;
+            saveTabSession(user, expiresAt);
             console.log(`FSA: Login exitoso. Sesión guardada.`);
 
             return { data: { user }, error: null };
@@ -1221,6 +1307,7 @@ class FileSystemAdapter {
             this.isInitialized = false;
             this.hasPendingHandle = false;
             this.pendingUsername = null;
+            clearTabSession();
             // Reset state to default
             this.state = JSON.parse(JSON.stringify(DEFAULT_DB));
             
