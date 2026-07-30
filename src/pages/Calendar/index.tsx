@@ -126,49 +126,55 @@ export default function CalendarPage() {
     const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
     return (
-        <div className="w-full space-y-8 pb-20 fade-in">
-            {/* Header Section (Notion Style) */}
-            <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-4">
-                <div className="space-y-1">
-                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Calendario</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium tracking-tight">
-                        Gestiona tus actuaciones y partes desde una vista temporal.
+        <div className="flex flex-col h-[calc(100dvh-6.5rem)] min-h-[32rem] max-h-[calc(100dvh-4rem)] gap-4 pb-4 fade-in">
+            {/* Header compacto */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+                <div className="space-y-0.5">
+                    <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Calendario</h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Partes, actuaciones y recordatorios por día.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm">
-                    <button 
+                <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-950/30 backdrop-blur-xl p-1 rounded-2xl border border-white/40 dark:border-white/10 shadow-lg shadow-slate-900/5">
+                    <button
                         onClick={prevMonth}
-                        className="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all active:scale-95"
+                        className="p-2 rounded-xl hover:bg-white/80 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all active:scale-95"
+                        type="button"
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <div className="px-4 min-w-[140px] text-center">
+                    <div className="px-3 min-w-[9rem] text-center">
                         <h2 className="text-sm font-black capitalize text-slate-900 dark:text-white">
                             {format(currentMonth, 'MMMM yyyy', { locale: es })}
                         </h2>
                     </div>
-                    <button 
+                    <button
                         onClick={nextMonth}
-                        className="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all active:scale-95"
+                        className="p-2 rounded-xl hover:bg-white/80 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all active:scale-95"
+                        type="button"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            <div className="flex flex-col lg:grid lg:grid-cols-12 gap-0 border border-slate-200 dark:border-white/10 rounded-[2.5rem] overflow-hidden bg-white dark:bg-black shadow-2xl">
-                {/* Calendar Grid - Minimalist Notion Style */}
-                <div className="lg:col-span-8 p-1 md:p-4 bg-white dark:bg-black border-r border-slate-200 dark:border-white/10">
-                    <div className="grid grid-cols-7 border-b border-slate-100 dark:border-white/5">
+            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
+                {/* Rejilla mensual — panel flotante */}
+                <div className="lg:col-span-8 min-h-0 flex flex-col rounded-[2rem] bg-white/45 dark:bg-slate-950/35 backdrop-blur-3xl border border-white/35 dark:border-white/10 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.18)] overflow-hidden">
+                    <div className="grid grid-cols-7 shrink-0 border-b border-white/30 dark:border-white/5 bg-white/20 dark:bg-white/[0.02]">
                         {weekDays.map(day => (
-                            <div key={day} className="text-center py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                            <div key={day} className="text-center py-2.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                                 {day}
                             </div>
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-7 gap-[1px] bg-slate-100 dark:bg-white/10">
+                    <div className="flex-1 min-h-0 p-2 sm:p-3">
+                        <div
+                            className="grid grid-cols-7 gap-1.5 sm:gap-2 h-full min-h-[18rem]"
+                            style={{ gridTemplateRows: `repeat(${Math.ceil(calendarDays.length / 7)}, minmax(0, 1fr))` }}
+                        >
                         {calendarDays.map((day, idx) => {
                             const dayItems = calendarData.filter(item => isSameDay(item.date, day));
                             const dayPartes = dayItems.filter(i => i.type === 'PARTE');
@@ -182,9 +188,9 @@ export default function CalendarPage() {
                                     key={idx}
                                     onClick={() => setSelectedDate(day)}
                                     className={clsx(
-                                        "relative h-32 md:h-44 p-2 transition-all duration-300 flex flex-col items-start justify-start group cursor-pointer",
-                                        !isCurrentMonth ? "bg-slate-50/50 dark:bg-white/[0.02]" : "bg-white dark:bg-black",
-                                        isSelected && "bg-blue-50/50 dark:bg-blue-500/[0.05]"
+                                        "relative min-h-0 h-full p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all duration-300 flex flex-col items-start justify-start group cursor-pointer border border-transparent",
+                                        !isCurrentMonth ? "bg-slate-100/40 dark:bg-white/[0.02] opacity-70" : "bg-white/50 dark:bg-white/[0.03] hover:bg-white/70 dark:hover:bg-white/[0.06]",
+                                        isSelected && "ring-2 ring-blue-400/50 bg-blue-50/60 dark:bg-blue-500/[0.08] border-blue-200/40 dark:border-blue-500/20 shadow-md shadow-blue-500/10"
                                     )}
                                 >
                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20">
@@ -250,29 +256,31 @@ export default function CalendarPage() {
                                     </div>
 
                                     {isSelected && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
+                                        <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-blue-500" />
                                     )}
                                 </div>
                             );
                         })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Day Details Sidebar - Refined Agenda Style */}
-                <div className="lg:col-span-4 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col h-full max-h-[800px]">
-                    <div className="p-8 border-b border-slate-200 dark:border-white/10">
-                        <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400 mb-2">
+                {/* Agenda del día — panel flotante */}
+                <div className="lg:col-span-4 min-h-[16rem] lg:min-h-0 flex flex-col rounded-[2rem] bg-white/45 dark:bg-slate-950/35 backdrop-blur-3xl border border-white/35 dark:border-white/10 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.18)] overflow-hidden">
+                    <div className="p-5 sm:p-6 border-b border-white/30 dark:border-white/5 shrink-0 bg-white/15 dark:bg-white/[0.02]">
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
                              <Clock className="w-4 h-4" />
-                             <span className="text-[10px] font-black uppercase tracking-widest">Planificación Diaria</span>
+                             <span className="text-[10px] font-black uppercase tracking-widest">Agenda</span>
                         </div>
-                        <h3 className="text-3xl font-black text-slate-900 dark:text-white capitalize leading-tight">
+                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white capitalize leading-tight">
                             {format(selectedDate, "EEEE", { locale: es })}
-                            <br />
-                            <span className="text-slate-400 font-light">{format(selectedDate, "d 'de' MMMM", { locale: es })}</span>
+                            <span className="text-slate-400 font-light normal-case text-base sm:text-lg block sm:inline sm:ml-2">
+                                {format(selectedDate, "d 'de' MMMM", { locale: es })}
+                            </span>
                         </h3>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 no-scrollbar">
                         {selectedDayItems.length > 0 ? (
                             <div className="space-y-4">
                                 {selectedDayItems.map((item, idx) => {
@@ -384,14 +392,15 @@ export default function CalendarPage() {
                                 })}
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center p-12 text-center h-full">
-                                <div className="p-5 bg-slate-100 dark:bg-white/5 rounded-3xl mb-4 text-slate-300">
-                                    <Plus className="w-8 h-8 opacity-20" />
+                            <div className="flex flex-col items-center justify-center py-10 text-center h-full min-h-[12rem]">
+                                <div className="p-4 bg-white/50 dark:bg-white/5 rounded-2xl mb-3 text-slate-300 border border-white/30 dark:border-white/5">
+                                    <Plus className="w-7 h-7 opacity-30" />
                                 </div>
                                 <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">No hay actividades.</p>
                                 <button 
                                     onClick={() => navigate(`/new?date=${format(selectedDate, 'yyyy-MM-dd')}`)}
-                                    className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                                    className="mt-3 px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+                                    type="button"
                                 >
                                     Agendar Parte
                                 </button>
