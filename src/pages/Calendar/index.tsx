@@ -16,7 +16,7 @@ import { ReminderModal } from '../../components/reminders/ReminderModal';
 import {
     CalendarPartePreviewModal,
     CALENDAR_PARTE_DOTS_MAX,
-    parteStatusDotTintClass,
+    parteStatusDotSurfaceClass,
     parteTooltipLabel,
 } from '../../components/calendar/CalendarPartePreviewModal';
 import { useAppStore } from '../../store/useAppStore';
@@ -253,33 +253,14 @@ export default function CalendarPage() {
                                                             setPreviewParteId(p.parteId);
                                                         }}
                                                         className={clsx(
-                                                            'relative block w-[8px] h-[8px] sm:w-2.5 sm:h-2.5 rounded-full shrink-0 overflow-hidden',
-                                                            'border border-white/85 dark:border-white/35',
-                                                            'bg-white/25 dark:bg-white/10 backdrop-blur-md',
-                                                            'shadow-[0_2px_8px_rgba(15,23,42,0.09),inset_0_1px_1px_rgba(255,255,255,0.9)]',
-                                                            'dark:shadow-[0_2px_10px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]',
-                                                            'transition-all duration-200 ease-out',
-                                                            'hover:-translate-y-px hover:scale-110',
-                                                            'hover:shadow-[0_4px_12px_rgba(15,23,42,0.12),inset_0_1px_1px_rgba(255,255,255,1)]',
-                                                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent'
+                                                            'block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0',
+                                                            'ring-1 ring-white/60 dark:ring-white/25',
+                                                            'shadow-[0_1px_2px_rgba(15,23,42,0.2)]',
+                                                            'transition-transform duration-150 hover:scale-125',
+                                                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 focus-visible:ring-offset-1',
+                                                            parteStatusDotSurfaceClass(p.status as ParteStatus)
                                                         )}
-                                                    >
-                                                        <span
-                                                            className={clsx(
-                                                                'absolute inset-0 bg-gradient-to-br pointer-events-none',
-                                                                parteStatusDotTintClass(p.status as ParteStatus)
-                                                            )}
-                                                            aria-hidden
-                                                        />
-                                                        <span
-                                                            className="absolute inset-0 bg-gradient-to-b from-white/75 via-white/20 to-transparent pointer-events-none dark:from-white/30 dark:via-white/5"
-                                                            aria-hidden
-                                                        />
-                                                        <span
-                                                            className="absolute left-[18%] top-[10%] w-[44%] h-[36%] rounded-full bg-white/80 blur-[0.4px] pointer-events-none dark:bg-white/50"
-                                                            aria-hidden
-                                                        />
-                                                    </button>
+                                                    />
                                                     <div
                                                         role="tooltip"
                                                         className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/95 text-white text-[10px] font-medium leading-snug max-w-[11rem] text-center opacity-0 group-hover/dot:opacity-100 transition-opacity z-[60] shadow-lg line-clamp-4 hidden sm:block"
@@ -301,23 +282,13 @@ export default function CalendarPage() {
                                             <span
                                                 key={`rem-${i}`}
                                                 className={clsx(
-                                                    'relative block w-[7px] h-[7px] sm:w-2 sm:h-2 rounded-full shrink-0 overflow-hidden',
-                                                    'border border-white/85 dark:border-white/35 bg-white/25 backdrop-blur-md',
-                                                    'shadow-[0_2px_8px_rgba(15,23,42,0.09),inset_0_1px_1px_rgba(255,255,255,0.9)]'
+                                                    'block w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0 ring-1 ring-white/60 dark:ring-white/25 shadow-[0_1px_2px_rgba(15,23,42,0.2)]',
+                                                    r.completed
+                                                        ? 'bg-gradient-to-br from-slate-300 to-slate-500'
+                                                        : 'bg-gradient-to-br from-orange-400 to-orange-600'
                                                 )}
                                                 title={r.text}
-                                            >
-                                                {!r.completed && (
-                                                    <>
-                                                        <span className="absolute inset-0 bg-gradient-to-br from-orange-400/45 via-orange-300/15 to-orange-500/30 pointer-events-none" />
-                                                        <span className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/15 to-transparent pointer-events-none" />
-                                                    </>
-                                                )}
-                                                {r.completed && (
-                                                    <span className="absolute inset-0 bg-gradient-to-br from-slate-300/50 to-slate-500/35 pointer-events-none" />
-                                                )}
-                                                <span className="absolute left-[18%] top-[10%] w-[40%] h-[34%] rounded-full bg-white/75 blur-[0.3px] pointer-events-none" />
-                                            </span>
+                                            />
                                         ))}
                                         </div>
                                     </div>

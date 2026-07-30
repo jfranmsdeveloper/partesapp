@@ -156,21 +156,21 @@ export function parteStatusDotClass(status: Parte['status']): string {
     }
 }
 
-/** Tinte interior del punto (sin halo de color externo). */
-export function parteStatusDotTintClass(status: Parte['status']): string {
+/** Estilo del punto en calendario: color legible, anillo fino, sombra mínima (sin halo ni lavado blanco). */
+export function parteStatusDotSurfaceClass(status: Parte['status']): string {
     switch (status) {
         case 'ABIERTO':
-            return 'from-amber-400/50 via-amber-300/20 to-amber-600/35';
+            return 'bg-gradient-to-br from-amber-400 to-amber-600';
         case 'EN TRÁMITE':
-            return 'from-blue-400/50 via-sky-300/20 to-blue-600/35';
+            return 'bg-gradient-to-br from-blue-400 to-blue-600';
         case 'CERRADO':
-            return 'from-emerald-400/40 via-teal-300/15 to-emerald-600/28';
+            return 'bg-gradient-to-br from-emerald-400 to-emerald-600';
     }
 }
 
-/** @deprecated Usar tint + capas liquid en el botón del calendario */
-export function parteStatusDotGlassClass(status: Parte['status']): string {
-    return parteStatusDotTintClass(status);
+/** @deprecated */
+export function parteStatusDotTintClass(status: Parte['status']): string {
+    return parteStatusDotSurfaceClass(status);
 }
 
 export const CALENDAR_PARTE_DOTS_MAX = 12;
