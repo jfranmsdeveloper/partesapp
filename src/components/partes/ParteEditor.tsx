@@ -12,12 +12,10 @@ import { Card } from '../ui/Card';
 // import { Badge } from '../ui/Badge';
 import { ActuacionesList } from '../actuaciones/ActuacionesList';
 import { AddActuacionForm } from '../actuaciones/AddActuacionForm';
-import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files, Clock, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Save, Plus, Trash2, FileUp, Loader2, Eye, Printer, Copy, Check, FileWarning, Files } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ActuacionType } from '../../types';
 import { parsePartePDF } from '../../utils/pdfParser';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 import { toLocalISOString } from '../../utils/dateUtils';
 
@@ -26,7 +24,7 @@ export const ParteEditor = () => {
     const { id } = useParams();
     const isNew = !id;
 
-    const { partes, clients, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF, linkPdfToParte, isLoading, setCommandPaletteOpen } = useUserStore();
+    const { partes, addParte, addActuacion, updateActuacion, deleteActuacion, deleteParte, updateParteStatus, updateParte, currentUser, users, upsertClientFromPDF, linkPdfToParte, isLoading, setCommandPaletteOpen } = useUserStore();
 
     const [title, setTitle] = useState('');
     const [selectedClientId, setSelectedClientId] = useState('');
@@ -66,8 +64,6 @@ export const ParteEditor = () => {
     const [showAddActuacion, setShowAddActuacion] = useState(false);
     const [editingActuacion, setEditingActuacion] = useState<{ id: string, data: any } | null>(null);
     const [showCopied, setShowCopied] = useState(false);
-    const [isDatosOpen, setIsDatosOpen] = useState(isNew);
-    const formAnchorRef = useRef<HTMLDivElement>(null);
 
 
     const currentParte = id ? partes.find(p => String(p.id) === String(id)) : undefined;
@@ -101,8 +97,8 @@ export const ParteEditor = () => {
             setCustomId(currentParte.id.toString());
             setCustomDate(toLocalISOString(new Date(currentParte.createdAt)));
             setSelectedClientId(currentParte.clientId || '');
-            // Open metadata panel when PDF is missing so the warning is visible
-            if (!currentParte.pdfFile) setIsDatosOpen(true);
+            // Note: We don't load the full PDF into state to save memory unless needed, 
+            // but for "viewing" we rely on currentParte.pdfFile
         }
     }, [currentParte]);
 
@@ -112,7 +108,8 @@ export const ParteEditor = () => {
             if (e.altKey && e.key.toLowerCase() === 'n') {
                 e.preventDefault();
                 if (!isNew && currentParte && !showAddActuacion) {
-                    openActuacionForm(null);
+                    setEditingActuacion(null);
+                    setShowAddActuacion(true);
                 }
             }
         };
@@ -308,16 +305,9 @@ export const ParteEditor = () => {
         }
     };
 
-    const openActuacionForm = (editing?: { id: string, data: any } | null) => {
-        setEditingActuacion(editing || null);
-        setShowAddActuacion(true);
-        setTimeout(() => {
-            formAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 50);
-    };
-
     const handleEditClick = (actuacion: any) => {
-        openActuacionForm({ id: actuacion.id, data: actuacion });
+        setEditingActuacion({ id: actuacion.id, data: actuacion });
+        setShowAddActuacion(true);
     };
 
     const handleCancelForm = () => {
@@ -532,127 +522,17 @@ export const ParteEditor = () => {
         );
     }
 
-    const selectedClientName = clients.find(c => String(c.id) === String(selectedClientId))?.name
-        || currentParte?.clientName
-        || '';
-
-    const formattedParteDate = (() => {
-        try {
-            return format(new Date(customDate), "d MMM yyyy · HH:mm", { locale: es });
-        } catch {
-            return customDate;
-        }
-    })();
-
-    const datosGeneralesForm = (
-        <form id="parte-form" onSubmit={handleCreateParte} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4 items-end">
-                <div>
-                    <Input
-                        label="Nº Parte"
-                        type="text"
-                        value={customId}
-                        onChange={(e) => setCustomId(e.target.value)}
-                        placeholder="Auto"
-                        disabled={!isNew}
-                        title={customId || "Auto"}
-                    />
-                </div>
-                <div>
-                    <DatePicker
-                        label="Fecha"
-                        value={customDate.split('T')[0]}
-                        onChange={(date) => {
-                            const time = customDate.split('T')[1] || '09:00';
-                            setCustomDate(`${date}T${time}`);
-                        }}
-                    />
-                </div>
-                <div>
-                    <Input
-                        label="Hora"
-                        type="time"
-                        value={customDate.split('T')[1] || '09:00'}
-                        onChange={(e) => {
-                            const date = customDate.split('T')[0];
-                            setCustomDate(`${date}T${e.target.value}`);
-                        }}
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">Emitido por</label>
-                    {!isNew && createdBy !== 'Usuario Actual' ? (
-                        <Input
-                            value={createdBy}
-                            onChange={(e) => setCreatedBy(e.target.value)}
-                            readOnly
-                            disabled
-                        />
-                    ) : (
-                        <div className="relative">
-                            <select
-                                value={createdBy === 'Usuario Actual' ? '' : createdBy}
-                                onChange={(e) => setCreatedBy(e.target.value)}
-                                required
-                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 transition-all duration-200 focus:border-orange-500 focus:outline-none focus:ring-4 focus:ring-orange-500/10"
-                            >
-                                <option value="" disabled>
-                                    {createdBy === 'Usuario Actual' ? 'Selecciona el usuario' : 'Selecciona un usuario'}
-                                </option>
-                                {users.map((u) => {
-                                    const name = u.user_metadata?.full_name || u.name || u.email;
-                                    return <option key={u.id} value={name}>{name}</option>;
-                                })}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                                </svg>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <ClientSelect
-                label="Solicitado por"
-                value={selectedClientId}
-                onChange={setSelectedClientId}
-                disabled={false}
-            />
-
-            <Input
-                label="Título / Descripción"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ej. Incidencia WiFi cliente X"
-                required
-                className="w-full"
-                title={title}
-            />
-
-            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20">
-                <Save className="w-4 h-4 mr-2" />
-                {isNew ? 'Crear Parte' : 'Guardar Cambios'}
-            </Button>
-            {isNew && (
-                <p className="text-xs text-slate-500 text-center -mt-2">
-                    Podrás añadir actuaciones una vez creado el parte.
-                </p>
-            )}
-        </form>
-    );
-
     return (
-        <div className="space-y-5">
-            {/* Sticky workspace header */}
-            <div className="sticky top-4 z-20 rounded-[1.75rem] bg-white/70 dark:bg-slate-950/60 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.12)] px-4 py-3">
-                <div className="flex flex-wrap items-center gap-3 justify-between">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
-                        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="px-2 shrink-0">
-                            <ChevronLeft className="w-5 h-5" />
+        <div className="space-y-6">
+            {/* Cabecera - Centrada y con controles */}
+            <div className="mx-auto w-[90%] max-w-7xl">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="px-2 sm:px-4">
+                            <ChevronLeft className="w-5 h-5 mr-1" />
+                            <span className="hidden sm:inline">Volver</span>
                         </Button>
-                        <h1 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
                             {isNew ? 'Nuevo Parte' : `Parte #${currentParte?.id}`}
                         </h1>
                         {!isNew && currentParte && (
@@ -668,7 +548,7 @@ export const ParteEditor = () => {
                                         updateParteStatus(currentParte.id, newStatus);
                                     }}
                                     className={clsx(
-                                        "appearance-none cursor-pointer pl-3 pr-8 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide border-0 focus:ring-2 focus:ring-offset-1 transition-all",
+                                        "appearance-none cursor-pointer pl-3 pr-8 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border-0 focus:ring-2 focus:ring-offset-1 transition-all",
                                         currentParte.status === 'ABIERTO' ? 'bg-green-100 text-green-700 ring-green-500' :
                                             currentParte.status === 'EN TRÁMITE' ? 'bg-blue-100 text-blue-700 ring-blue-500' :
                                                 'bg-red-100 text-red-700 ring-red-500'
@@ -685,178 +565,149 @@ export const ParteEditor = () => {
                                 </div>
                             </div>
                         )}
-                        {!isNew && currentParte && (
-                            <div className="hidden sm:flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-slate-600 dark:text-slate-300">
-                                    <Clock className="w-3.5 h-3.5 text-orange-500" />
-                                    {currentParte.totalTime} min
-                                </span>
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-slate-600 dark:text-slate-300">
-                                    {currentParte.totalActuaciones} act.
-                                </span>
-                            </div>
-                        )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        {!isNew && (
-                            <>
+                    {/* NEW CONTROLS: Search and Paginator */}
+                    {!isNew && (
+                        <div className="flex items-center gap-3">
+                             <button 
+                                className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors shadow-sm"
+                                onClick={() => setCommandPaletteOpen(true)}
+                                type="button"
+                            >
+                                <Search className="w-4 h-4" />
+                                <span className="hidden md:inline">Buscar...</span>
+                                <kbd className="hidden md:inline-block px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold ml-1">⌘K</kbd>
+                            </button>
+                            
+                            <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
                                 <button
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors shadow-sm"
-                                    onClick={() => setCommandPaletteOpen(true)}
+                                    onClick={handlePrevParte}
+                                    disabled={currentIndex === -1 || currentIndex >= partes.length - 1}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 border-r border-slate-200 dark:border-slate-700 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                    title="Parte anterior"
                                     type="button"
                                 >
-                                    <Search className="w-4 h-4" />
-                                    <kbd className="hidden md:inline-block px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold">⌘K</kbd>
+                                    <ChevronLeft className="w-5 h-5" />
                                 </button>
-                                <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
-                                    <button
-                                        onClick={handlePrevParte}
-                                        disabled={currentIndex === -1 || currentIndex >= partes.length - 1}
-                                        className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 border-r border-slate-200 dark:border-slate-700 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                        title="Parte anterior"
-                                        type="button"
-                                    >
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={handleNextParte}
-                                        disabled={currentIndex <= 0}
-                                        className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                        title="Parte siguiente"
-                                        type="button"
-                                    >
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                        {!isNew && (
-                            <Button type="submit" form="parte-form" size="sm" className="bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20">
-                                <Save className="w-4 h-4 sm:mr-1.5" />
-                                <span className="hidden sm:inline">Guardar</span>
-                            </Button>
-                        )}
-                    </div>
+                                <button
+                                    onClick={handleNextParte}
+                                    disabled={currentIndex <= 0}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                                    title="Parte siguiente"
+                                    type="button"
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Import cards for new partes */}
-            {isNew && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div
-                        onClick={() => !isUploading && !isBulkUploading && singleInputRef.current?.click()}
-                        className={clsx(
-                            "group relative overflow-hidden bg-white/70 dark:bg-slate-900/60 backdrop-blur rounded-[1.75rem] p-5 border-2 border-dashed transition-all duration-300 cursor-pointer",
-                            isUploading ? "border-blue-500 bg-blue-50/30" : "border-blue-100 dark:border-blue-900/30 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10"
-                        )}
-                    >
-                        <div className="relative z-10 flex items-center gap-4">
-                            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 shrink-0">
-                                {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <FileUp className="w-6 h-6" />}
-                            </div>
-                            <div>
-                                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Cargar PDF</h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">Revisa los datos antes de guardar</p>
-                            </div>
-                        </div>
-                        <input type="file" ref={singleInputRef} className="hidden" accept=".pdf" onChange={handleSingleUpload} onClick={(e) => e.stopPropagation()} />
-                    </div>
+            <div className="flex flex-col items-center w-full gap-8 pb-20">
 
-                    <div
-                        onClick={() => !isUploading && !isBulkUploading && bulkInputRef.current?.click()}
-                        className={clsx(
-                            "group relative overflow-hidden bg-white/70 dark:bg-slate-900/60 backdrop-blur rounded-[1.75rem] p-5 border-2 border-dashed transition-all duration-300 cursor-pointer",
-                            isBulkUploading ? "border-orange-500 bg-orange-50/30" : "border-orange-100 dark:border-orange-900/30 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10"
-                        )}
-                    >
-                        <div className="relative z-10 flex items-center gap-4">
-                            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 shrink-0">
-                                {isBulkUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Files className="w-6 h-6" />}
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Carga Masiva</h3>
-                                    <span className="bg-orange-100 text-orange-700 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">Varios</span>
+                {/* Import Selection (Only for New Partes) */}
+                {isNew && (
+                    <div className="w-[90%] max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 1. Individual Import */}
+                        <div 
+                            onClick={() => !isUploading && !isBulkUploading && singleInputRef.current?.click()}
+                            className={clsx(
+                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-10 border-4 border-dashed transition-all duration-300 cursor-pointer",
+                                isUploading ? "border-blue-500 bg-blue-50/30" : "border-blue-100 dark:border-blue-900/30 hover:border-blue-400 hover:shadow-2xl hover:shadow-blue-500/20"
+                            )}
+                        >
+                            <div className="relative z-10 flex flex-col items-center text-center gap-4">
+                                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform duration-300">
+                                    {isUploading ? <Loader2 className="w-8 h-8 animate-spin" /> : <FileUp className="w-8 h-8" />}
                                 </div>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">Importa varios PDF a la vez</p>
-                            </div>
-                        </div>
-                        <input type="file" ref={bulkInputRef} className="hidden" accept=".pdf" multiple onChange={handleBulkUpload} onClick={(e) => e.stopPropagation()} />
-                    </div>
-                </div>
-            )}
-
-            {/* Existing parte: two-column workspace */}
-            {!isNew && currentParte ? (
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
-                    {/* LEFT: actuaciones */}
-                    <div className="xl:col-span-8 space-y-4">
-                        <Card className="!p-5 md:!p-6">
-                            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Actuaciones</h2>
-                                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                                        Alt+N nueva · ⌘↵ guardar
-                                    </p>
-                                </div>
-                                <div className="flex gap-1.5">
-                                    <Button onClick={handleExportActuaciones} variant="outline" size="sm" className="px-2 sm:px-3" title="Informe">
-                                        <Printer className="w-4 h-4 sm:mr-1.5" />
-                                        <span className="hidden sm:inline">Informe</span>
-                                    </Button>
-                                    <Button
-                                        onClick={handleCopyEmail}
-                                        variant="outline"
-                                        size="sm"
-                                        className={clsx("px-2 sm:px-3 transition-all duration-300", showCopied ? "border-green-500 text-green-600 bg-green-50" : "")}
-                                        title="Copiar Email"
-                                    >
-                                        {showCopied ? <Check className="w-4 h-4 sm:mr-1.5" /> : <Copy className="w-4 h-4 sm:mr-1.5" />}
-                                        <span className="hidden sm:inline">{showCopied ? '¡Copiado!' : 'Email'}</span>
-                                    </Button>
-                                    {!showAddActuacion && (
-                                        <Button
-                                            onClick={() => openActuacionForm(null)}
-                                            size="sm"
-                                            className="px-3 bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20"
-                                        >
-                                            <Plus className="w-4 h-4 sm:mr-1.5" />
-                                            <span className="hidden sm:inline">Nueva</span>
-                                        </Button>
-                                    )}
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">Cargar PDF Individual</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Escanea un archivo y revisa los datos antes de guardar</p>
                                 </div>
                             </div>
+                            {/* Decorative background element */}
+                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
+                            
+                            <input
+                                type="file"
+                                ref={singleInputRef}
+                                className="hidden"
+                                accept=".pdf"
+                                onChange={handleSingleUpload}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
 
-                            <div ref={formAnchorRef}>
-                                {showAddActuacion ? (
-                                    <div className="mb-5">
-                                        <AddActuacionForm
-                                            onAdd={handleAddOrUpdateActuacion}
-                                            onCancel={handleCancelForm}
-                                            initialData={editingActuacion?.data}
-                                            defaultTimestamp={(() => {
-                                                if (currentParte.actuaciones.length === 0) return currentParte.createdAt;
-                                                const lastAct = currentParte.actuaciones[currentParte.actuaciones.length - 1];
-                                                const endDate = new Date(new Date(lastAct.timestamp).getTime() + lastAct.duration * 60000);
-                                                return endDate.toISOString();
-                                            })()}
-                                            key={editingActuacion?.id || 'new'}
-                                        />
+                        {/* 2. Bulk/Massive Import */}
+                        <div 
+                            onClick={() => !isUploading && !isBulkUploading && bulkInputRef.current?.click()}
+                            className={clsx(
+                                "group relative overflow-hidden bg-white dark:bg-slate-900 rounded-3xl p-10 border-4 border-dashed transition-all duration-300 cursor-pointer",
+                                isBulkUploading ? "border-orange-500 bg-orange-50/30" : "border-orange-100 dark:border-orange-900/30 hover:border-orange-400 hover:shadow-2xl hover:shadow-orange-500/20"
+                            )}
+                        >
+                            <div className="relative z-10 flex flex-col items-center text-center gap-4">
+                                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 group-hover:scale-110 transition-transform duration-300">
+                                    {isBulkUploading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Files className="w-8 h-8" />}
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-center gap-2 mb-1">
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Carga Masiva</h3>
+                                        <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Varios</span>
                                     </div>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => openActuacionForm(null)}
-                                        className="w-full mb-5 flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-50/80 hover:bg-white dark:bg-slate-900/40 dark:hover:bg-slate-900/60 text-slate-500 hover:text-orange-600 border border-dashed border-slate-300 dark:border-slate-700 hover:border-orange-400 transition-all font-bold text-sm group"
-                                    >
-                                        <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                        Nueva Actuación
-                                    </button>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Importa múltiples archivos PDF a la vez automáticamente</p>
+                                </div>
+                            </div>
+                            {/* Decorative background element */}
+                            <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors"></div>
+
+                            <input
+                                type="file"
+                                ref={bulkInputRef}
+                                className="hidden"
+                                accept=".pdf"
+                                multiple
+                                onChange={handleBulkUpload}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* 2. Actuaciones (Only if !isNew) */}
+                {!isNew && currentParte && (
+                    <div className="w-[90%] max-w-7xl">
+                        <Card className="min-h-[500px]">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-lg font-semibold">Actuaciones</h2>
+                                {!showAddActuacion && (
+                                     <div className="flex gap-1.5 sm:gap-2">
+                                        <Button onClick={handleExportActuaciones} variant="outline" size="sm" className="px-2 sm:px-4" title="Informe">
+                                            <Printer className="w-4 h-4 sm:mr-2" />
+                                            <span className="hidden sm:inline">Informe</span>
+                                        </Button>
+                                        <Button
+                                            onClick={handleCopyEmail}
+                                            variant="outline"
+                                            size="sm"
+                                            className={clsx("px-2 sm:px-4 transition-all duration-300", showCopied ? "border-green-500 text-green-600 bg-green-50" : "")}
+                                            title="Copiar Email"
+                                        >
+                                            {showCopied ? <Check className="w-4 h-4 sm:mr-2" /> : <Copy className="w-4 h-4 sm:mr-2" />}
+                                            <span className="hidden sm:inline">{showCopied ? '¡Copiado!' : 'Email'}</span>
+                                        </Button>
+                                        <Button onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} size="sm" className="px-3 sm:px-4 bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20">
+                                            <Plus className="w-4 h-4 sm:mr-2" />
+                                            <span className="hidden sm:inline">Nueva Actuación</span>
+                                            <span className="inline sm:hidden">Nueva</span>
+                                        </Button>
+                                    </div>
                                 )}
                             </div>
 
-                            <div className="max-h-[min(55vh,560px)] overflow-y-auto pr-1 -mr-1">
+                            <div className="mb-6">
                                 <ActuacionesList
                                     actuaciones={currentParte.actuaciones}
                                     onDelete={async (actuacionId) => {
@@ -866,12 +717,11 @@ export const ParteEditor = () => {
                                     }}
                                     onEdit={handleEditClick}
                                     onDuplicate={async (actuacion) => {
-                                        const { id: _ignoredId, ...actuacionSinId } = actuacion;
-                                        void _ignoredId;
+                                        const { id, ...actuacionSinId } = actuacion;
                                         const now = new Date();
                                         const localIso = toLocalISOString(now);
                                         const formattedNow = localIso.replace('T', ' ') + (localIso.includes(':') && localIso.split(':').length === 2 ? ':00' : '');
-
+                                        
                                         await addActuacion(currentParte.id, {
                                             ...actuacionSinId,
                                             timestamp: formattedNow
@@ -879,111 +729,174 @@ export const ParteEditor = () => {
                                     }}
                                 />
                             </div>
-                        </Card>
-                    </div>
 
-                    {/* RIGHT: metadata sidebar */}
-                    <div className="xl:col-span-4 space-y-4 xl:sticky xl:top-28">
-                        <Card className="!p-5">
-                            <button
-                                type="button"
-                                onClick={() => setIsDatosOpen(v => !v)}
-                                className="w-full flex items-start justify-between gap-3 text-left"
-                            >
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Datos Generales</h2>
-                                        {!currentParte.pdfFile && !uploadedPdf && (
-                                            <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full flex items-center gap-1 font-bold">
-                                                <FileWarning className="w-3 h-3" />
-                                                SIN PDF
-                                            </span>
-                                        )}
-                                    </div>
-                                    {!isDatosOpen && (
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed truncate">
-                                            {formattedParteDate}
-                                            {selectedClientName ? ` · ${selectedClientName}` : ''}
-                                            {title ? ` · ${title}` : ''}
-                                        </p>
-                                    )}
+                            {!showAddActuacion && (
+                                <div className="flex justify-center mt-2 mb-6">
+                                    <Button 
+                                        onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} 
+                                        className="w-full sm:w-auto bg-slate-50 hover:bg-white text-slate-600 border border-dashed border-slate-300 hover:border-blue-400 hover:text-blue-600 transition-all font-bold group"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2 group-hover:scale-125 transition-transform" />
+                                        Nueva Actuación
+                                    </Button>
                                 </div>
-                                <ChevronDown className={clsx("w-5 h-5 text-slate-400 shrink-0 transition-transform", isDatosOpen && "rotate-180")} />
-                            </button>
+                            )}
 
-                            {isDatosOpen ? (
-                                <div className="mt-5 space-y-5">
-                                    {!currentParte.pdfFile && !uploadedPdf && (
-                                        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl flex items-start gap-3">
-                                            <FileWarning className="w-4 h-4 text-orange-600 mt-0.5 shrink-0" />
-                                            <div className="space-y-2">
-                                                <p className="text-xs font-semibold text-orange-800 dark:text-orange-400">Creado manualmente, sin PDF</p>
-                                                <Button
-                                                    onClick={() => !isUploading && singleInputRef.current?.click()}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    disabled={isUploading}
-                                                >
-                                                    <FileUp className="w-3 h-3 mr-2" />
-                                                    Vincular PDF
-                                                </Button>
-                                                <input type="file" ref={singleInputRef} className="hidden" accept=".pdf" onChange={handleSingleUpload} onClick={(e) => e.stopPropagation()} />
-                                            </div>
-                                        </div>
-                                    )}
-                                    {datosGeneralesForm}
-                                </div>
-                            ) : (
-                                <div className="sr-only" aria-hidden>
-                                    {datosGeneralesForm}
+                            {showAddActuacion && (
+                                <div className="mt-4 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                    <AddActuacionForm
+                                        onAdd={handleAddOrUpdateActuacion}
+                                        onCancel={handleCancelForm}
+                                        initialData={editingActuacion?.data}
+                                        defaultTimestamp={(() => {
+                                            if (currentParte.actuaciones.length === 0) return currentParte.createdAt;
+                                            const lastAct = currentParte.actuaciones[currentParte.actuaciones.length - 1];
+                                            const endDate = new Date(new Date(lastAct.timestamp).getTime() + lastAct.duration * 60000);
+                                            return endDate.toISOString();
+                                        })()}
+                                        key={editingActuacion?.id || 'new'} // Force re-render on switch
+                                    />
                                 </div>
                             )}
                         </Card>
+                    </div>
+                )}
 
-                        <Card className="!p-5">
-                            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">Documentos PDF</h3>
-                            <div className="space-y-3">
+
+                {/* 3. Resumen (Original) */}
+                {!isNew && currentParte && (
+                    <div className="w-[90%] max-w-7xl">
+                        <Card>
+                            <h2 className="text-lg font-semibold mb-4">Resumen</h2>
+                            <div className="flex flex-col md:flex-row gap-8 justify-around items-center p-4">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Total Tiempo</span>
+                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100 flex items-start">
+                                        {currentParte.totalTime}
+                                        <span className="text-lg text-slate-400 font-bold ml-1 mt-1">min</span>
+                                    </span>
+                                </div>
+                                <div className="w-px h-16 bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm uppercase font-bold tracking-wider mb-1">Actuaciones</span>
+                                    <span className="text-4xl font-black text-slate-800 dark:text-slate-100">
+                                        {currentParte.totalActuaciones}
+                                    </span>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                )}
+
+
+                {/* Quick Add Button between Summary and General Data */}
+                {!isNew && !showAddActuacion && (
+                    <div className="w-[90%] max-w-7xl">
+                        <Button 
+                            onClick={() => { setEditingActuacion(null); setShowAddActuacion(true); }} 
+                            className="w-full bg-blue-50/50 hover:bg-blue-50 text-blue-600 border border-dashed border-blue-200 hover:border-blue-400 transition-all font-bold group py-4 h-auto rounded-2xl"
+                        >
+                            <Plus className="w-5 h-5 mr-2 group-hover:scale-125 transition-transform" />
+                            Nueva Actuación
+                        </Button>
+                    </div>
+                )}
+
+
+                {/* 1. Datos Generales (Always Visible) */}
+                <div className="w-[90%] max-w-7xl">
+                    <Card>
+                        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            Datos Generales
+                            {!isNew && !currentParte?.pdfFile && !uploadedPdf && (
+                                <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <FileWarning className="w-3 h-3" />
+                                    SIN PDF
+                                </span>
+                            )}
+                        </h2>
+
+                        {!isNew && currentParte && !currentParte.pdfFile && !uploadedPdf && (
+                            <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl flex items-start gap-3">
+                                <FileWarning className="w-5 h-5 text-orange-600 mt-0.5" />
+                                <div className="space-y-1">
+                                    <p className="text-sm font-semibold text-orange-800 dark:text-orange-400">Este parte fue creado manualmente</p>
+                                    <p className="text-xs text-orange-700 dark:text-orange-500/80">
+                                        No tiene un PDF asociado. Puedes subir uno ahora para vincularlo. Se actualizará el ID del parte pero se mantendrán los datos actuales.
+                                    </p>
+                                    <Button 
+                                        onClick={() => !isUploading && singleInputRef.current?.click()}
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="mt-2"
+                                        disabled={isUploading}
+                                    >
+                                        <FileUp className="w-3 h-3 mr-2" />
+                                        Vincular PDF
+                                    </Button>
+                                    <input
+                                        type="file"
+                                        ref={singleInputRef}
+                                        className="hidden"
+                                        accept=".pdf"
+                                        onChange={handleSingleUpload}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {!isNew && currentParte && (
+                            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Abierto</p>
+                                    <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">PDF Abierto</h3>
                                     {currentParte.pdfFile ? (
-                                        <Button variant="outline" className="w-full" size="sm" onClick={handleViewPdf}>
-                                            <Eye className="w-4 h-4 mr-2" />
-                                            Ver Abierto
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" className="w-full" onClick={handleViewPdf}>
+                                                <Eye className="w-4 h-4 mr-2" />
+                                                Ver Abierto
+                                            </Button>
+                                        </div>
                                     ) : (
-                                        <>
+                                        <div className="relative">
                                             <input
                                                 type="file"
                                                 accept=".pdf"
                                                 onChange={async (e) => {
                                                     const file = e.target.files?.[0];
                                                     if (!file) return;
+                                                    // Manual upload without OCR
                                                     const reader = new FileReader();
                                                     reader.onload = () => {
                                                         const base64 = reader.result as string;
-                                                        if (currentParte) updateParte(currentParte.id, { pdfFile: base64 });
+                                                        if (currentParte) {
+                                                            updateParte(currentParte.id, { pdfFile: base64 });
+                                                        }
                                                     };
                                                     reader.readAsDataURL(file);
                                                 }}
                                                 className="hidden"
                                                 id="upload-pdf-manual"
                                             />
-                                            <Button variant="outline" className="w-full cursor-pointer" size="sm" type="button" onClick={() => document.getElementById('upload-pdf-manual')?.click()}>
-                                                <FileUp className="w-4 h-4 mr-2" />
-                                                Subir Abierto
-                                            </Button>
-                                        </>
+                                            <label htmlFor="upload-pdf-manual">
+                                                <Button variant="outline" className="w-full cursor-pointer" type="button" onClick={(e) => { e.preventDefault(); document.getElementById('upload-pdf-manual')?.click(); }}>
+                                                    <FileUp className="w-4 h-4 mr-2" />
+                                                    Subir PDF Abierto
+                                                </Button>
+                                            </label>
+                                        </div>
                                     )}
                                 </div>
+
                                 <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Cerrado / Firmado</p>
+                                    <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">PDF Cerrado</h3>
                                     {currentParte.pdfFileSigned ? (
-                                        <Button variant="primary" className="w-full" size="sm" onClick={handleViewSignedPdf}>
+                                        <Button variant="primary" className="w-full" onClick={handleViewSignedPdf}>
                                             <Eye className="w-4 h-4 mr-2" />
                                             Ver Cerrado
                                         </Button>
                                     ) : (
-                                        <>
+                                        <div className="relative">
                                             <input
                                                 type="file"
                                                 accept=".pdf"
@@ -993,83 +906,195 @@ export const ParteEditor = () => {
                                                     const reader = new FileReader();
                                                     reader.onload = () => {
                                                         const base64 = reader.result as string;
-                                                        if (currentParte) updateParte(currentParte.id, { pdfFileSigned: base64 });
+                                                        if (currentParte) {
+                                                            updateParte(currentParte.id, { pdfFileSigned: base64 });
+                                                        }
                                                     };
                                                     reader.readAsDataURL(file);
                                                 }}
                                                 className="hidden"
                                                 id="upload-pdf-signed"
                                             />
-                                            <Button variant="outline" className="w-full cursor-pointer text-slate-500" size="sm" type="button" onClick={() => document.getElementById('upload-pdf-signed')?.click()}>
-                                                <FileUp className="w-4 h-4 mr-2" />
-                                                Subir Firmado
-                                            </Button>
-                                        </>
+                                            <label htmlFor="upload-pdf-signed">
+                                                <Button variant="outline" className="w-full dashed border-slate-300 text-slate-500 hover:text-blue-500 cursor-pointer" type="button" onClick={(e) => { e.preventDefault(); document.getElementById('upload-pdf-signed')?.click(); }}>
+                                                    <FileUp className="w-4 h-4 mr-2" />
+                                                    Subir Firmado
+                                                </Button>
+                                            </label>
+                                        </div>
                                     )}
                                 </div>
                             </div>
-                        </Card>
+                        )}
 
-                        <Card className="!p-5">
-                            <div className="flex items-center justify-between gap-3 mb-4">
-                                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Participantes</h3>
-                                <div className="flex -space-x-2">
-                                    {Array.from(new Set(currentParte.actuaciones.map(a => a.user))).map((userName) => {
-                                        const userObj = users.find(u => (u.user_metadata?.full_name || u.name) === userName || u.email === userName);
-                                        const hasAvatar = userObj?.avatar_url;
-                                        return (
-                                            <div key={userName} className="relative z-10" title={userName}>
-                                                {hasAvatar ? (
-                                                    <img src={userObj.avatar_url} alt={userName} className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-slate-900" />
-                                                ) : (
-                                                    <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-[10px] text-orange-700 dark:text-orange-200 font-bold uppercase ring-2 ring-white dark:ring-slate-900">
-                                                        {userName.charAt(0)}
-                                                    </div>
-                                                )}
+                        <form id="parte-form" onSubmit={handleCreateParte} className="space-y-6">
+                            {/* Row 1: Key Metadata (Full Width usage) */}
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                                <div className="md:col-span-2">
+                                    <Input
+                                        label="Nº Parte"
+                                        type="text"
+                                        value={customId}
+                                        onChange={(e) => setCustomId(e.target.value)}
+                                        placeholder="Auto"
+                                        disabled={!isNew}
+                                        title={customId || "Auto"}
+                                    />
+                                </div>
+                                <div className="md:col-span-3">
+                                    <DatePicker
+                                        label="Fecha Creación"
+                                        value={customDate.split('T')[0]}
+                                        onChange={(date) => {
+                                            const time = customDate.split('T')[1] || '09:00';
+                                            setCustomDate(`${date}T${time}`);
+                                        }}
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Input
+                                        label="Hora"
+                                        type="time"
+                                        value={customDate.split('T')[1] || '09:00'}
+                                        onChange={(e) => {
+                                            const date = customDate.split('T')[0];
+                                            setCustomDate(`${date}T${e.target.value}`);
+                                        }}
+                                    />
+                                </div>
+                                <div className="md:col-span-5">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">Emitido por</label>
+                                    {!isNew && createdBy !== 'Usuario Actual' ? (
+                                        <Input
+                                            value={createdBy}
+                                            onChange={(e) => setCreatedBy(e.target.value)}
+                                            readOnly
+                                            disabled
+                                        />
+                                    ) : (
+                                        <div className="relative">
+                                            <select
+                                                value={createdBy === 'Usuario Actual' ? '' : createdBy}
+                                                onChange={(e) => setCreatedBy(e.target.value)}
+                                                required
+                                                className="block w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 focus:border-orange-500 focus:outline-none focus:ring-4 focus:ring-orange-500/10 placeholder:text-slate-400"
+                                            >
+                                                <option value="" disabled>
+                                                    {createdBy === 'Usuario Actual' ? 'Selecciona el usuario correcto' : 'Selecciona un usuario'}
+                                                </option>
+                                                {users.map((u) => {
+                                                    const name = u.user_metadata?.full_name || u.name || u.email;
+                                                    return <option key={u.id} value={name}>{name}</option>
+                                                })}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                                </svg>
                                             </div>
-                                        );
-                                    })}
-                                    {currentParte.actuaciones.length === 0 && (
-                                        <span className="text-xs text-slate-400">Sin actuaciones</span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                {currentParte.status !== 'CERRADO' ? (
-                                    <Button
-                                        type="button"
-                                        variant="danger"
-                                        className="w-full"
-                                        onClick={() => updateParteStatus(currentParte.id, 'CERRADO')}
-                                        disabled={currentParte.actuaciones.length === 0}
-                                    >
-                                        Cerrar Parte
-                                    </Button>
-                                ) : (
-                                    <Button type="button" variant="outline" className="w-full" onClick={() => updateParteStatus(currentParte.id, 'EN TRÁMITE')}>
-                                        Reabrir Parte
-                                    </Button>
-                                )}
-                                <Button
-                                    variant="ghost"
-                                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
-                                    onClick={handleDeleteParte}
-                                >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Eliminar Parte
-                                </Button>
+                            {/* Row 2: Title */}
+                            <div className="mb-6">
+                                <ClientSelect
+                                    label="Solicitado por (Usuario / Empleado)"
+                                    value={selectedClientId}
+                                    onChange={setSelectedClientId}
+                                    disabled={false} // Always editable?
+                                />
                             </div>
-                        </Card>
-                    </div>
+
+                            <Input
+                                label="Título / Descripción"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Ej. Incidencia WiFi cliente X"
+                                required
+                                className="w-full text-lg"
+                                title={title}
+                            />
+
+                            <div className="pt-2 flex flex-col items-center">
+                                <Button type="submit" className="w-full md:w-auto md:px-12 md:py-3 text-lg bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20">
+                                    <Save className="w-5 h-5 mr-2" />
+                                    {isNew ? 'Crear Parte' : 'Guardar Cambios'}
+                                </Button>
+                                {isNew && (
+                                    <p className="text-sm text-slate-500 mt-3 text-center">
+                                        Podrás añadir actuaciones una vez creado el parte.
+                                    </p>
+                                )}
+                            </div>
+                        </form>
+                    </Card>
                 </div>
-            ) : (
-                /* New parte form */
-                <Card className="!p-6 max-w-3xl mx-auto">
-                    <h2 className="text-lg font-semibold mb-5 text-slate-800 dark:text-slate-100">Datos Generales</h2>
-                    {datosGeneralesForm}
-                </Card>
-            )}
+
+                {/* 4. Footer Actions (Only if !isNew) */}
+                {!isNew && currentParte && (
+                    <div className="w-[90%] max-w-7xl flex flex-col sm:flex-row justify-between items-center py-6 border-t border-slate-100 dark:border-slate-800/50 gap-4">
+                        <Button
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={handleDeleteParte}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Eliminar Parte
+                        </Button>
+
+                        <div className="flex items-center gap-6">
+                            {/* Avatares de participantes */}
+                            <div className="flex -space-x-3">
+                                {Array.from(new Set(currentParte.actuaciones.map(a => a.user))).map((userName) => {
+                                    const userObj = users.find(u => (u.user_metadata?.full_name || u.name) === userName || u.email === userName);
+                                    const hasAvatar = userObj?.avatar_url;
+
+                                    return (
+                                        <div key={userName} className="relative z-10 transition-transform hover:scale-110 hover:z-20 group" title={userName}>
+                                            {hasAvatar ? (
+                                                <img
+                                                    src={userObj.avatar_url}
+                                                    alt={userName}
+                                                    className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow-md"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-xs text-orange-700 dark:text-orange-200 font-bold uppercase ring-2 ring-white dark:ring-slate-900 shadow-md">
+                                                    {userName.charAt(0)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <div className="flex gap-3">
+                                    {currentParte.status !== 'CERRADO' && (
+                                        <Button
+                                            type="button"
+                                            variant="danger"
+                                            onClick={() => {
+                                                console.log('Close button clicked');
+                                                updateParteStatus(currentParte.id, 'CERRADO');
+                                            }}
+                                            disabled={currentParte.actuaciones.length === 0}
+                                        >
+                                            Cerrar Parte
+                                        </Button>
+                                    )}
+                                    {currentParte.status === 'CERRADO' && (
+                                        <Button type="button" variant="outline" onClick={() => updateParteStatus(currentParte.id, 'EN TRÁMITE')}>
+                                            Reabrir Parte
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
