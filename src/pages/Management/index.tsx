@@ -14,7 +14,7 @@ import { SpreadsheetView } from '../../components/management/SpreadsheetView';
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
-import { Square, CheckSquare, Trash2, X, Plus, FileUp, Loader2, Files, CloudDownload, CloudUpload } from 'lucide-react';
+import { Square, CheckSquare, Trash2, X, Plus, FileUp, Loader2, Files, CloudDownload, CloudUpload, GitMerge } from 'lucide-react';
 import { BulkActuacionModal } from '../../components/management/BulkActuacionModal';
 
 export default function Management() {
@@ -22,7 +22,7 @@ export default function Management() {
     const { 
         partes, addParte, fixLegacyAuthorship, currentUser, 
         deletePartes, upsertClientFromPDF, isSingleFileMode, 
-        isLegacyMode, importFiles, exportDatabase 
+        isLegacyMode, importFiles, exportDatabase, mergeDatabase 
     } = useUserStore();
     const [view, setView] = useState<ManagementViewMode>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -32,7 +32,9 @@ export default function Management() {
     const [isBulkUploading, setIsBulkUploading] = useState(false);
     const bulkInputRef = useRef<HTMLInputElement>(null);
     const icloudFilesRef = useRef<HTMLInputElement>(null);
+    const mergeJsonRef = useRef<HTMLInputElement>(null);
     const [isSyncingFiles, setIsSyncingFiles] = useState(false);
+    const [isMergingDb, setIsMergingDb] = useState(false);
 
     // Selection State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -222,6 +224,45 @@ export default function Management() {
         }
     };
 
+    const handleMergeDatabaseJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const confirmed = window.confirm(
+            '¿Unificar este database.json con la base de datos de ESTE equipo?\n\n' +
+                '• Se añadirán partes, actuaciones y clientes que no existan aquí.\n' +
+                '• Si un parte tiene el mismo número y el mismo título, se combinarán sus actuaciones.\n' +
+                '• Si el mismo número es otro parte distinto, se importará con un número nuevo.\n' +
+                '• No se elimina nada de tu copia actual.'
+        );
+        if (!confirmed) {
+            e.target.value = '';
+            return;
+        }
+
+        setIsMergingDb(true);
+        try {
+            const result = await mergeDatabase(file);
+            if (result.ok && result.stats) {
+                const s = result.stats;
+                alert(
+                    `✅ Base de datos unificada.\n\n` +
+                        `Partes nuevos: ${s.partesAdded}\n` +
+                        `Partes combinados: ${s.partesMerged}\n` +
+                        `Partes renumerados: ${s.partesRenamed}\n` +
+                        `Actuaciones añadidas: ${s.actuacionesAdded}\n` +
+                        `Clientes nuevos: ${s.clientsAdded}\n` +
+                        `Usuarios nuevos: ${s.usersAdded}`
+                );
+            } else {
+                alert(`❌ ${result.error || 'No se pudo unificar el archivo.'}`);
+            }
+        } finally {
+            setIsMergingDb(false);
+            e.target.value = '';
+        }
+    };
+
     return (
         <div className="space-y-6 pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -271,6 +312,29 @@ export default function Management() {
                             />
                         </div>
                     )}
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => mergeJsonRef.current?.click()}
+                        disabled={isMergingDb}
+                        className="text-violet-700 border-violet-200 hover:bg-violet-50 dark:text-violet-300 dark:border-violet-500/30 dark:hover:bg-violet-500/10"
+                        title="Añadir datos de otro database.json al de este equipo"
+                    >
+                        {isMergingDb ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                            <GitMerge className="w-4 h-4 mr-2" />
+                        )}
+                        Unificar JSON
+                    </Button>
+                    <input
+                        type="file"
+                        accept=".json,application/json"
+                        ref={mergeJsonRef}
+                        className="hidden"
+                        onChange={handleMergeDatabaseJson}
+                    />
 
                     <Button 
                         variant="primary"

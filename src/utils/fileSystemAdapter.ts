@@ -1,5 +1,6 @@
 // Using native crypto.randomUUID instead of external uuid library
 import CryptoJS from 'crypto-js';
+import { mergeDatabaseStates, parseDatabaseFileText } from './mergeDatabase';
 
 // Internal secret for database obfuscation (Security by obscurity against non-developers)
 const INTERNAL_SECRET = 'partes-app-v2-secure-salt-2026';
@@ -1411,14 +1412,9 @@ class FileSystemAdapter {
      */
     async importDatabaseFromText(text: string): Promise<boolean> {
         try {
-            let newState = decryptData(text);
+            const newState = parseDatabaseFileText(text);
             
-            if (!newState) {
-                // Fallback: try parsing as raw JSON if decryption failed
-                newState = JSON.parse(text);
-            }
-            
-            if (newState && (newState.users || newState.partes)) {
+            if (newState) {
                 this.state = newState;
                 await this.saveDatabase();
                 this.isInitialized = true;
@@ -1429,6 +1425,36 @@ class FileSystemAdapter {
             console.error('Error importing JSON:', e);
             return false;
         }
+    }
+
+    /**
+     * Combina un database.json externo con la base de datos actual del equipo.
+     * Añade partes/actuaciones/clientes que falten; si un mismo ID es otro parte, asigna ID nuevo.
+     */
+    async mergeDatabaseFromText(text: string): Promise<{ ok: boolean; stats?: import('./mergeDatabase').MergeStats; error?: string }> {
+        if (!this.isInitialized) {
+            const ready = await this.init(false);
+            if (!ready) {
+                return { ok: false, error: 'Conecta tu carpeta de datos antes de unificar.' };
+            }
+        }
+
+        await this._loadDatabase(true);
+
+        const incoming = parseDatabaseFileText(text);
+        if (!incoming) {
+            return { ok: false, error: 'El archivo no es un database.json válido.' };
+        }
+
+        const { state, stats } = mergeDatabaseStates(this.state, incoming);
+        this.state = state;
+
+        const saved = await this.saveDatabase();
+        if (!saved) {
+            return { ok: false, error: 'No se pudo guardar la base de datos unificada.' };
+        }
+
+        return { ok: true, stats };
     }
 }
 

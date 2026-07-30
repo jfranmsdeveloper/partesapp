@@ -80,6 +80,7 @@ interface AppState {
     importFiles: (files: FileList | File[]) => Promise<{success: number, total: number}>;
     exportDatabase: () => void;
     importDatabase: (file: File) => Promise<boolean>;
+    mergeDatabase: (file: File) => Promise<{ ok: boolean; stats?: import('../utils/mergeDatabase').MergeStats; error?: string }>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -853,5 +854,14 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
         }
         return success;
+    },
+
+    mergeDatabase: async (file: File) => {
+        const text = await file.text();
+        const result = await (supabase as any).mergeDatabaseFromText(text);
+        if (result.ok) {
+            await get().fetchData();
+        }
+        return result;
     },
 }));
