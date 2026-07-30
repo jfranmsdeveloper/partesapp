@@ -1,10 +1,12 @@
 /* UI Version: 12:30 Baseline */
-import { Search, Plus, Calendar, Filter, X, Clock, Users, BarChart3, List, Layout, ArrowDownAz, ArrowUpAz, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { Search, Plus, Calendar, Filter, X, Clock, Users, BarChart3, List, Layout, ArrowDownAz, ArrowUpAz, ChevronLeft, ChevronRight, Table2 } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useAppStore } from '../../store/useAppStore';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+export type ManagementViewMode = 'list' | 'kanban' | 'timeline' | 'clients' | 'workload' | 'spreadsheet';
 
 export interface FilterState {
     globalSearch: string;
@@ -22,8 +24,8 @@ interface ManagementFiltersProps {
     filters: FilterState;
     onFilterChange: (key: keyof FilterState, value: string) => void;
     onClearFilters: () => void;
-    view: 'list' | 'kanban' | 'timeline' | 'clients' | 'workload';
-    onViewChange: (val: 'list' | 'kanban' | 'timeline' | 'clients' | 'workload') => void;
+    view: ManagementViewMode;
+    onViewChange: (val: ManagementViewMode) => void;
     onAddClient: () => void;
 }
 
@@ -163,6 +165,16 @@ export const ManagementFilters = ({
                         >
                             <Clock className="w-3 h-3" />
                             Timeline
+                        </button>
+                        <button
+                            onClick={() => onViewChange('spreadsheet')}
+                            className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${view === 'spreadsheet'
+                                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                                }`}
+                        >
+                            <Table2 className="w-3 h-3" />
+                            Tabla
                         </button>
                         <button
                             onClick={() => onViewChange('clients')}

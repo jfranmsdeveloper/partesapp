@@ -9,7 +9,8 @@ import { TimelineView } from '../../components/management/TimelineView';
 import { ClientsView } from '../../components/management/ClientsView';
 import { WorkloadView } from '../../components/management/WorkloadView';
 import { ManagementFilters } from '../../components/management/ManagementFilters';
-import type { FilterState } from '../../components/management/ManagementFilters';
+import type { FilterState, ManagementViewMode } from '../../components/management/ManagementFilters';
+import { SpreadsheetView } from '../../components/management/SpreadsheetView';
 import { AddClientModal } from '../../components/management/AddClientModal';
 import { Button } from '../../components/ui/Button';
 import type { Parte } from '../../types';
@@ -23,7 +24,7 @@ export default function Management() {
         deletePartes, upsertClientFromPDF, isSingleFileMode, 
         isLegacyMode, importFiles, exportDatabase 
     } = useUserStore();
-    const [view, setView] = useState<'list' | 'kanban' | 'timeline' | 'clients' | 'workload'>('list');
+    const [view, setView] = useState<ManagementViewMode>('list');
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
@@ -349,6 +350,11 @@ export default function Management() {
                     <KanbanBoard partes={filteredPartes} />
                 ) : view === 'timeline' ? (
                     <TimelineView partes={filteredPartes} />
+                ) : view === 'spreadsheet' ? (
+                    <SpreadsheetView
+                        partes={filteredPartes}
+                        onOpenParte={(id) => navigate(`/parte/${id}`)}
+                    />
                 ) : view === 'clients' ? (
                     <ClientsView onFilterChange={handleFilterChange} onViewChange={setView} />
                 ) : (
